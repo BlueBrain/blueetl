@@ -1,6 +1,0 @@
-- project:
-    name: 'blueetl'
-    git_project: 'nse/blueetl'
-    jobs:
-      - 'nse.python.{name}.gerrit'
-      - 'nse.python.{name}'

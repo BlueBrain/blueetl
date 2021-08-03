@@ -28,10 +28,20 @@ setup(
         "Source": "git@bbpgitlab.epfl.ch:nse/blueetl.git",
     },
     license="BBP-internal-confidential",
-    install_requires=[],
+    install_requires=[
+        "numpy>=1.19.4",
+        "pandas>=1.2.5",
+    ],
     packages=find_packages(),
     python_requires=">=3.6",
-    extras_require={"docs": ["sphinx", "sphinx-bluebrain-theme"]},
+    extras_require={
+        "docs": ["sphinx", "sphinx-bluebrain-theme"],
+        "spa": [
+            "simProjectAnalysis @ git+ssh://git@bbpgitlab.epfl.ch/conn/personal/reimann/bbp-analysis-framework.git@newbluepy#egg=simProjectAnalysis",
+            "progressbar>=2.5",  # needed by simProjectAnalysis
+            "interval>=1.0.0",  # to avoid a DependencyWarning in NeuroTools
+        ],
+    },
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "Intended Audience :: Education",

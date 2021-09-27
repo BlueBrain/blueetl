@@ -1,16 +1,19 @@
 #!/usr/bin/env python
-
-
+import hashlib
+import logging
 import os
+import sys
 
 import bluepy
-import simProjectAnalysis as spa
+import pandas as pd
 import pandas
+import numpy as np
 import numpy
 import tqdm
 
 from scipy import sparse
 
+from blueetl import etl
 
 circuit_rel_entries = ['cells', 'morphologies', 'emodels', 'connectome', 'atlas', 'projections']
 
@@ -32,28 +35,31 @@ def parse_arguments():
 
 
 def initial_setup(sims):
-    import hashlib
-    conditions = sims.index.names
-    out = []
-    circuit_dict = {}
-    for cond, path in sims.iteritems():
-        cond_dict = dict(zip(conditions, cond))
-        value = bluepy.Simulation(path)
-        circ_cfg = dict([(k, value.circuit.config.get(k, "__NONE__")) for k in circuit_rel_entries])
-        circ_hash = hashlib.md5(str(circ_cfg).encode("UTF-8")).hexdigest()
-        if circ_hash not in circuit_dict:
-            circuit_dict[circ_hash] = value.circuit
-        out.append(spa.ResultsWithConditions(value, circuit_hash=circ_hash,
-                                             **cond_dict))
-    return spa.ConditionCollection(out), circuit_dict
+    def _calculate_hash(config):
+        circ_cfg = {k: config.get(k, "__NONE__") for k in circuit_rel_entries}
+        return hashlib.md5(str(circ_cfg).encode("UTF-8")).hexdigest()
+
+    def _load_sim_and_circuit(path):
+        simulation = bluepy.Simulation(path)
+        circuit_hash = _calculate_hash(simulation.circuit.config)
+        return simulation, circuit_hash
+
+    def _func(x):
+        for index, path in x.etl.iter_named_items():
+            simulation, circuit_hash = _load_sim_and_circuit(path)
+            yield simulation, {**index._asdict(), "circuit_hash": circuit_hash}
+
+    data = sims.etl.remodel(_func)
+    circuits = {index.circuit_hash: sim.circuit for index, sim in data.etl.iter_named_items()}
+    return data, circuits
 
 
 def pool_spikes_factory(t_win):
 
-    def pool_spikes(lst_sims):
+    def pool_spikes(x):
         offset = 0.0
         out = []
-        for sim in lst_sims:
+        for sim in x:
             if t_win is None:
                 t_win_use = [sim.t_start, sim.t_end]
             else:
@@ -139,13 +145,18 @@ def create_cmat_dict(circ_dict, gid_dict):
 
 
 def split_spikes_factory(target_gid_dicts):
-    def split_spikes(circ_fns, spks_in):
-        for circ, spks in zip(circ_fns, spks_in):
-            spks, spk_win = spks
-            gid_dict = target_gid_dicts[circ]
+    def split_spikes(x):
+        data = []
+        labels = []
+        for index, value in x.etl.iter_named_items():
+            assert index._fields == ("ca", "circuit_hash")
+            spikes, window = value
+            gid_dict = target_gid_dicts[index.circuit_hash]
             for label, gids in tqdm.tqdm(gid_dict.items()):
-                valid = numpy.in1d(spks[:, 1], gids)
-                yield (spks[valid], spk_win, gids), {"circuit_hash": circ, "neuron_type": label}
+                valid = numpy.in1d(spikes[:, 1], gids)
+                data.append((spikes[valid], window, gids))
+                labels.append(label)
+        return pd.Series(data, index=pd.Index(labels, name="neuron_type"))
     return split_spikes
 
 
@@ -216,7 +227,9 @@ def pair_correlation_factory(cmat_dict, t_step=20.0):
     corr_bins = numpy.linspace(1E-9, 1, 100) # TODO: Configurable
 
 
-    def pair_correlations(lst_nrn_types, lst_spk_data):
+    def pair_correlations(x):
+        lst_spk_data = x.to_numpy()
+        lst_nrn_types = x.index.to_numpy()
         test_time_windows_consistent(lst_spk_data)
         print("Calculating binned spiking matrices...")
         lst_M = [spikes_to_binned_matrix(spk_data, t_step) for spk_data in lst_spk_data]
@@ -251,20 +264,20 @@ def pair_correlation_factory(cmat_dict, t_step=20.0):
 
 
 def main():
+    logformat = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+    logging.basicConfig(level=logging.INFO, format=logformat)
+    np.random.seed(0)
+    etl.register_accessors()
     sims, cfg = parse_arguments()
-    out_fn = cfg.pop("output_root")
+    out_fn = sys.argv[3]
     data, circ_dict = initial_setup(sims)
 
     # Specify in config to apply the analysis only to a subset of simulation conditions
-    for k, v in cfg.get("condition_filter", {}).items():
-        data = data.filter(**dict([(k, v)]))
+    data = data.etl.filter(**cfg.get("condition_filter", {}), drop_level=False)
     # Pool spikes over specified condition by concatenating
     spk_pool_cond = cfg.get("pool_spikes", {}).get("conditions", [])
     spk_pool_twin = cfg.get("pool_spikes", {}).get("t_win", None)
-    spikes = data.pool(spk_pool_cond, func=pool_spikes_factory(spk_pool_twin))
-    if "circuit_hash" not in spikes.conditions(): # "pool" gets rid of singleton dimensions...
-        assert len(circ_dict) == 1
-        spikes.add_label("circuit_hash", list(circ_dict)[0])
+    spikes = data.etl.pool(spk_pool_cond, func=pool_spikes_factory(spk_pool_twin))
 
     # Get parameters for spike binning from config
     binsize = cfg.get("binsize", 20.0)
@@ -280,17 +293,18 @@ def main():
         cmat_dict = dict([(k, {}) for k in circ_dict.keys()])
 
     # Split spike results into individual results for the different classes
-    spikes_per_target = spikes.transform(["circuit_hash"], split_spikes_factory(target_gid_dicts), xy=True)
+    spikes_per_target = spikes.groupby(["circuit_hash"]).apply(split_spikes_factory(target_gid_dicts))
 
     # Execute...
-    correlation_res = spa.ConditionCollection([])
-    for circ_hash in spikes_per_target.labels_of("circuit_hash"):
+    correlation_res = []
+    for circ_hash in spikes_per_target.etl.labels_of("circuit_hash"):
         func = pair_correlation_factory(cmat_dict[circ_hash], t_step=binsize)
-        tmp_res = spikes_per_target.filter(circuit_hash=circ_hash).transform(["neuron_type"], func, xy=True)
-        correlation_res.merge(tmp_res)
+        tmp_res = spikes_per_target.etl.filter(circuit_hash=circ_hash).etl.remodel(func)
+        correlation_res.append(tmp_res)
 
-    correlation_res.add_label("time_bin_size", binsize)
-    correlation_res.to_pandas().to_pickle(os.path.join(out_fn, "results.pkl"))
+    correlation_res = etl.safe_concat(correlation_res)
+    correlation_res = correlation_res.etl.add_condition("time_bin_size", binsize, inner=True)
+    correlation_res.to_pickle(os.path.join(out_fn, "results.pkl"))
 
 
 if __name__ == "__main__":

@@ -1,13 +1,16 @@
 #!/usr/bin/env python
-
-
+import hashlib
+import logging
 import os
+import sys
 
 import bluepy
-import simProjectAnalysis as spa
+import numpy as np
 import pandas
 import numpy
 import tqdm
+
+from blueetl import etl
 
 circuit_rel_entries = ['cells', 'morphologies', 'emodels', 'connectome', 'atlas', 'projections']
 
@@ -29,20 +32,23 @@ def parse_arguments():
 
 
 def initial_setup(sims):
-    import hashlib
-    conditions = sims.index.names
-    out = []
-    circuit_dict = {}
-    for cond, path in sims.iteritems():
-        cond_dict = dict(zip(conditions, cond))
-        value = bluepy.Simulation(path)
-        circ_cfg = dict([(k, value.circuit.config.get(k, "__NONE__")) for k in circuit_rel_entries])
-        circ_hash = hashlib.md5(str(circ_cfg).encode("UTF-8")).hexdigest()
-        if circ_hash not in circuit_dict:
-            circuit_dict[circ_hash] = value.circuit
-        out.append(spa.ResultsWithConditions(value, circuit_hash=circ_hash,
-                                             **cond_dict))
-    return spa.ConditionCollection(out), circuit_dict
+    def _calculate_hash(config):
+        circ_cfg = {k: config.get(k, "__NONE__") for k in circuit_rel_entries}
+        return hashlib.md5(str(circ_cfg).encode("UTF-8")).hexdigest()
+
+    def _load_sim_and_circuit(path):
+        simulation = bluepy.Simulation(path)
+        circuit_hash = _calculate_hash(simulation.circuit.config)
+        return simulation, circuit_hash
+
+    def _func(x):
+        for index, path in x.etl.iter_named_items():
+            simulation, circuit_hash = _load_sim_and_circuit(path)
+            yield simulation, {**index._asdict(), "circuit_hash": circuit_hash}
+
+    data = sims.etl.remodel(_func)
+    circuits = {index.circuit_hash: sim.circuit for index, sim in data.etl.iter_named_items()}
+    return data, circuits
 
 
 def read_spikes(sim):
@@ -86,9 +92,9 @@ def make_bins(flat_locations, nbins=1000):
 
 def make_t_bins(sims, t_start=None, t_end=None, t_step=20.0):
     if t_start is None:
-        t_start = numpy.min(sims.map(lambda sim: sim.t_start).get())
+        t_start = numpy.min(sims.map(lambda sim: sim.t_start))
     if t_end is None:
-        t_end = numpy.max(sims.map(lambda sim: sim.t_end).get())
+        t_end = numpy.max(sims.map(lambda sim: sim.t_end))
     t_bins = numpy.arange(t_start, t_end + t_step, t_step)
     return t_bins
 
@@ -122,9 +128,9 @@ def save(Hs, t_bins, loc_bins, out_root):
     grp_bins.create_dataset("y", data=loc_bins[1])
 
     grp_data = h5.create_group("histograms")
-    for i, val in enumerate(Hs.get()):
+    for i, val in enumerate(Hs):
         grp_data.create_dataset("instance{0}".format(i), data=val)
-    mn_data = numpy.mean(numpy.stack(Hs.get(), -1), axis=-1)
+    mn_data = numpy.mean(numpy.stack(Hs, -1), axis=-1)
     grp_data.create_dataset("mean", data=mn_data)
     return mn_data
 
@@ -149,23 +155,26 @@ def plot(mn_hist, t_bins, loc_bins, out_root):
 
 
 def main():
+    logformat = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+    logging.basicConfig(level=logging.INFO, format=logformat)
+    np.random.seed(0)
+    etl.register_accessors()
     sims, cfg = parse_arguments()
-    out_fn = cfg.pop("output_root")
+    out_fn = sys.argv[3]
     data, circ_dict = initial_setup(sims)
 
     assert len(circ_dict) == 1, "Simulations must use the same circuit"
     circ = list(circ_dict.values())[0]
 
     # Specify in config to apply the analysis only to a subset of simulation conditions
-    for k, v in cfg.get("condition_filter", {}).items():
-        data = data.filter(**dict([(k, v)]))
+    data = data.etl.filter(**cfg.get("condition_filter", {}), drop_level=False)
     spikes = data.map(read_spikes)
 
     # time bins
     t_bins = make_t_bins(sims, cfg.get("t_start", None), cfg.get("t_end", None), cfg.get("t_step", 20.0))
 
     # Get neuron locations and bins
-    gids = numpy.unique(numpy.hstack(data.map(get_sim_gids).get()))
+    gids = numpy.unique(numpy.hstack(data.map(get_sim_gids)))
     locations = circ.cells.get(gids, ["x", "y", "z"])
     flat_locations = flatten_locations(locations, cfg["flatmap"])
     loc_bins = make_bins(flat_locations, cfg.get("nbins", 1000))

@@ -5,6 +5,8 @@ from pandas.testing import assert_series_equal
 
 from blueetl import etl
 
+etl.register_accessors()
+
 
 def _build_series():
     """Return a simple Series.

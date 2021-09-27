@@ -1,7 +1,9 @@
 [MESSAGES CONTROL]
-disable=bad-continuation,fixme,invalid-name,len-as-condition,no-else-return,line-too-long
+disable=bad-continuation,fixme,invalid-name,len-as-condition,no-else-return
 
 [FORMAT]
+# Regexp for a line that is allowed to be longer than the limit.
+ignore-long-lines=\bhttps?://\S
 # Maximum number of characters on a single line.
 max-line-length=100
 

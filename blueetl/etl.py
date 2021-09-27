@@ -1,3 +1,4 @@
+"""Pandas accessors."""
 import collections
 import logging
 
@@ -12,14 +13,18 @@ L = logging.getLogger(__name__)
 
 
 class ETLBaseAccessor:
+    """Base accessor."""
+
     def __init__(self, pandas_obj):
+        """Initialize the accessor."""
         self._validate(pandas_obj)
         self._obj = pandas_obj
 
     @staticmethod
     def _validate(obj):
-        assert isinstance(obj.index, pd.MultiIndex), "Only MultiIndexes are supported"
-        assert all(isinstance(n, str) for n in obj.index.names), "All the levels must have a name"
+        """Validate the wrapped object."""
+        assert all(obj.index.names), "All the index levels must have a name"
+        assert len(set(obj.index.names)) == obj.index.nlevels, "The level names must be unique"
 
     def conditions(self):
         """Names for each of the index levels."""
@@ -113,6 +118,8 @@ class ETLBaseAccessor:
 
 
 class ETLSeriesAccessor(ETLBaseAccessor):
+    """Series accessor."""
+
     def unpool(self, func):
         """Apply the given function to the object elements and add a condition to the index.
 
@@ -123,13 +130,13 @@ class ETLSeriesAccessor(ETLBaseAccessor):
         """
         return self._obj.apply(func).stack()
 
-    def merge(self, other):
-        # FIXME: to be removed if redundant
-        return pd.concat([self._obj, other.reindex_like(self._obj)])
-
-    def map(self, func):
-        # FIXME: to be removed if redundant
-        return self._obj.map(func)
+    # def merge(self, other):
+    #     # FIXME: to be removed if redundant
+    #     return pd.concat([self._obj, other.reindex_like(self._obj)])
+    #
+    # def map(self, func):
+    #     # FIXME: to be removed if redundant
+    #     return self._obj.map(func)
 
     def remodel(self, func):
         """Apply func and return a new Series.
@@ -152,7 +159,7 @@ class ETLSeriesAccessor(ETLBaseAccessor):
 
 
 class ETLDataFrameAccessor(ETLBaseAccessor):
-    pass
+    """DataFrame accessor."""
 
 
 def register_accessors():

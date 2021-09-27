@@ -277,3 +277,32 @@ def test_pool_with_func_returning_series():
             name="values",
         ),
     )
+
+
+def test_remodel():
+    def func(x):
+        for index, value in x.etl.iter_named_items():
+            yield value + 1000, {**index._asdict(), "i2": "e"}
+            yield value + 2000, {**index._asdict(), "i2": "f"}
+
+    s = _build_series()
+    result = s.etl.remodel(func)
+    assert_series_equal(
+        result,
+        pd.Series(
+            [1000, 2000, 1001, 2001, 1002, 2002, 1003, 2003],
+            index=pd.MultiIndex.from_tuples(
+                [
+                    ("a", "c", "e"),
+                    ("a", "c", "f"),
+                    ("a", "d", "e"),
+                    ("a", "d", "f"),
+                    ("b", "c", "e"),
+                    ("b", "c", "f"),
+                    ("b", "d", "e"),
+                    ("b", "d", "f"),
+                ],
+                names=["i0", "i1", "i2"],
+            ),
+        ),
+    )

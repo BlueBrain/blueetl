@@ -5,8 +5,8 @@ import sys
 
 from setuptools import setup, find_packages
 
-if sys.version_info < (3, 6):
-    sys.exit("Sorry, Python < 3.6 is not supported")
+if sys.version_info < (3, 7):
+    sys.exit("Sorry, Python < 3.7 is not supported")
 
 # read the contents of the README file
 with open("README.rst", encoding="utf-8") as f:
@@ -37,6 +37,8 @@ setup(
     install_requires=[
         "numpy>=1.19.4",
         "pandas>=1.2.5",
+        "pyyaml>=5.4.1",
+        "xarray>=0.18.0",
     ],
     packages=find_packages(),
     python_requires=">=3.7",

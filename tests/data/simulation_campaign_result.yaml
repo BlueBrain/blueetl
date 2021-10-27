@@ -1,0 +1,12 @@
+---
+name: dummy_name
+attrs:
+  k1: v1
+  k2: v2
+data:
+  - ca: 1.1
+    path: path1
+    seed: 1
+  - ca: 1.2
+    path: path2
+    seed: 1

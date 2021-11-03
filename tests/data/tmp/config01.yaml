@@ -1,6 +1,6 @@
 ---
 name: 0d36641c-2b97-4bcc-a7e1-170498dc40bc
-attrs:
+attrs:  # custom attributes
   path_prefix: "/gpfs/bbp.cscs.ch/project/proj83/scratch/bbp_workflow"
   blue_config_template: workflows/BlueConfig__SSCx_TC_PerLayerShotNoise__NoSomaReport.tmpl
   custom_user_targets:
@@ -53,52 +53,57 @@ attrs:
   bq: 2
   tau: 100
   circuit_config: "/gpfs/bbp.cscs.ch/project/proj83/circuits/Bio_M/20200805/CircuitConfig_TC"
-data:
+coords:  # parameters used to generate the simulations
+  __method__: product  # product or zip
+  rate_min: [0.05, 0.2, 0.5]
+  num_fibers_per_cluster: [1, 2, 3, 4]
+  seed: [628462]
+data:  # list of generated simulations
   - rate_min: 0.05
     num_fibers_per_cluster: 1
     seed: 628462
-    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/000
+    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/000/BlueConfig
   - rate_min: 0.05
     num_fibers_per_cluster: 2
     seed: 628462
-    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/001
+    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/001/BlueConfig
   - rate_min: 0.05
     num_fibers_per_cluster: 3
     seed: 628462
-    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/002
+    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/002/BlueConfig
   - rate_min: 0.05
     num_fibers_per_cluster: 4
     seed: 628462
-    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/003
+    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/003/BlueConfig
   - rate_min: 0.2
     num_fibers_per_cluster: 1
     seed: 628462
-    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/004
+    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/004/BlueConfig
   - rate_min: 0.2
     num_fibers_per_cluster: 2
     seed: 628462
-    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/005
+    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/005/BlueConfig
   - rate_min: 0.2
     num_fibers_per_cluster: 3
     seed: 628462
-    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/006
+    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/006/BlueConfig
   - rate_min: 0.2
     num_fibers_per_cluster: 4
     seed: 628462
-    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/007
+    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/007/BlueConfig
   - rate_min: 0.5
     num_fibers_per_cluster: 1
     seed: 628462
-    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/008
+    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/008/BlueConfig
   - rate_min: 0.5
     num_fibers_per_cluster: 2
     seed: 628462
-    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/009
+    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/009/BlueConfig
   - rate_min: 0.5
     num_fibers_per_cluster: 3
     seed: 628462
-    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/010
+    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/010/BlueConfig
   - rate_min: 0.5
     num_fibers_per_cluster: 4
     seed: 628462
-    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/011
+    path: 0d36641c-2b97-4bcc-a7e1-170498dc40bc/011/BlueConfig

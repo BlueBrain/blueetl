@@ -8,7 +8,7 @@ L = logging.getLogger(__name__)
 
 # Naming conventions
 #  level: number, or name of the level in the MultiIndex
-#  condition: name of the level (e.g. seed), similar to level but it cannot be numeric
+#  condition: name of the level (e.g. seed), similar to level, but it cannot be numeric
 #  labels: possible values for a specific level of the index
 
 
@@ -23,8 +23,8 @@ class ETLBaseAccessor:
     @staticmethod
     def _validate(obj):
         """Validate the wrapped object."""
-        assert all(obj.index.names), "All the index levels must have a name"
-        assert len(set(obj.index.names)) == obj.index.nlevels, "The level names must be unique"
+        # assert all(obj.index.names), "All the index levels must have a name"
+        # assert len(set(obj.index.names)) == obj.index.nlevels, "The level names must be unique"
 
     def conditions(self):
         """Names for each of the index levels."""
@@ -82,8 +82,8 @@ class ETLBaseAccessor:
             result = result.reorder_levels(list(range(1, result.index.nlevels)) + [0])
         return result
 
-    def filter(self, drop_level=True, **kwargs):
-        """Filter the dataframe based on some conditions on the index.
+    def select(self, drop_level=True, **kwargs):
+        """Filter the series or dataframe based on some conditions on the index.
 
         Args:
             drop_level (bool): True to drop the conditions from the returned object.
@@ -94,6 +94,20 @@ class ETLBaseAccessor:
         labels, values = zip(*kwargs.items())
         return self._obj.xs(level=labels, key=values, drop_level=drop_level, axis=0)
 
+    filter = select  # deprecated, to be removed
+
+    def select_one(self, drop_level=True, **kwargs):
+        return self.select(drop_level=drop_level, **kwargs).iat[0]
+
+    def groupby_excluding(self, conditions, *args, **kwargs):
+        """Group by all the conditions except for the ones specified.
+
+        Args:
+            conditions: single condition or list of conditions to be excluded from the groupby
+        """
+        complementary_conditions = self.complementary_conditions(conditions)
+        return self._obj.groupby(complementary_conditions, *args, **kwargs)
+
     def pool(self, conditions, func):
         """Remove one or more conditions grouping by the remaining conditions.
 
@@ -103,18 +117,20 @@ class ETLBaseAccessor:
                 If the returned value is a Series, it will be used as an additional level
                 in the MultiIndex of the returned object.
         """
-        complementary_conditions = self.complementary_conditions(conditions)
-        return self._obj.groupby(complementary_conditions).apply(func)
+        return self.groupby_excluding(conditions).apply(func)
 
     def iter_named_index(self):
         """Iterate over the index, yielding a namedtuple for each element.
 
         It can be used as an alternative to the pandas iteration over the index
         to yield named tuples instead of standard tuples.
+
+        It works with both Indexes and MultiIndexes.
         """
-        IndexNames = collections.namedtuple("IndexNames", self._obj.index.names, rename=True)
+        names = self._obj.index.names
+        IndexNames = collections.namedtuple("IndexNames", names, rename=True)
         for i in self._obj.index:
-            yield IndexNames(*i)
+            yield IndexNames(*i if len(names) > 1 else i)
 
 
 class ETLSeriesAccessor(ETLBaseAccessor):
@@ -154,12 +170,46 @@ class ETLSeriesAccessor(ETLBaseAccessor):
         """Iterate over the items, yielding a tuple (named_index, value) for each element.
 
         The returned named_index is a namedtuple representing the value of the index.
+        The returned value is the actual value of each element of the series.
         """
-        return zip(self._obj.etl.iter_named_index(), iter(self._obj))
+        return zip(self.iter_named_index(), iter(self._obj))
 
 
 class ETLDataFrameAccessor(ETLBaseAccessor):
     """DataFrame accessor."""
+
+    def iter_named_items(self):
+        """Iterate over the items, yielding a tuple (named_index, value) for each element.
+
+        The returned named_index is a namedtuple representing the value of the index.
+        The returned value is a namedtuple as returned by pandas.DataFrame.itertuples.
+        """
+        return zip(self.iter_named_index(), self._obj.itertuples(index=False))
+
+    def query_dict(self, query):
+        """Given a query dictionary, return the filtered DataFrame.
+
+        This method is similar to pd.DataFrame.query, but it accepts a dict instead of a string.
+
+        Args:
+            query (dict): query given as a string or dict.
+                Examples:
+                    {"mtype": "SO_BP", "etype": "cNAC"}
+                    {"mtype": ["SO_BP", "SP_AA"]}
+        """
+        # if the query is empty, return the original dataframe
+        if not query:
+            return self._obj
+        # ensure that all the values are lists
+        query = {k: v if isinstance(v, list) else [v] for k, v in query.items()}
+        return self._obj[self._obj[list(query)].isin(query).all("columns")]
+
+    def query_params(self, **params):
+        """Given some query parameters, return the filtered DataFrame.
+
+        See `query_dict` for more information.
+        """
+        return self.query_dict(params)
 
 
 def register_accessors():

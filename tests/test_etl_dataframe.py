@@ -297,3 +297,19 @@ def test_pool_with_func_returning_series_with_different_shape():
             index=pd.Index(["a", "b"], name="i0"),
         ),
     )
+
+
+@pytest.mark.parametrize(
+    "query,expected_index",
+    [
+        ({"v0": 0}, [("a", "c")]),
+        ({"v0": 1, "v1": 5}, [("a", "d")]),
+        ({"v0": 1, "v1": 8}, []),
+        ({"v0": [1, 2]}, [("a", "d"), ("b", "c")]),
+        ({"v0": [1, 2], "v1": [6, 7]}, [("b", "c")]),
+    ],
+)
+def test_query_dict(query, expected_index):
+    df = _build_dataframe()
+    result = df.etl.query_dict(query)
+    assert_array_equal(result.index.to_list(), expected_index)

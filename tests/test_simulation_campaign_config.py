@@ -4,14 +4,14 @@ import pandas as pd
 import xarray as xr
 import yaml
 
-from blueetl.simulation_campaign.config import SimulationCampaignResult
+from blueetl.config.simulations import SimulationsConfig
 
 TEST_DATA_PATH = Path(__file__).parent / "data"
 
 
 def _get_simulation_campaign_result():
-    """Return a SimulationCampaignResult instance."""
-    return SimulationCampaignResult(
+    """Return a SimulationsConfig instance."""
+    return SimulationsConfig(
         name="dummy_name",
         attrs={"k1": "v1", "k2": "v2"},
         data=[
@@ -55,8 +55,8 @@ def _get_xarray():
 
 
 def test_simulation_campaign_result_load():
-    result = SimulationCampaignResult.load(TEST_DATA_PATH / "simulation_campaign_result.yaml")
-    assert isinstance(result, SimulationCampaignResult)
+    result = SimulationsConfig.load(TEST_DATA_PATH / "simulation_campaign_result.yaml")
+    assert isinstance(result, SimulationsConfig)
     assert result.name == "dummy_name"
     assert result.attrs == {"k1": "v1", "k2": "v2"}
     assert result.data == [
@@ -67,8 +67,8 @@ def test_simulation_campaign_result_load():
 
 def test_simulation_campaign_result_from_dict():
     d = _get_dict()
-    result = SimulationCampaignResult.from_dict(d)
-    assert isinstance(result, SimulationCampaignResult)
+    result = SimulationsConfig.from_dict(d)
+    assert isinstance(result, SimulationsConfig)
     assert result.name == d["name"]
     assert result.attrs == d["attrs"]
     assert result.data == d["data"]
@@ -76,8 +76,8 @@ def test_simulation_campaign_result_from_dict():
 
 def test_simulation_campaign_result_from_pandas():
     s = _get_pandas()
-    result = SimulationCampaignResult.from_pandas(s)
-    assert isinstance(result, SimulationCampaignResult)
+    result = SimulationsConfig.from_pandas(s)
+    assert isinstance(result, SimulationsConfig)
     assert result.name == s.name
     assert result.attrs == s.attrs
     assert result.data == [
@@ -88,8 +88,8 @@ def test_simulation_campaign_result_from_pandas():
 
 def test_simulation_campaign_result_from_xarray():
     da = _get_xarray()
-    result = SimulationCampaignResult.from_xarray(da)
-    assert isinstance(result, SimulationCampaignResult)
+    result = SimulationsConfig.from_xarray(da)
+    assert isinstance(result, SimulationsConfig)
     assert result.name == da.name
     assert result.attrs == da.attrs
     assert result.data == [

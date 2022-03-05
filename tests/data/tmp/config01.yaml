@@ -1,6 +1,11 @@
 ---
 name: 0d36641c-2b97-4bcc-a7e1-170498dc40bc
 attrs:  # custom attributes
+  parameters: # parameters used to generate the simulations
+    __method__: product  # product or zip
+    rate_min: [ 0.05, 0.2, 0.5 ]
+    num_fibers_per_cluster: [ 1, 2, 3, 4 ]
+    seed: [ 628462 ]
   path_prefix: "/gpfs/bbp.cscs.ch/project/proj83/scratch/bbp_workflow"
   blue_config_template: workflows/BlueConfig__SSCx_TC_PerLayerShotNoise__NoSomaReport.tmpl
   custom_user_targets:
@@ -53,11 +58,6 @@ attrs:  # custom attributes
   bq: 2
   tau: 100
   circuit_config: "/gpfs/bbp.cscs.ch/project/proj83/circuits/Bio_M/20200805/CircuitConfig_TC"
-coords:  # parameters used to generate the simulations
-  __method__: product  # product or zip
-  rate_min: [0.05, 0.2, 0.5]
-  num_fibers_per_cluster: [1, 2, 3, 4]
-  seed: [628462]
 data:  # list of generated simulations
   - rate_min: 0.05
     num_fibers_per_cluster: 1

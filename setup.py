@@ -1,12 +1,7 @@
 #!/usr/bin/env python
-
 import importlib.util
-import sys
 
-from setuptools import setup, find_packages
-
-if sys.version_info < (3, 7):
-    sys.exit("Sorry, Python < 3.7 is not supported")
+from setuptools import find_packages, setup
 
 # read the contents of the README file
 with open("README.rst", encoding="utf-8") as f:
@@ -38,7 +33,9 @@ setup(
         "numpy>=1.19.4",
         "pandas>=1.2.5",
         "pyyaml>=5.4.1",
+        "tables>=3.6.1",  # needed by pandas to read hdf files
         "xarray>=0.18.0",
+        "bluepy>=2.4",
     ],
     packages=find_packages(),
     python_requires=">=3.7",
@@ -49,7 +46,6 @@ setup(
             "progressbar>=2.5",  # needed by simProjectAnalysis
             "interval>=1.0.0",  # to avoid a DependencyWarning in NeuroTools
         ],
-        "xarray": ["xarray>=0.19.0"],
     },
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",

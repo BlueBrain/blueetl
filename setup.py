@@ -33,7 +33,8 @@ setup(
         "numpy>=1.19.4",
         "pandas>=1.2.5",
         "pyyaml>=5.4.1",
-        "tables>=3.6.1",  # needed by pandas to read hdf files
+        "tables>=3.6.1",  # needed by pandas to read and write hdf files
+        "pyarrow>=7",  # needed by pandas to read and write feather or parquet files
         "xarray>=0.18.0",
         "bluepy>=2.4",
     ],

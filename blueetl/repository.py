@@ -1,19 +1,29 @@
 import json
 import logging
+from typing import Any, Dict, Type
 
+from blueetl.config.simulations import SimulationsConfig
 from blueetl.extract.neurons import Neurons
 from blueetl.extract.simulations import Simulations
 from blueetl.extract.spikes import Spikes
-from blueetl.store.hdf import HDFStore
+from blueetl.store.base import BaseStore
+from blueetl.store.parquet import ParquetStore as DefaultStore
 
 L = logging.getLogger(__name__)
 
 
 class Repository:
-    def __init__(self, simulations_config, extraction_config, cache_dir, use_cache=False):
+    def __init__(
+        self,
+        simulations_config: SimulationsConfig,
+        extraction_config: Dict[str, Any],
+        cache_dir,
+        use_cache: bool = False,
+        store_class: Type[BaseStore] = DefaultStore,
+    ) -> None:
         self.extraction_config = extraction_config
         self.simulations_config = simulations_config
-        self.store = HDFStore(cache_dir)
+        self.store = store_class(cache_dir)
         self.use_cache = use_cache
         self.simulations = None
         self.neurons = None

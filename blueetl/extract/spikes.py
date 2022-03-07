@@ -24,11 +24,6 @@ class Spikes:
     def df(self):
         return self._df
 
-    # @classmethod
-    # def _dump_interval(cls, i):
-    #     """Convert a pd.Interval to a simplified string that can be saved to hdf."""
-    #     return f"{i.left}_{i.right}"
-
     @classmethod
     def _assign_window(cls, df, bins, labels: List[str]):
         df = df.copy()
@@ -56,7 +51,6 @@ class Spikes:
             interval_index_from_tuples = partial(
                 pd.IntervalIndex.from_tuples, closed="left", name=WINDOW
             )
-            # windows = [tuple(w) for w in windows]
             bins = interval_index_from_tuples(list(windows.values()))
             labels = list(windows.keys())
             if not bins.is_overlapping:
@@ -105,8 +99,7 @@ class Spikes:
 
     def to_pandas(self):
         """Dump spikes to a dataframe that can be serialized and stored."""
-        # Prevent error: Cannot store a category dtype in a HDF5 dataset that uses format="fixed"
-        return self.df.astype({NEURON_CLASS: object, WINDOW: object})
+        return self.df
 
     def as_series(self):
         columns = [SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS, WINDOW, GID]

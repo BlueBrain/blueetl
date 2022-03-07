@@ -9,7 +9,6 @@ CIRCUIT_ID = "circuit_id"
 CIRCUIT = "circuit"
 NEURON_CLASS = "neuron_class"
 WINDOW = "window"
-COUNT = "count"
 
 DTYPES = {
     GID: np.int64,

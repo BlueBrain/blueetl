@@ -4,15 +4,7 @@ from itertools import chain
 import numpy as np
 import pandas as pd
 
-from blueetl.constants import (
-    CIRCUIT,
-    CIRCUIT_ID,
-    COUNT,
-    GID,
-    NEURON_CLASS,
-    SIMULATION,
-    SIMULATION_ID,
-)
+from blueetl.constants import CIRCUIT, CIRCUIT_ID, GID, NEURON_CLASS
 from blueetl.utils import ensure_dtypes, timed
 
 L = logging.getLogger(__name__)
@@ -77,8 +69,7 @@ class Neurons:
 
     def to_pandas(self):
         """Dump neurons to a dataframe that can be serialized and stored."""
-        # Prevent error: Cannot store a category dtype in a HDF5 dataset that uses format="fixed"
-        return self.df.astype({NEURON_CLASS: object})
+        return self.df
 
     def as_series(self):
         columns = [CIRCUIT_ID, NEURON_CLASS]

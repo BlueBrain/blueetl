@@ -1,10 +1,10 @@
 import hashlib
 import json
 import logging
-from typing import List
+from typing import Dict, List
 
 import pandas as pd
-from bluepy import Simulation
+from bluepy import Circuit, Simulation
 
 from blueetl.constants import CIRCUIT, CIRCUIT_ID, SIMULATION, SIMULATION_ID, SIMULATION_PATH
 from blueetl.utils import ensure_dtypes
@@ -51,8 +51,8 @@ class Simulations:
     @classmethod
     def from_paths(cls, simulation_paths: List[str]):
         """Return a dataframe of simulations from a list of simulation paths."""
-        circuit_hashes = {}  # map circuit_hash -> circuit_id
-        circuits = {}  # map circuit_id -> circuit
+        circuit_hashes: Dict[str, int] = {}  # map circuit_hash -> circuit_id
+        circuits: Dict[int, Circuit] = {}  # map circuit_id -> circuit
         records = []
         for simulation_id, simulation_path in enumerate(simulation_paths):
             simulation = Simulation(simulation_path)

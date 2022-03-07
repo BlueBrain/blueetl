@@ -10,27 +10,20 @@ from blueetl.utils import timed
 L = logging.getLogger(__name__)
 
 
-def _category_to_object(df):
-    # Prevent error: Cannot store a category dtype in a HDF5 dataset that uses format="fixed"
-    return df.astype({name: "object" for name in df.columns[df.dtypes == "category"]})
-
-
-class HDFStore(BaseStore):
+class ParquetStore(BaseStore):
     def _get_path(self, name: str) -> Path:
-        return self.basedir / f"{name}.h5"
+        return self.basedir / f"{name}.parquet"
 
     def dump(self, df: pd.DataFrame, name: str) -> None:
         path = self._get_path(name)
         with timed(L.info, "Writing %s to %s", name, path):
-            df = _category_to_object(df)
-            df.to_hdf(
-                path,
-                key=name,
-                mode="w",
-                # complib="blosc",
-                # complevel=9,
-                # format="fixed",
-                # format="table",
+            df.to_parquet(
+                path=path,
+                # engine="auto",
+                # compression="snappy",
+                # index=None,
+                # partition_cols=None,
+                # storage_options=None,
             )
 
     def load(self, name: str) -> Optional[pd.DataFrame]:
@@ -38,4 +31,10 @@ class HDFStore(BaseStore):
         if not path.exists():
             return None
         with timed(L.info, "Reading %s from %s", name, path):
-            return pd.read_hdf(path, key=name)
+            return pd.read_parquet(
+                path=path,
+                # engine="auto",
+                # columns=None,
+                # storage_options=None,
+                # use_nullable_dtypes=False,
+            )

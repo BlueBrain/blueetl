@@ -6,7 +6,7 @@ from scipy.ndimage import gaussian_filter
 
 from blueetl import etl
 from blueetl.config.simulations import SimulationsConfig
-from blueetl.constants import CIRCUIT_ID, GID, NEURON_CLASS, SIMULATION_ID, TIME, WINDOW, COUNT
+from blueetl.constants import CIRCUIT_ID, GID, NEURON_CLASS, TIME, WINDOW
 from blueetl.repository import Repository
 from blueetl.utils import load_yaml
 

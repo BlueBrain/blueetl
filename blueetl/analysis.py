@@ -5,7 +5,6 @@ import pandas as pd
 
 from blueetl import etl
 from blueetl.config.simulations import SimulationsConfig
-from blueetl.constants import CIRCUIT_ID, GID, NEURON_CLASS, WINDOW
 from blueetl.repository import Repository
 from blueetl.utils import load_yaml, import_by_string
 
@@ -26,7 +25,7 @@ class Analyzer:
         self.repo.extract()
         self.repo.print()
 
-    def _get_window_limits(self, window):
+    def get_window_limits(self, window):
         return self.analysis_config["extraction"]["windows"][window]
 
     def calculate_features_by_gid(self):
@@ -37,17 +36,7 @@ class Analyzer:
             for feature_collection in feature_collections:
                 func = import_by_string(feature_collection["function"])
                 params = feature_collection.get("params", {})
-                record.update(
-                    func(
-                        analysis=self,
-                        circuit_id=record[CIRCUIT_ID],
-                        neuron_class=record[NEURON_CLASS],
-                        window=record[WINDOW],
-                        gid=record[GID],
-                        df=df,
-                        params=params,
-                    )
-                )
+                record.update(func(analysis=self, key=key, df=df, params=params))
             records.append(record)
         # in the returned df, the type of `neuron_class` and `window` is `object`
         return pd.DataFrame(records)
@@ -60,16 +49,7 @@ class Analyzer:
             for feature_collection in feature_collections:
                 func = import_by_string(feature_collection["function"])
                 params = feature_collection.get("params", {})
-                record.update(
-                    func(
-                        analysis=self,
-                        circuit_id=record[CIRCUIT_ID],
-                        neuron_class=record[NEURON_CLASS],
-                        window=record[WINDOW],
-                        df=df,
-                        params=params,
-                    )
-                )
+                record.update(func(analysis=self, key=key, df=df, params=params))
             records.append(record)
         # in the returned df, the type of `neuron_class` and `window` is `object`
         return pd.DataFrame(records)

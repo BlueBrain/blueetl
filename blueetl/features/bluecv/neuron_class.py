@@ -13,8 +13,8 @@ from blueetl.constants import GID, TIME
 L = logging.getLogger(__name__)
 
 
-def calculate_features_by_neuron_class(analysis, circuit_id, neuron_class, window, df, params):
-    t_start, t_stop = analysis._get_window_limits(window)
+def calculate_features_by_neuron_class(analysis, key, df, params):
+    t_start, t_stop = analysis.get_window_limits(key.window)
     # create an array containing multiple arrays of spikes, one for each gid
     spiketrains = df.groupby([GID])[TIME].apply(np.array).to_numpy()
     ST = to_spiketrains(spiketrains, t_start, t_stop)

@@ -9,8 +9,8 @@ from blueetl.constants import TIME
 L = logging.getLogger(__name__)
 
 
-def calculate_features_by_gid(analysis, circuit_id, neuron_class, window, gid, df, params):
-    t_start, t_stop = analysis._get_window_limits(window)
+def calculate_features_by_gid(analysis, key, df, params):
+    t_start, t_stop = analysis.get_window_limits(key.window)
     spiketrain = df[TIME].to_numpy()
     functions = {
         "MFR": partial(get_MFR, spiketrain, t_start=t_start, t_stop=t_stop),

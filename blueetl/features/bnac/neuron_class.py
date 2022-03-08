@@ -9,10 +9,10 @@ from blueetl.constants import GID, TIME
 L = logging.getLogger(__name__)
 
 
-def get_initial_spiking_stats(analysis, circuit_id, neuron_class, window, df, params):
+def get_initial_spiking_stats(analysis, key, df, params):
     # assuming number_of_trials = 1
     neurons = analysis.repo.neurons.df.etl.query_params(
-        circuit_id=circuit_id, neuron_class=neuron_class
+        circuit_id=key.circuit_id, neuron_class=key.neuron_class
     )
     # first spike times
     first_spikes = df.groupby(GID).min().reset_index()
@@ -23,7 +23,7 @@ def get_initial_spiking_stats(analysis, circuit_id, neuron_class, window, df, pa
     # spike counts using 0 for missing neurons
     spike_counts_all = pd.merge(neurons, spike_counts, how="left")[TIME].fillna(0).to_numpy()
 
-    t_start, t_stop = analysis._get_window_limits(window)
+    t_start, t_stop = analysis.get_window_limits(key.window)
     mean_firing_rates_per_second = spike_counts_all * 1000.0 / (t_stop - t_start)
     return {
         "first_spike_time_means_cort_zeroed_by_cell": first_spikes_all,
@@ -43,15 +43,15 @@ def get_initial_spiking_stats(analysis, circuit_id, neuron_class, window, df, pa
     }
 
 
-def get_histogram_features(analysis, circuit_id, neuron_class, window, df, params):
+def get_histogram_features(analysis, key, df, params):
     number_of_trials = analysis.analysis_config.get("number_of_trials", 1)
     times = df[TIME]
-    t_start, t_stop = analysis._get_window_limits(window)
+    t_start, t_stop = analysis.get_window_limits(key.window)
     hist, _ = np.histogram(times, range=[t_start, t_stop], bins=t_stop - t_start)
     num_target_cells = len(
         analysis.repo.neurons.df.etl.query_params(
-            circuit_id=circuit_id,
-            neuron_class=neuron_class,
+            circuit_id=key.circuit_id,
+            neuron_class=key.neuron_class,
         )
     )
     hist = hist / (num_target_cells * number_of_trials)

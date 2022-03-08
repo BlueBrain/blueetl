@@ -2,9 +2,12 @@ import logging
 
 import numpy as np
 import pandas as pd
+from elephant.conversion import BinnedSpikeTrain
+from neo import SpikeTrain
+from quantities import ms
 from scipy.ndimage import gaussian_filter
 
-from blueetl import etl
+from blueetl import etl, features
 from blueetl.config.simulations import SimulationsConfig
 from blueetl.constants import CIRCUIT_ID, GID, NEURON_CLASS, TIME, WINDOW
 from blueetl.repository import Repository
@@ -27,9 +30,12 @@ class Analyzer:
         self.repo.extract()
         self.repo.print()
 
+    def _get_window_limits(self, window):
+        return self.analysis_config["extraction"]["windows"][window]
+
     def calculate_features(self):
         records = []
-        for key, df in self.repo.spikes.grouped():
+        for key, df in self.repo.spikes.grouped_by_neuron_class():
             record = key._asdict()
             record.update(
                 self._get_initial_spiking_stats(
@@ -65,9 +71,8 @@ class Analyzer:
         # spike counts using 0 for missing neurons
         spike_counts_all = pd.merge(neurons, spike_counts, how="left")[TIME].fillna(0).to_numpy()
 
-        window_limits = self.analysis_config["extraction"]["windows"][window]
-        window_duration = window_limits[1] - window_limits[0]
-        mean_firing_rates_per_second = spike_counts_all * 1000.0 / window_duration
+        t_start, t_stop = self._get_window_limits(window)
+        mean_firing_rates_per_second = spike_counts_all * 1000.0 / (t_stop - t_start)
         return {
             "first_spike_time_means_cort_zeroed_by_cell": first_spikes_all,
             "first_spike_time_means_cort_zeroed": first_spikes,
@@ -87,9 +92,8 @@ class Analyzer:
 
     def _get_histogram_features(self, circuit_id, neuron_class, window, times):
         number_of_trials = self.analysis_config.get("number_of_trials", 1)
-        window_limits = self.analysis_config["extraction"]["windows"][window]
-        window_duration = window_limits[1] - window_limits[0]
-        hist, _ = np.histogram(times, range=window_limits, bins=window_duration)
+        t_start, t_stop = self._get_window_limits(window)
+        hist, _ = np.histogram(times, range=[t_start, t_stop], bins=t_stop - t_start)
         num_target_cells = len(
             self.repo.neurons.df.etl.query_params(
                 circuit_id=circuit_id,
@@ -114,6 +118,72 @@ class Analyzer:
             "smoothed_3ms_spike_times_max_normalised_hist_1ms_bin": norm_smoothed_hist,
         }
 
+    def calculate_features_by_gid(self):
+        records = []
+        for key, df in self.repo.spikes.grouped_by_gid():
+            record = key._asdict()
+            record.update(
+                self._get_bluecv_features_by_gid(
+                    circuit_id=record[CIRCUIT_ID],
+                    neuron_class=record[NEURON_CLASS],
+                    window=record[WINDOW],
+                    gid=record[GID],
+                    df=df,
+                )
+            )
+            records.append(record)
+        # in the returned df, the type of `neuron_class` and `window` is `object`
+        return pd.DataFrame(records)
+
+    def _get_bluecv_features_by_gid(self, circuit_id, neuron_class, window, gid, df):
+        t_start, t_stop = self._get_window_limits(window)
+        spiketrain = df[TIME].to_numpy()
+        return {
+            "MFR": features.get_MFR(spiketrain, t_start=t_start, t_stop=t_stop),
+            "ISI": features.get_ISI(spiketrain),
+            "CV": features.get_CV(spiketrain),
+            "LV": features.get_LV(spiketrain),
+            "latency": features.get_latency(spiketrain, t_start=t_start),
+            "spike_count": features.get_spike_count(spiketrain),
+        }
+
+    def calculate_features_by_neuron_class(self):
+        records = []
+        for key, df in self.repo.spikes.grouped_by_neuron_class():
+            record = key._asdict()
+            record.update(
+                self._get_bluecv_features_by_neuron_class(
+                    circuit_id=record[CIRCUIT_ID],
+                    neuron_class=record[NEURON_CLASS],
+                    window=record[WINDOW],
+                    df=df,
+                )
+            )
+            records.append(record)
+        # in the returned df, the type of `neuron_class` and `window` is `object`
+        return pd.DataFrame(records)
+
+    def _get_bluecv_features_by_neuron_class(self, circuit_id, neuron_class, window, df):
+        t_start, t_stop = self._get_window_limits(window)
+        # create an array containing multiple arrays of spikes, one for each gid
+        spiketrains = df.groupby([GID])[TIME].apply(np.array).to_numpy()
+        ST = to_spiketrains(spiketrains, t_start, t_stop)
+        BST = to_binned_spiketrain(ST)
+        return {
+            "PSD": features.get_PSD(spiketrains, n_segments=2),
+            "AC": features.get_AC(BST),
+            "CPDF": features.get_CPDF(ST, bin_size=20),
+            "PSTH": features.get_PSTH(spiketrains, t_start=t_start, t_stop=t_stop, bin_size=10),
+        }
+
+
+def to_spiketrains(data, t_start, t_end):
+    return [SpikeTrain(spiketrain * ms, t_start=t_start, t_stop=t_end) for spiketrain in data]
+
+
+def to_binned_spiketrain(ST, bin_size=5 * ms):
+    return BinnedSpikeTrain(ST, bin_size=bin_size)
+
 
 def main():
     loglevel = logging.INFO
@@ -121,7 +191,8 @@ def main():
     logging.basicConfig(format=logformat, level=loglevel)
     np.random.seed(0)
     etl.register_accessors()
-    analysis_config = load_yaml("./tests/data/tmp/analysis_config_01.yaml")
+    # analysis_config = load_yaml("./tests/data/tmp/analysis_config_01.yaml")
+    analysis_config = load_yaml("./tests/data/tmp/analysis_config_02.yaml")
     a = Analyzer(analysis_config, use_cache=True)
     a.initialize()
     features = a.calculate_features()

@@ -13,7 +13,7 @@ L = logging.getLogger(__name__)
 class Neurons:
     def __init__(self, df: pd.DataFrame):
         assert set(df.columns) == {CIRCUIT_ID, NEURON_CLASS, GID}
-        self._df = ensure_dtypes(df)
+        self._df: pd.DataFrame = ensure_dtypes(df)
         # FIXME: do we need to ensure that the neurons are sorted?
         self._df = self._df.sort_values([CIRCUIT_ID, NEURON_CLASS, GID], ignore_index=True)
 
@@ -75,6 +75,6 @@ class Neurons:
         columns = [CIRCUIT_ID, NEURON_CLASS]
         return self.df.set_index(columns)[GID]
 
-    def count_by_class(self):
+    def count_by_neuron_class(self):
         """Return the number of gids for each circuit and neuron class."""
         return self.df.groupby([CIRCUIT_ID, NEURON_CLASS])[GID].count()

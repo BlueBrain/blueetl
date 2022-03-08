@@ -30,6 +30,6 @@ def dump_yaml(filepath, data):
         yaml.safe_dump(data, stream=f)
 
 
-def ensure_dtypes(df: pd.DataFrame):
+def ensure_dtypes(df: pd.DataFrame) -> pd.DataFrame:
     """Return a DataFrame with the columns cast to the predefined types."""
     return df.astype({k: DTYPES[k] for k in df.columns if k in DTYPES})

@@ -26,9 +26,9 @@ class SimulationsConfig:
                 - parameters identifying the simulation (for example: seed, ca...).
                   The value of each coordinate needs to be the single value used in this simulation.
         """
-        self.name = name
-        self.attrs = attrs
-        self.data = data
+        self.name = name or ""
+        self.attrs = attrs or {}
+        self.data = data or []
         self._resolve_paths()
 
     def _resolve_paths(self):

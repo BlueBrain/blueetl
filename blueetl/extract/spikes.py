@@ -14,7 +14,7 @@ L = logging.getLogger(__name__)
 class Spikes:
     def __init__(self, df: pd.DataFrame):
         assert set(df.columns) == {TIME, GID, WINDOW, SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS}
-        self._df = ensure_dtypes(df)
+        self._df: pd.DataFrame = ensure_dtypes(df)
         # FIXME: do we need to ensure that the neurons or times are sorted?
         # self._df = self._df.sort_values(
         #     [SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS, WINDOW, GID, TIME], ignore_index=True
@@ -105,7 +105,7 @@ class Spikes:
         columns = [SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS, WINDOW, GID]
         return self.df.set_index(columns)[TIME]
 
-    def grouped(self):
+    def grouped_by_neuron_class(self):
         """Group the dataframe by some columns and yield each record as a tuple (key, df).
 
         Group by columns: SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS, WINDOW
@@ -113,9 +113,20 @@ class Spikes:
         Yields:
             a tuple (key, df), where key is a namedtuple with the grouped columns
         """
-        groupby_columns = [SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS, WINDOW]
-        grouped = self.df.groupby(groupby_columns, sort=False, observed=True)
-        grouped = grouped[[TIME, GID]]
-        RecordKey = collections.namedtuple("RecordKey", groupby_columns)
-        for key, df in grouped:
-            yield RecordKey(*key), df
+        yield from self.df.etl.grouped_by(
+            groupby_columns=[SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS, WINDOW],
+            selected_columns=[TIME, GID],
+        )
+
+    def grouped_by_gid(self):
+        """Group the dataframe by some columns and yield each record as a tuple (key, df).
+
+        Group by columns: SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS, WINDOW, GID
+
+        Yields:
+            a tuple (key, df), where key is a namedtuple with the grouped columns
+        """
+        yield from self.df.etl.grouped_by(
+            groupby_columns=[SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS, WINDOW, GID],
+            selected_columns=[TIME],
+        )

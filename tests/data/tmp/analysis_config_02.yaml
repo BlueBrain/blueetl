@@ -1,0 +1,33 @@
+---
+simulation_campaign: "tests/data/tmp/simulation_campaign_02.yaml"
+output: "analysis_dir_bluecv"
+extraction:
+  neuron_classes:
+    "L3_EXC": { "layer": [ 3 ], "synapse_class": [ "EXC" ] }
+    "L4_EXC": { "layer": [ 4 ], "synapse_class": [ "EXC" ] }
+    "L3_INH": { "layer": [ 3 ], "synapse_class": [ "INH" ] }
+    "L4_INH": { "layer": [ 4 ], "synapse_class": [ "INH" ] }
+  limit: null
+  target: "hex0"
+  windows:
+    "w1": [ 3800, 4000 ]
+    "w2": [ 4800, 5000 ]
+    "w3": [ 5800, 6000 ]
+    "w4": [ 4000, 4200 ]
+    "w5": [ 5000, 5200 ]
+    "w6": [ 6000, 6200 ]
+analysis:
+  features:
+    gid:
+      MFR:
+      latency:
+      ISI:
+      CV:
+      spike_count:
+    neuron_class:
+      PSTH:
+        bin_size: 10
+      PSD:
+    comparison:
+      VR:
+      VP:

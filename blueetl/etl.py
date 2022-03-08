@@ -211,6 +211,18 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
         """
         return self.query_dict(params)
 
+    def grouped_by(self, groupby_columns, selected_columns, sort=True, observed=True):
+        """Group the dataframe by some columns and yield each record as a tuple (key, df).
+
+        Yields:
+            a tuple (key, df), where key is a namedtuple with the grouped columns
+        """
+        grouped = self._obj.groupby(groupby_columns, sort=sort, observed=observed)
+        grouped = grouped[selected_columns]
+        RecordKey = collections.namedtuple("RecordKey", groupby_columns)
+        for key, df in grouped:
+            yield RecordKey(*key), df
+
 
 def register_accessors():
     """Register the accessors.

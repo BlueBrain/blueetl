@@ -22,7 +22,7 @@ class Simulations:
                 index: simulation coordinates
         """
         assert set(df.columns) == {SIMULATION_PATH, SIMULATION_ID, CIRCUIT_ID, SIMULATION, CIRCUIT}
-        self._df = ensure_dtypes(df)
+        self._df: pd.DataFrame = ensure_dtypes(df)
 
     @property
     def df(self):

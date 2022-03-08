@@ -20,15 +20,16 @@ def calculate_features_by_neuron_class(analysis, circuit_id, neuron_class, windo
     ST = to_spiketrains(spiketrains, t_start, t_stop)
     BST = to_binned_spiketrain(ST)
     functions = {
-        "PSD": partial(get_PSD, spiketrains, n_segments=2),
+        "PSD": partial(get_PSD, spiketrains),
         "AC": partial(get_AC, BST),
-        "CPDF": partial(get_CPDF, ST, bin_size=20),
-        "PSTH": partial(get_PSTH, spiketrains, t_start=t_start, t_stop=t_stop, bin_size=10),
+        "CPDF": partial(get_CPDF, ST),
+        "PSTH": partial(get_PSTH, spiketrains, t_start=t_start, t_stop=t_stop),
     }
     result = {}
     for feature_name, feature_config in params.items():
         if feature_config["enabled"]:
-            result[feature_name] = functions[feature_name](**feature_config.get("params", {}))
+            feature_params = feature_config.get("params", {})
+            result[feature_name] = functions[feature_name](**feature_params)
     return result
 
 

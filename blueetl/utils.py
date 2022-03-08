@@ -1,5 +1,6 @@
 import time
 from contextlib import contextmanager
+from importlib import import_module
 
 import pandas as pd
 import yaml
@@ -33,3 +34,8 @@ def dump_yaml(filepath, data):
 def ensure_dtypes(df: pd.DataFrame) -> pd.DataFrame:
     """Return a DataFrame with the columns cast to the predefined types."""
     return df.astype({k: DTYPES[k] for k in df.columns if k in DTYPES})
+
+
+def import_by_string(full_name):
+    module_name, _, func_name = full_name.rpartition(".")
+    return getattr(import_module(module_name), func_name)

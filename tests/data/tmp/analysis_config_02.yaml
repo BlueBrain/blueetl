@@ -19,15 +19,31 @@ extraction:
 analysis:
   features:
     gid:
-      MFR:
-      latency:
-      ISI:
-      CV:
-      spike_count:
+      - function: blueetl.features.bluecv.gid.calculate_features_by_gid
+        params:
+          MFR:
+            enabled: true
+          latency:
+            enabled: true
+          ISI:
+            enabled: true
+          CV:
+            enabled: true
+          spike_count:
+            enabled: true
     neuron_class:
-      PSTH:
-        bin_size: 10
-      PSD:
+      - function: blueetl.features.bluecv.neuron_class.calculate_features_by_neuron_class
+        params:
+          PSTH:
+            enabled: true
+            params:
+              bin_size: 10
+          PSD:
+            enabled: true
     comparison:
-      VR:
-      VP:
+      - function: blueetl.features.bluecv.comparison.calculate_comparison_features
+        params:
+          VR:
+            enabled: true
+          VP:
+            enabled: true

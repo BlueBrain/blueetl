@@ -25,3 +25,7 @@ extraction:
     "w4": [ -50, 25 ]
 analysis:
   number_of_trials: 1
+  features:
+    neuron_class:
+      - function: blueetl.features.bnac.neuron_class.get_initial_spiking_stats
+      - function: blueetl.features.bnac.neuron_class.get_histogram_features

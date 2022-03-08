@@ -1,0 +1,81 @@
+import logging
+from functools import partial
+
+import numpy as np
+from elephant import spectral, statistics
+from elephant.conversion import BinnedSpikeTrain
+from elephant.spike_train_correlation import correlation_coefficient
+from neo import SpikeTrain
+from quantities import ms
+
+from blueetl.constants import GID, TIME
+
+L = logging.getLogger(__name__)
+
+
+def calculate_features_by_neuron_class(analysis, circuit_id, neuron_class, window, df, params):
+    t_start, t_stop = analysis._get_window_limits(window)
+    # create an array containing multiple arrays of spikes, one for each gid
+    spiketrains = df.groupby([GID])[TIME].apply(np.array).to_numpy()
+    ST = to_spiketrains(spiketrains, t_start, t_stop)
+    BST = to_binned_spiketrain(ST)
+    functions = {
+        "PSD": partial(get_PSD, spiketrains, n_segments=2),
+        "AC": partial(get_AC, BST),
+        "CPDF": partial(get_CPDF, ST, bin_size=20),
+        "PSTH": partial(get_PSTH, spiketrains, t_start=t_start, t_stop=t_stop, bin_size=10),
+    }
+    result = {}
+    for feature_name, feature_config in params.items():
+        if feature_config["enabled"]:
+            result[feature_name] = functions[feature_name](**feature_config.get("params", {}))
+    return result
+
+
+def to_spiketrains(data, t_start, t_end):
+    return [SpikeTrain(spiketrain * ms, t_start=t_start, t_stop=t_end) for spiketrain in data]
+
+
+def to_binned_spiketrain(ST, bin_size=5 * ms):
+    return BinnedSpikeTrain(ST, bin_size=bin_size)
+
+
+def get_PSD(spiketrains, n_segments=2):
+    """Get power spectrum density of neuronal population"""
+    _, PSD = spectral.welch_psd(
+        np.concatenate(spiketrains),
+        n_segments=n_segments,
+    )
+    return PSD
+
+
+def get_AC(BST):
+    """Get mean firing rate of neuronal population"""
+    return np.triu(correlation_coefficient(BST), k=1)
+
+
+def get_CPDF(ST, bin_size=20):
+    """Get complexity"""
+    CPDF = statistics.complexity_pdf(ST, bin_size=bin_size * ms)
+    return np.asarray(CPDF).reshape(-1)
+
+
+def get_PSTH(spiketrains, t_start, t_stop, bin_size=20):
+    """Get perstimulus time histogram of the selected population.
+
+    Args:
+        bin_size (float): bin size in ms
+
+    Returns:
+        a list with two items:
+            counts (np.ndarray): number of spike_times per bin in psth
+            bins (np.ndarray): start of the bins
+    """
+    spiketrains = np.concatenate(spiketrains)
+    inputbins = np.arange(t_start, t_stop, bin_size)
+    counts, bins = np.histogram(
+        spiketrains,
+        bins=inputbins.size,
+        range=(t_start, t_stop),
+    )
+    return [counts, bins[:-1]]

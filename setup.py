@@ -47,6 +47,7 @@ setup(
         "spa": [
             "simProjectAnalysis @ git+ssh://git@bbpgitlab.epfl.ch/conn/personal/reimann/bbp-analysis-framework.git@newbluepy#egg=simProjectAnalysis",
             "progressbar>=2.5",  # needed by simProjectAnalysis
+            "future",  # needed by simProjectAnalysis
             "interval>=1.0.0",  # to avoid a DependencyWarning in NeuroTools
         ],
     },

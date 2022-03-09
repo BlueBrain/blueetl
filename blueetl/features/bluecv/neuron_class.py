@@ -3,12 +3,11 @@ from functools import partial
 
 import numpy as np
 from elephant import spectral, statistics
-from elephant.conversion import BinnedSpikeTrain
 from elephant.spike_train_correlation import correlation_coefficient
-from neo import SpikeTrain
 from quantities import ms
 
 from blueetl.constants import GID, TIME
+from blueetl.features.bluecv.utils import to_binned_spiketrain, to_spiketrains
 
 L = logging.getLogger(__name__)
 
@@ -31,14 +30,6 @@ def calculate_features_by_neuron_class(analysis, key, df, params):
             feature_params = feature_config.get("params", {})
             result[feature_name] = functions[feature_name](**feature_params)
     return result
-
-
-def to_spiketrains(data, t_start, t_end):
-    return [SpikeTrain(spiketrain * ms, t_start=t_start, t_stop=t_end) for spiketrain in data]
-
-
-def to_binned_spiketrain(ST, bin_size=5 * ms):
-    return BinnedSpikeTrain(ST, bin_size=bin_size)
 
 
 def get_PSD(spiketrains, n_segments=2):

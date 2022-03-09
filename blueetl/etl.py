@@ -181,8 +181,8 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
     def iter_named_items(self):
         """Iterate over the items, yielding a tuple (named_index, value) for each element.
 
-        The returned named_index is a namedtuple representing the value of the index.
-        The returned value is a namedtuple as returned by pandas.DataFrame.itertuples.
+        The returned ``named_index`` is a namedtuple representing the value of the index.
+        The returned ``value`` is a namedtuple as returned by pandas.DataFrame.itertuples.
         """
         return zip(self.iter_named_index(), self._obj.itertuples(index=False))
 

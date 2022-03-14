@@ -5,21 +5,21 @@ import numpy as np
 import pandas as pd
 
 from blueetl.constants import CIRCUIT, CIRCUIT_ID, GID, NEURON_CLASS
-from blueetl.utils import ensure_dtypes, timed
+from blueetl.extract.base import BaseExtractor
+from blueetl.utils import timed
 
 L = logging.getLogger(__name__)
 
 
-class Neurons:
+class Neurons(BaseExtractor):
     def __init__(self, df: pd.DataFrame):
-        assert set(df.columns) == {CIRCUIT_ID, NEURON_CLASS, GID}
-        self._df: pd.DataFrame = ensure_dtypes(df)
-        # FIXME: do we need to ensure that the neurons are sorted?
+        super().__init__(df)
+        # ensure that the neurons are sorted
         self._df = self._df.sort_values([CIRCUIT_ID, NEURON_CLASS, GID], ignore_index=True)
 
-    @property
-    def df(self):
-        return self._df
+    @staticmethod
+    def _validate(df):
+        assert set(df.columns) == {CIRCUIT_ID, NEURON_CLASS, GID}
 
     @staticmethod
     def _get_gids(circuit, target, neuron_classes, limit=None, sort=False):
@@ -32,7 +32,7 @@ class Neurons:
             group = group.copy()
             neuron_limit = group.pop("$limit", limit)
             neuron_sort = group.pop("$sort", sort)
-            gids = cells.etl.query_dict(group).index.to_numpy()
+            gids = cells.etl.q(group).index.to_numpy()
             neuron_count = len(gids)
             if neuron_limit and neuron_count > neuron_limit:
                 gids = np.random.choice(gids, size=neuron_limit, replace=False)
@@ -62,14 +62,6 @@ class Neurons:
             )
         df = pd.DataFrame.from_records(records, columns=[CIRCUIT_ID, NEURON_CLASS, GID])
         return cls(df)
-
-    @classmethod
-    def from_pandas(cls, df):
-        return cls(df)
-
-    def to_pandas(self):
-        """Dump neurons to a dataframe that can be serialized and stored."""
-        return self.df
 
     def as_series(self):
         columns = [CIRCUIT_ID, NEURON_CLASS]

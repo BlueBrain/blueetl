@@ -1,6 +1,6 @@
 ---
 simulation_campaign: "/gpfs/bbp.cscs.ch/project/proj83/scratch/bbp_workflow/c26abad3-0861-4f7d-863c-a42daffd029f/config.json"
-output: "analysis_dir"
+output: "analysis_01_bnac"
 extraction:
   neuron_classes:
     "L1_EXC": { "layer": [ 1 ], "synapse_class": [ "EXC" ] }
@@ -19,10 +19,10 @@ extraction:
   limit: 5000
   target: "hex0"
   windows:
-    "w1": [ 2000, 7000 ]
-    "w2": [ 0, 100 ]
-    "w3": [ 0, 25 ]
-    "w4": [ -50, 25 ]
+    "w1": { bounds: [ 2000, 7000 ] }
+    "w2": { bounds: [ 0, 100 ], n_trials: 3, trial_step: 1000 }
+    "w3": { bounds: [ 0, 25 ] }
+    "w4": { bounds: [ -50, 25 ] }
 analysis:
   number_of_trials: 1
   features:

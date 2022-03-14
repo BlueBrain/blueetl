@@ -7,26 +7,15 @@ import pandas as pd
 from bluepy import Circuit, Simulation
 
 from blueetl.constants import CIRCUIT, CIRCUIT_ID, SIMULATION, SIMULATION_ID, SIMULATION_PATH
-from blueetl.utils import ensure_dtypes
+from blueetl.extract.base import BaseExtractor
 
 L = logging.getLogger(__name__)
 
 
-class Simulations:
-    def __init__(self, df: pd.DataFrame):
-        """Initialize a Simulations object.
-
-        Args:
-            df: DataFrame with
-                columns: simulation_path, simulation_id, circuit_id, simulation, circuit
-                index: simulation coordinates
-        """
+class Simulations(BaseExtractor):
+    @staticmethod
+    def _validate(df):
         assert set(df.columns) == {SIMULATION_PATH, SIMULATION_ID, CIRCUIT_ID, SIMULATION, CIRCUIT}
-        self._df: pd.DataFrame = ensure_dtypes(df)
-
-    @property
-    def df(self):
-        return self._df
 
     @staticmethod
     def _get_circuit_hash(circuit_config):

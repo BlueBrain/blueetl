@@ -1,12 +1,10 @@
 import logging
 
-import numpy as np
 import pandas as pd
 
-from blueetl import etl
 from blueetl.config.simulations import SimulationsConfig
 from blueetl.repository import Repository
-from blueetl.utils import load_yaml, import_by_string
+from blueetl.utils import import_by_string
 
 L = logging.getLogger(__name__)
 
@@ -25,31 +23,30 @@ class Analyzer:
         self.repo.extract()
         self.repo.print()
 
-    def get_window_limits(self, window):
-        return self.analysis_config["extraction"]["windows"][window]
-
     def calculate_features_by_gid(self):
         feature_collections = self.analysis_config["analysis"]["features"].get("gid", [])
         records = []
-        for key, df in self.repo.spikes.grouped_by_gid():
-            record = key._asdict()
-            for feature_collection in feature_collections:
-                func = import_by_string(feature_collection["function"])
-                params = feature_collection.get("params", {})
-                record.update(func(analysis=self, key=key, df=df, params=params))
-            records.append(record)
+        if feature_collections:
+            for key, df in self.repo.spikes.grouped_by_gid():
+                record = key._asdict()
+                for feature_collection in feature_collections:
+                    func = import_by_string(feature_collection["function"])
+                    params = feature_collection.get("params", {})
+                    record.update(func(analysis=self, key=key, df=df, params=params))
+                records.append(record)
         # in the returned df, the type of `neuron_class` and `window` is `object`
         return pd.DataFrame(records)
 
     def calculate_features_by_neuron_class(self):
         feature_collections = self.analysis_config["analysis"]["features"].get("neuron_class", [])
         records = []
-        for key, df in self.repo.spikes.grouped_by_neuron_class():
-            record = key._asdict()
-            for feature_collection in feature_collections:
-                func = import_by_string(feature_collection["function"])
-                params = feature_collection.get("params", {})
-                record.update(func(analysis=self, key=key, df=df, params=params))
-            records.append(record)
+        if feature_collections:
+            for key, df in self.repo.spikes.grouped_by_neuron_class():
+                record = key._asdict()
+                for feature_collection in feature_collections:
+                    func = import_by_string(feature_collection["function"])
+                    params = feature_collection.get("params", {})
+                    record.update(func(analysis=self, key=key, df=df, params=params))
+                records.append(record)
         # in the returned df, the type of `neuron_class` and `window` is `object`
         return pd.DataFrame(records)

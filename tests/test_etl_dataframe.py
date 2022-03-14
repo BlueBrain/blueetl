@@ -3,9 +3,7 @@ import pytest
 from numpy.testing import assert_array_equal
 from pandas.testing import assert_frame_equal, assert_series_equal
 
-from blueetl import etl
-
-etl.register_accessors()
+from blueetl.core.etl import ETLDataFrameAccessor
 
 
 def _build_dataframe():
@@ -27,7 +25,7 @@ def _build_dataframe():
 def test_etl_instance():
     df = _build_dataframe()
     result = df.etl
-    assert isinstance(result, etl.ETLDataFrameAccessor)
+    assert isinstance(result, ETLDataFrameAccessor)
 
 
 def test_conditions():

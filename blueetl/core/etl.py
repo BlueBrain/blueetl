@@ -1,7 +1,9 @@
 """Pandas accessors."""
 import collections
 import logging
+from typing import Dict, Optional
 
+import numpy as np
 import pandas as pd
 
 L = logging.getLogger(__name__)
@@ -13,7 +15,7 @@ L = logging.getLogger(__name__)
 
 
 class ETLBaseAccessor:
-    """Base accessor."""
+    """Accessor with methods common to Series and DataFrame."""
 
     def __init__(self, pandas_obj):
         """Initialize the accessor."""
@@ -119,19 +121,6 @@ class ETLBaseAccessor:
         """
         return self.groupby_excluding(conditions).apply(func)
 
-    def iter_named_index(self):
-        """Iterate over the index, yielding a namedtuple for each element.
-
-        It can be used as an alternative to the pandas iteration over the index
-        to yield named tuples instead of standard tuples.
-
-        It works with both Indexes and MultiIndexes.
-        """
-        names = self._obj.index.names
-        IndexNames = collections.namedtuple("IndexNames", names, rename=True)
-        for i in self._obj.index:
-            yield IndexNames(*i if len(names) > 1 else i)
-
 
 class ETLSeriesAccessor(ETLBaseAccessor):
     """Series accessor."""
@@ -154,62 +143,116 @@ class ETLSeriesAccessor(ETLBaseAccessor):
     #     # FIXME: to be removed if redundant
     #     return self._obj.map(func)
 
-    def remodel(self, func):
-        """Apply func and return a new Series.
+    # def remodel(self, func):
+    #     """Apply func and return a new Series.
+    #
+    #     Args:
+    #         func: generator function accepting the Series as argument, and yielding tuples
+    #             (value, conditions) that will be concatenated to build a new Series.
+    #
+    #     Returns:
+    #         (pd.Series) result of the concatenation.
+    #     """
+    #     return concat_tuples(func(self._obj))
 
-        Args:
-            func: generator function accepting the Series as argument, and yielding tuples
-                (value, conditions) that will be concatenated to build a new Series.
-
-        Returns:
-            (pd.Series) result of the concatenation.
-        """
-        return concat_tuples(func(self._obj))
-
-    def iter_named_items(self):
+    def iter(self):
         """Iterate over the items, yielding a tuple (named_index, value) for each element.
 
         The returned named_index is a namedtuple representing the value of the index.
         The returned value is the actual value of each element of the series.
         """
-        return zip(self.iter_named_index(), iter(self._obj))
+        return zip(self._obj.index.etl.iter(), iter(self._obj))
+
+    iter_named_items = iter  # deprecated
+
+    def query_dict(self, query: Dict) -> pd.Series:
+        """Given a query dictionary, return a new Series filtered by index."""
+        series = self._obj
+        if query:
+            masks = (
+                series.index.get_level_values(k).isin(v if isinstance(v, list) else [v])
+                for k, v in query.items()
+            )
+            series = series[np.all(list(masks), axis=0)]
+        return series.copy()
+
+    def q(self, _query: Optional[Dict] = None, /, **params) -> pd.Series:
+        """Given a query dictionary or some query parameters, return a new Series filtered by index.
+
+        Filter by index.
+        Query and params cannot be specified together.
+        If they are both empty or unspecified, return a copy of the original Series.
+
+        Args:
+            _query: query dictionary, with:
+                    keys: index levels
+                    values: value or list of values
+                All the keys are combined with AND, while each list of values is combined with OR.
+                Examples
+                    {"mtype": "SO_BP", "etype": "cNAC"} -> mtype == SO_BP AND etype == cNAC
+                    {"mtype": ["SO_BP", "SP_AA"]} -> mtype == SO_BP OR mtype == SP_AA
+        """
+        if _query and params:
+            raise ValueError("Only one of 'query' and 'params' can be specified")
+        return self.query_dict(_query or params)
 
 
 class ETLDataFrameAccessor(ETLBaseAccessor):
     """DataFrame accessor."""
 
-    def iter_named_items(self):
+    def iter(self):
         """Iterate over the items, yielding a tuple (named_index, value) for each element.
 
         The returned ``named_index`` is a namedtuple representing the value of the index.
         The returned ``value`` is a namedtuple as returned by pandas.DataFrame.itertuples.
         """
-        return zip(self.iter_named_index(), self._obj.itertuples(index=False))
+        return zip(self._obj.index.etl.iter(), self._obj.itertuples(index=False, name="Values"))
 
-    def query_dict(self, query):
-        """Given a query dictionary, return the filtered DataFrame.
+    iter_named_items = iter  # deprecated
 
-        This method is similar to pd.DataFrame.query, but it accepts a dict instead of a string.
+    def query_dict(self, query: Dict) -> pd.DataFrame:
+        """Given a query dictionary, return a new DataFrame filtered by columns and index."""
+        df = self._obj
+        # split query keys into columns and index
+        q = {"columns": {}, "index": {}}
+        columns_set = set(df.columns)
+        for k, v in query.items():
+            # ensure that all the values are lists
+            v = [v] if not isinstance(v, list) else v
+            q["columns" if k in columns_set else "index"][k] = v
+        # filter by columns if needed
+        if q["columns"]:
+            df = df[df[list(q["columns"])].isin(q["columns"]).all(axis=1)]
+        # filter by index if needed
+        if q["index"]:
+            masks = (df.index.get_level_values(k).isin(v) for k, v in q["index"].items())
+            df = df[np.all(list(masks), axis=0)]
+        return df.copy()
+
+    def q(self, _query: Optional[Dict] = None, /, **params) -> pd.DataFrame:
+        """Given a query dictionary or some query parameters, return the filtered DataFrame.
+
+        Filter by columns and index.
+        Query and params cannot be specified together.
+        If they are both empty or unspecified, return a copy of the original DataFrame.
+
+        This method is similar to pd.DataFrame.query, but it accepts a dict instead of a string
+        and has some limitations on the possible filters to be applied.
 
         Args:
-            query (dict): query given as a string or dict.
-                Examples:
-                    {"mtype": "SO_BP", "etype": "cNAC"}
-                    {"mtype": ["SO_BP", "SP_AA"]}
+            _query: query dictionary, with:
+                    keys: columns or index levels
+                    values: value or list of values
+                All the keys are combined with AND, while each list of values is combined with OR.
+                Examples
+                    {"mtype": "SO_BP", "etype": "cNAC"} -> mtype == SO_BP AND etype == cNAC
+                    {"mtype": ["SO_BP", "SP_AA"]} -> mtype == SO_BP OR mtype == SP_AA
         """
-        # if the query is empty, return the original dataframe
-        if not query:
-            return self._obj
-        # ensure that all the values are lists
-        query = {k: v if isinstance(v, list) else [v] for k, v in query.items()}
-        return self._obj[self._obj[list(query)].isin(query).all("columns")]
+        if _query and params:
+            raise ValueError("Query and params cannot be specified together")
+        return self.query_dict(_query or params)
 
-    def query_params(self, **params):
-        """Given some query parameters, return the filtered DataFrame.
-
-        See `query_dict` for more information.
-        """
-        return self.query_dict(params)
+    query_params = q  # deprecated
 
     def grouped_by(self, groupby_columns, selected_columns, sort=True, observed=True):
         """Group the dataframe by some columns and yield each record as a tuple (key, df).
@@ -224,6 +267,27 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
             yield RecordKey(*key), df
 
 
+class ETLIndexAccessor:
+    def __init__(self, pandas_obj):
+        """Initialize the accessor."""
+        self._obj = pandas_obj
+
+    def iter(self):
+        """Iterate over the index, yielding a namedtuple for each element.
+
+        It can be used as an alternative to the pandas iteration over the index
+        to yield named tuples instead of standard tuples.
+
+        It works with both Indexes and MultiIndexes.
+        """
+        names = self._obj.names
+        Index = collections.namedtuple("Index", names, rename=True)
+        if len(names) > 1:
+            yield from (Index(*i) for i in self._obj)
+        else:
+            yield from (Index(i) for i in self._obj)
+
+
 def register_accessors():
     """Register the accessors.
 
@@ -234,48 +298,4 @@ def register_accessors():
     # but this call is more explicit and it doesn't need any unused import
     pd.api.extensions.register_series_accessor("etl")(ETLSeriesAccessor)
     pd.api.extensions.register_dataframe_accessor("etl")(ETLDataFrameAccessor)
-
-
-def safe_concat(iterable, *args, **kwargs):
-    """Build and return a Series or a Dataframe from an iterable of objects with the same index.
-
-    Args:
-        iterable: iterable of Series or DataFrames.
-            All the objects must be of the same type and they must have the same index,
-            or an exception is raised.
-
-    Returns:
-        (pd.Series, pd.DataFrame) result of the concatenation, same type of the input elements.
-    """
-
-    def _ordered(obj):
-        nonlocal order
-        if order is None:
-            order = obj.index.names
-        return obj if order == obj.index.names else obj.reorder_levels(order)
-
-    order = None
-    return pd.concat((_ordered(obj) for obj in iterable), *args, **kwargs)
-
-
-def concat_tuples(iterable, *args, **kwargs):
-    """Build and return a Series from an iterable of tuples (value, conditions).
-
-    Args:
-        iterable: iterable of tuples (value, conditions), where
-            - value is a single value that will be added to the Series
-            - conditions is a dict containing the conditions to be used for the MultiIndex.
-              The keys of the conditions must be the same for each tuple of the iterable,
-              or an exception is raised.
-
-    Returns:
-        (pd.Series) result of the concatenation.
-    """
-
-    def _index(conditions):
-        arrays = [[v] for v in conditions.values()]
-        names = list(conditions)
-        return pd.MultiIndex.from_arrays(arrays, names=names)
-
-    iterable = (pd.Series([data], index=_index(conditions)) for data, conditions in iterable)
-    return safe_concat(iterable, *args, **kwargs)
+    pd.api.extensions.register_index_accessor("etl")(ETLIndexAccessor)

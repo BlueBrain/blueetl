@@ -6,6 +6,7 @@ from blueetl.config.simulations import SimulationsConfig
 from blueetl.extract.neurons import Neurons
 from blueetl.extract.simulations import Simulations
 from blueetl.extract.spikes import Spikes
+from blueetl.extract.windows import Windows
 from blueetl.store.base import BaseStore
 from blueetl.store.parquet import ParquetStore as DefaultStore
 
@@ -27,6 +28,7 @@ class Repository:
         self.use_cache = use_cache
         self.simulations = None
         self.neurons = None
+        self.windows = None
         self.spikes = None
 
     def extract_simulations(self):
@@ -56,6 +58,17 @@ class Repository:
             L.info("Dumping neurons...")
             self.store.dump(self.neurons.to_pandas(), "neurons")
 
+    def extract_windows(self):
+        df = self.store.load("windows") if self.use_cache else None
+        if df is not None:
+            L.info("Windows loaded from existing dataframe")
+            self.windows = Windows.from_pandas(df)
+        else:
+            L.info("Extracting windows...")
+            self.windows = Windows.from_config(self.extraction_config)
+            L.info("Dumping windows...")
+            self.store.dump(self.windows.to_pandas(), "windows")
+
     def extract_spikes(self):
         df = self.store.load("spikes") if self.use_cache else None
         if df is not None:
@@ -66,7 +79,7 @@ class Repository:
             self.spikes = Spikes.from_simulations(
                 simulations=self.simulations,
                 neurons=self.neurons,
-                windows=self.extraction_config["windows"],
+                windows=self.windows,
             )
             L.info("Dumping spikes...")
             self.store.dump(self.spikes.to_pandas(), "spikes")
@@ -74,6 +87,7 @@ class Repository:
     def extract(self):
         self.extract_simulations()
         self.extract_neurons()
+        self.extract_windows()
         self.extract_spikes()
 
     def print(self):
@@ -81,12 +95,8 @@ class Repository:
         print(json.dumps(self.extraction_config, indent=2))
         print("### simulations_config")
         print(json.dumps(self.simulations_config.to_dict(), indent=2))
-        print("### simulations.df")
-        print(self.simulations.df)
-        print(self.simulations.df.dtypes)
-        print("### neurons.df")
-        print(self.neurons.df)
-        print(self.neurons.df.dtypes)
-        print("### spikes.df")
-        print(self.spikes.df)
-        print(self.spikes.df.dtypes)
+        for name in ["simulations", "neurons", "windows", "spikes"]:
+            print(f"### {name}.df")
+            df = getattr(getattr(self, name), "df")
+            print(df)
+            print(df.dtypes)

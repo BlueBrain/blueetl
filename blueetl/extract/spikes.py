@@ -72,7 +72,7 @@ class Spikes(BaseExtractor):
                 {GID: tuple, SIMULATION: "first"}
             )
             df_list = []
-            for index, value in grouped.etl.iter_named_items():
+            for index, value in grouped.etl.iter():
                 # TODO: load spikes in parallel?
                 L.info(
                     "Processing simulation_id=%s, circuit_id=%s, neuron_class=%s: %s gids",

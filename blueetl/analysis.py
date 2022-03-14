@@ -32,7 +32,7 @@ class Analyzer:
                 for feature_collection in feature_collections:
                     func = import_by_string(feature_collection["function"])
                     params = feature_collection.get("params", {})
-                    record.update(func(analysis=self, key=key, df=df, params=params))
+                    record.update(func(repo=self.repo, key=key, df=df, params=params))
                 records.append(record)
         # in the returned df, the type of `neuron_class` and `window` is `object`
         return pd.DataFrame(records)
@@ -46,7 +46,7 @@ class Analyzer:
                 for feature_collection in feature_collections:
                     func = import_by_string(feature_collection["function"])
                     params = feature_collection.get("params", {})
-                    record.update(func(analysis=self, key=key, df=df, params=params))
+                    record.update(func(repo=self.repo, key=key, df=df, params=params))
                 records.append(record)
         # in the returned df, the type of `neuron_class` and `window` is `object`
         return pd.DataFrame(records)

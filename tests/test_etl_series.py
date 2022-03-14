@@ -279,7 +279,7 @@ def test_pool_with_func_returning_series():
 
 def test_remodel():
     def func(x):
-        for index, value in x.etl.iter_named_items():
+        for index, value in x.etl.iter():
             yield value + 1000, {**index._asdict(), "i2": "e"}
             yield value + 2000, {**index._asdict(), "i2": "f"}
 

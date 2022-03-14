@@ -9,13 +9,11 @@ from blueetl.constants import GID, TIME, TRIAL, COUNT
 L = logging.getLogger(__name__)
 
 
-def get_initial_spiking_stats(analysis, key, df, params):
-    number_of_trials = analysis.repo.windows.get_number_of_trials(key.window)
+def get_initial_spiking_stats(repo, key, df, params):
+    number_of_trials = repo.windows.get_number_of_trials(key.window)
     trial_columns = list(range(number_of_trials))
-    duration = analysis.repo.windows.get_duration(key.window)
-    neurons = analysis.repo.neurons.df.etl.q(
-        circuit_id=key.circuit_id, neuron_class=key.neuron_class
-    )
+    duration = repo.windows.get_duration(key.window)
+    neurons = repo.neurons.df.etl.q(circuit_id=key.circuit_id, neuron_class=key.neuron_class)
     # first spike for each trial and gid, averaged across all trials where the neuron was present
     first_spike_time_means_cort_zeroed = (
         df.groupby([TRIAL, GID]).first().groupby(GID).mean().reset_index()
@@ -69,14 +67,14 @@ def get_initial_spiking_stats(analysis, key, df, params):
     }
 
 
-def get_histogram_features(analysis, key, df, params):
-    number_of_trials = analysis.repo.windows.get_number_of_trials(key.window)
-    duration = analysis.repo.windows.get_duration(key.window)
+def get_histogram_features(repo, key, df, params):
+    number_of_trials = repo.windows.get_number_of_trials(key.window)
+    duration = repo.windows.get_duration(key.window)
     duration = int(duration)
     times = df[TIME].to_numpy()
     hist, _ = np.histogram(times, range=[0, duration], bins=duration)
     num_target_cells = len(
-        analysis.repo.neurons.df.etl.q(circuit_id=key.circuit_id, neuron_class=key.neuron_class)
+        repo.neurons.df.etl.q(circuit_id=key.circuit_id, neuron_class=key.neuron_class)
     )
     hist = hist / (num_target_cells * number_of_trials)
     min_hist = np.min(hist)

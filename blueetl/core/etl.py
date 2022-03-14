@@ -165,7 +165,7 @@ class ETLSeriesAccessor(ETLBaseAccessor):
 
     iter_named_items = iter  # deprecated
 
-    def query_dict(self, query: Dict) -> pd.Series:
+    def _query_dict(self, query: Dict) -> pd.Series:
         """Given a query dictionary, return a new Series filtered by index."""
         series = self._obj
         if query:
@@ -194,7 +194,14 @@ class ETLSeriesAccessor(ETLBaseAccessor):
         """
         if _query and params:
             raise ValueError("Only one of 'query' and 'params' can be specified")
-        return self.query_dict(_query or params)
+        return self._query_dict(_query or params)
+
+    def one(self, _query: Optional[Dict] = None, /, **params) -> pd.Series:
+        """Execute the query and return the unique resulting record."""
+        result = self.q(_query, **params)
+        if len(result) != 1:
+            raise RuntimeError(f"The query returned {len(result)} records instead of 1.")
+        return result.iloc[0]
 
 
 class ETLDataFrameAccessor(ETLBaseAccessor):
@@ -210,7 +217,7 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
 
     iter_named_items = iter  # deprecated
 
-    def query_dict(self, query: Dict) -> pd.DataFrame:
+    def _query_dict(self, query: Dict) -> pd.DataFrame:
         """Given a query dictionary, return a new DataFrame filtered by columns and index."""
         df = self._obj
         # split query keys into columns and index
@@ -250,9 +257,14 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
         """
         if _query and params:
             raise ValueError("Query and params cannot be specified together")
-        return self.query_dict(_query or params)
+        return self._query_dict(_query or params)
 
-    query_params = q  # deprecated
+    def one(self, _query: Optional[Dict] = None, /, **params) -> pd.DataFrame:
+        """Execute the query and return the unique resulting record."""
+        result = self.q(_query, **params)
+        if len(result) != 1:
+            raise RuntimeError(f"The query returned {len(result)} records instead of 1.")
+        return result.iloc[0]
 
     def grouped_by(self, groupby_columns, selected_columns, sort=True, observed=True):
         """Group the dataframe by some columns and yield each record as a tuple (key, df).

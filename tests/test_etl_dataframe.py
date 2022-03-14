@@ -307,7 +307,7 @@ def test_pool_with_func_returning_series_with_different_shape():
         ({"v0": [1, 2], "v1": [6, 7]}, [("b", "c")]),
     ],
 )
-def test_query_dict(query, expected_index):
+def test_query(query, expected_index):
     df = _build_dataframe()
-    result = df.etl.query_dict(query)
+    result = df.etl.q(query)
     assert_array_equal(result.index.to_list(), expected_index)

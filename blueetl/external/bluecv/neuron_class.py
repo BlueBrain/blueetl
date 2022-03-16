@@ -7,7 +7,7 @@ from elephant.spike_train_correlation import correlation_coefficient
 from quantities import ms
 
 from blueetl.constants import GID, TIME
-from blueetl.features.bluecv.utils import to_binned_spiketrain, to_spiketrains
+from blueetl.external.bluecv.utils import to_binned_spiketrain, to_spiketrains
 
 L = logging.getLogger(__name__)
 

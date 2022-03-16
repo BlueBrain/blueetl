@@ -1,3 +1,4 @@
+# adapted from BlueNetworkActivityComparison/bnac/data_processor.py
 import logging
 
 import numpy as np
@@ -27,17 +28,23 @@ def get_initial_spiking_stats(repo, key, df, params):
     spike_counts_by_trial = (
         df.groupby([TRIAL, GID]).count().reset_index().rename(columns={TIME: COUNT})
     )
-    # spike counts with index gid and columns [0, 1, 2...], one numeric column for each trial
-    spike_counts_by_trial = spike_counts_by_trial.pivot(index=GID, columns=TRIAL, values=COUNT)
+    # spike counts with index gid and columns [0, 1, 2...], one numeric column for each trial,
+    # including a column even when there are no spikes in that trial. To include the empty columns,
+    # it's not possible to use: df.pivot(index=GID, columns=TRIAL, values=COUNT)
+    spike_counts_by_trial = pd.concat(
+        [spike_counts_by_trial.etl.q(trial=i).set_index(GID)[COUNT] for i in trial_columns],
+        axis=1,
+        keys=trial_columns,
+    )
     # spike counts array for all the neurons, using 0 for missing neurons
-    spike_counts_by_trial_by_cell = (
+    spike_counts_by_trial_and_cell = (
         pd.merge(neurons, spike_counts_by_trial, how="left", on=GID)[trial_columns]
         .fillna(0)
         .to_numpy()
         .transpose()
     )
-    mean_spike_counts = np.mean(spike_counts_by_trial_by_cell, axis=0)
-    mean_of_spike_counts_for_each_trial = np.mean(spike_counts_by_trial_by_cell, axis=1)
+    mean_spike_counts = np.mean(spike_counts_by_trial_and_cell, axis=0)
+    mean_of_spike_counts_for_each_trial = np.mean(spike_counts_by_trial_and_cell, axis=1)
 
     mean_firing_rates_per_second = mean_spike_counts * 1000.0 / duration
     first_trial = df.etl.q(trial=0)[[GID, TIME]].sort_values([GID, TIME], ignore_index=True)
@@ -52,7 +59,7 @@ def get_initial_spiking_stats(repo, key, df, params):
             first_spike_time_means_cort_zeroed_by_cell[TIME].to_numpy()
         ),
         "first_spike_time_means_cort_zeroed": first_spike_time_means_cort_zeroed[TIME].to_numpy(),
-        "all_spike_counts": spike_counts_by_trial_by_cell.flatten(),
+        "all_spike_counts": spike_counts_by_trial_and_cell.flatten(),
         "mean_spike_counts": mean_spike_counts,
         "mean_of_mean_spike_counts": np.nanmean(mean_spike_counts),
         "non_zero_mean_spike_counts": mean_spike_counts[mean_spike_counts > 0],

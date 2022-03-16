@@ -37,6 +37,8 @@ setup(
         "pyarrow>=7",  # needed by pandas to read and write feather or parquet files
         "elephant>=0.10.0",
         "quantities>=0.13.0",
+        "seaborn>=0.11.2",
+        "matplotlib>=3.4.3",
         "xarray>=0.18.0",
         "bluepy>=2.4",
     ],

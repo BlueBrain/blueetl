@@ -1,7 +1,8 @@
 """Pandas accessors."""
 import collections
 import logging
-from typing import Dict, Optional
+from abc import ABC, abstractmethod
+from typing import Any, Dict, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -14,7 +15,7 @@ L = logging.getLogger(__name__)
 #  labels: possible values for a specific level of the index
 
 
-class ETLBaseAccessor:
+class ETLBaseAccessor(ABC):
     """Accessor with methods common to Series and DataFrame."""
 
     def __init__(self, pandas_obj):
@@ -96,7 +97,7 @@ class ETLBaseAccessor:
         labels, values = zip(*kwargs.items())
         return self._obj.xs(level=labels, key=values, drop_level=drop_level, axis=0)
 
-    filter = select  # deprecated, to be removed
+    filter = select  # FIXME: deprecated and to be removed
 
     def select_one(self, drop_level=True, **kwargs):
         return self.select(drop_level=drop_level, **kwargs).iat[0]
@@ -120,6 +121,47 @@ class ETLBaseAccessor:
                 in the MultiIndex of the returned object.
         """
         return self.groupby_excluding(conditions).apply(func)
+
+    @abstractmethod
+    def _query_dict(self, query: Dict) -> Union[pd.Series, pd.DataFrame]:
+        """Given a query dictionary, return the filtered Series or DataFrame."""
+
+    def q(self, _query: Optional[Dict] = None, /, **params) -> Union[pd.Series, pd.DataFrame]:
+        """Given a query dict or some query parameters, return the filtered Series or DataFrame.
+
+        Filter by columns (for DataFrames) and index (for both Series and DataFrames).
+        Query and params cannot be specified together.
+        If they are both empty or unspecified, return a copy of the original Series or DataFrame.
+
+        This method is similar to the `query` method for DataFrames, but it accepts a dict instead
+        of a string, and has some limitations on the possible filters to be applied.
+
+        Args:
+            _query: query dictionary, with:
+                    keys: columns or index levels
+                    values: value or list of values
+                All the keys are combined with AND, while each list of values is combined with OR.
+                Examples
+                    {"mtype": "SO_BP", "etype": "cNAC"} -> mtype == SO_BP AND etype == cNAC
+                    {"mtype": ["SO_BP", "SP_AA"]} -> mtype == SO_BP OR mtype == SP_AA
+        """
+        if _query and params:
+            raise ValueError("Query and params cannot be specified together")
+        return self._query_dict(_query or params)
+
+    def one(self, _query: Optional[Dict] = None, /, **params) -> Any:
+        """Execute the query and return the unique resulting record."""
+        result = self.q(_query, **params)
+        if len(result) != 1:
+            raise RuntimeError(f"The query returned {len(result)} records instead of 1.")
+        return result.iloc[0]
+
+    def first(self, _query: Optional[Dict] = None, /, **params) -> Any:
+        """Execute the query and return the first resulting record."""
+        result = self.q(_query, **params)
+        if len(result) == 0:
+            raise RuntimeError("The query returned 0 records.")
+        return result.iloc[0]
 
 
 class ETLSeriesAccessor(ETLBaseAccessor):
@@ -163,8 +205,6 @@ class ETLSeriesAccessor(ETLBaseAccessor):
         """
         return zip(self._obj.index.etl.iter(), iter(self._obj))
 
-    iter_named_items = iter  # deprecated
-
     def _query_dict(self, query: Dict) -> pd.Series:
         """Given a query dictionary, return a new Series filtered by index."""
         series = self._obj
@@ -175,33 +215,6 @@ class ETLSeriesAccessor(ETLBaseAccessor):
             )
             series = series[np.all(list(masks), axis=0)]
         return series.copy()
-
-    def q(self, _query: Optional[Dict] = None, /, **params) -> pd.Series:
-        """Given a query dictionary or some query parameters, return a new Series filtered by index.
-
-        Filter by index.
-        Query and params cannot be specified together.
-        If they are both empty or unspecified, return a copy of the original Series.
-
-        Args:
-            _query: query dictionary, with:
-                    keys: index levels
-                    values: value or list of values
-                All the keys are combined with AND, while each list of values is combined with OR.
-                Examples
-                    {"mtype": "SO_BP", "etype": "cNAC"} -> mtype == SO_BP AND etype == cNAC
-                    {"mtype": ["SO_BP", "SP_AA"]} -> mtype == SO_BP OR mtype == SP_AA
-        """
-        if _query and params:
-            raise ValueError("Only one of 'query' and 'params' can be specified")
-        return self._query_dict(_query or params)
-
-    def one(self, _query: Optional[Dict] = None, /, **params) -> pd.Series:
-        """Execute the query and return the unique resulting record."""
-        result = self.q(_query, **params)
-        if len(result) != 1:
-            raise RuntimeError(f"The query returned {len(result)} records instead of 1.")
-        return result.iloc[0]
 
 
 class ETLDataFrameAccessor(ETLBaseAccessor):
@@ -214,8 +227,6 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
         The returned ``value`` is a namedtuple as returned by pandas.DataFrame.itertuples.
         """
         return zip(self._obj.index.etl.iter(), self._obj.itertuples(index=False, name="Values"))
-
-    iter_named_items = iter  # deprecated
 
     def _query_dict(self, query: Dict) -> pd.DataFrame:
         """Given a query dictionary, return a new DataFrame filtered by columns and index."""
@@ -235,36 +246,6 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
             masks = (df.index.get_level_values(k).isin(v) for k, v in q["index"].items())
             df = df[np.all(list(masks), axis=0)]
         return df.copy()
-
-    def q(self, _query: Optional[Dict] = None, /, **params) -> pd.DataFrame:
-        """Given a query dictionary or some query parameters, return the filtered DataFrame.
-
-        Filter by columns and index.
-        Query and params cannot be specified together.
-        If they are both empty or unspecified, return a copy of the original DataFrame.
-
-        This method is similar to pd.DataFrame.query, but it accepts a dict instead of a string
-        and has some limitations on the possible filters to be applied.
-
-        Args:
-            _query: query dictionary, with:
-                    keys: columns or index levels
-                    values: value or list of values
-                All the keys are combined with AND, while each list of values is combined with OR.
-                Examples
-                    {"mtype": "SO_BP", "etype": "cNAC"} -> mtype == SO_BP AND etype == cNAC
-                    {"mtype": ["SO_BP", "SP_AA"]} -> mtype == SO_BP OR mtype == SP_AA
-        """
-        if _query and params:
-            raise ValueError("Query and params cannot be specified together")
-        return self._query_dict(_query or params)
-
-    def one(self, _query: Optional[Dict] = None, /, **params) -> pd.DataFrame:
-        """Execute the query and return the unique resulting record."""
-        result = self.q(_query, **params)
-        if len(result) != 1:
-            raise RuntimeError(f"The query returned {len(result)} records instead of 1.")
-        return result.iloc[0]
 
     def grouped_by(self, groupby_columns, selected_columns, sort=True, observed=True):
         """Group the dataframe by some columns and yield each record as a tuple (key, df).

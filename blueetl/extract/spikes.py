@@ -13,23 +13,12 @@ from blueetl.constants import (
     TRIAL,
 )
 from blueetl.extract.base import BaseExtractor
-from blueetl.utils import timed
 
 L = logging.getLogger(__name__)
 
 
 class Spikes(BaseExtractor):
-    @staticmethod
-    def _validate(df):
-        assert set(df.columns) == {
-            SIMULATION_ID,
-            CIRCUIT_ID,
-            NEURON_CLASS,
-            WINDOW,
-            TRIAL,
-            TIME,
-            GID,
-        }
+    _columns = [SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS, WINDOW, TRIAL, TIME, GID]
 
     @classmethod
     def _assign_window(cls, df: pd.DataFrame, name: str, trial: int, t_start: float, t_stop: float):
@@ -64,32 +53,28 @@ class Spikes(BaseExtractor):
 
     @classmethod
     def from_simulations(cls, simulations, neurons, windows):
-        with timed(L.info, "Completed spikes extraction"):
-            merged = pd.merge(simulations.df, neurons.df, sort=False)
-            # group the gids together
-            columns = [SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS]
-            grouped = merged.groupby(columns, sort=False, observed=True).agg(
-                {GID: tuple, SIMULATION: "first"}
+        merged = pd.merge(simulations.df, neurons.df, sort=False)
+        # group the gids together
+        columns = [SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS]
+        grouped = merged.groupby(columns, sort=False, observed=True).agg(
+            {GID: tuple, SIMULATION: "first"}
+        )
+        df_list = []
+        for index, rec in grouped.etl.iter():
+            # TODO: load spikes in parallel?
+            L.info(
+                "Processing simulation_id=%s, circuit_id=%s, neuron_class=%s: %s gids",
+                *index,
+                len(rec.gid),
             )
-            df_list = []
-            for index, value in grouped.etl.iter():
-                # TODO: load spikes in parallel?
-                L.info(
-                    "Processing simulation_id=%s, circuit_id=%s, neuron_class=%s: %s gids",
-                    *index,
-                    len(value.gid),
-                )
-                tmp_df = cls._load_spikes(value.simulation.spikes, value.gid, windows.df)
-                tmp_df[columns] = list(index)
-                # TODO: verify if converting NEURON_CLASS to category here using CategoricalDtype
-                #  can reduce the memory temporarily needed during the process.
-                df_list.append(tmp_df)
-            df = pd.concat(df_list, ignore_index=True, copy=False)
-            return cls(df)
-
-    def as_series(self):
-        columns = [SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS, WINDOW, GID]
-        return self.df.set_index(columns)[TIME]
+            windows_df = windows.df.etl.q(simulation_id=index.simulation_id)
+            tmp_df = cls._load_spikes(rec.simulation.spikes, rec.gid, windows_df)
+            tmp_df[columns] = list(index)
+            # TODO: verify if converting NEURON_CLASS to category here using CategoricalDtype
+            #  can reduce the memory temporarily needed during the process.
+            df_list.append(tmp_df)
+        df = pd.concat(df_list, ignore_index=True, copy=False)
+        return cls(df)
 
     def grouped_by_neuron_class(self):
         """Group the dataframe by some columns and yield each record as a tuple (key, df).

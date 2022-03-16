@@ -13,9 +13,7 @@ L = logging.getLogger(__name__)
 
 
 class Simulations(BaseExtractor):
-    @staticmethod
-    def _validate(df):
-        assert set(df.columns) == {SIMULATION_PATH, SIMULATION_ID, CIRCUIT_ID, SIMULATION, CIRCUIT}
+    _columns = [SIMULATION_PATH, SIMULATION_ID, CIRCUIT_ID, SIMULATION, CIRCUIT]
 
     @staticmethod
     def _get_circuit_hash(circuit_config):

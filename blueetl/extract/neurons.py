@@ -12,17 +12,15 @@ L = logging.getLogger(__name__)
 
 
 class Neurons(BaseExtractor):
+    _columns = [CIRCUIT_ID, NEURON_CLASS, GID]
+
     def __init__(self, df: pd.DataFrame):
         super().__init__(df)
         # ensure that the neurons are sorted
-        self._df = self._df.sort_values([CIRCUIT_ID, NEURON_CLASS, GID], ignore_index=True)
+        self._df = self._df.sort_values(self._columns, ignore_index=True)
 
     @staticmethod
-    def _validate(df):
-        assert set(df.columns) == {CIRCUIT_ID, NEURON_CLASS, GID}
-
-    @staticmethod
-    def _get_gids(circuit, target, neuron_classes, limit=None, sort=False):
+    def _get_gids(circuit, target, neuron_classes, limit=None):
         properties = list(set(chain.from_iterable(neuron_classes.values())))
         properties = [p for p in properties if not p.startswith("$")]
         with timed(L.info, "Cells loaded from circuit"):
@@ -31,21 +29,17 @@ class Neurons(BaseExtractor):
         for neuron_class, group in neuron_classes.items():
             group = group.copy()
             neuron_limit = group.pop("$limit", limit)
-            neuron_sort = group.pop("$sort", sort)
             gids = cells.etl.q(group).index.to_numpy()
             neuron_count = len(gids)
             if neuron_limit and neuron_count > neuron_limit:
                 gids = np.random.choice(gids, size=neuron_limit, replace=False)
-            if neuron_sort:
-                gids.sort()
             result[neuron_class] = gids
             L.info(
-                "Selected gids for %s: %s/%s (limit=%s, sort=%s)",
+                "Selected gids for %s: %s/%s (limit=%s)",
                 neuron_class,
                 len(gids),
                 neuron_count,
                 neuron_limit,
-                neuron_sort,
             )
         return result
 
@@ -62,10 +56,6 @@ class Neurons(BaseExtractor):
             )
         df = pd.DataFrame.from_records(records, columns=[CIRCUIT_ID, NEURON_CLASS, GID])
         return cls(df)
-
-    def as_series(self):
-        columns = [CIRCUIT_ID, NEURON_CLASS]
-        return self.df.set_index(columns)[GID]
 
     def count_by_neuron_class(self):
         """Return the number of gids for each circuit and neuron class."""

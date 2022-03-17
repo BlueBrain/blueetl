@@ -2,11 +2,12 @@
 import collections
 import logging
 from abc import ABC, abstractmethod
-from itertools import chain
 from typing import Any, Dict, Optional, Union
 
 import numpy as np
 import pandas as pd
+
+from blueetl.core.utils import query_frame, query_series
 
 L = logging.getLogger(__name__)
 
@@ -88,6 +89,8 @@ class ETLBaseAccessor(ABC):
 
     def select(self, drop_level=True, **kwargs):
         """Filter the series or dataframe based on some conditions on the index.
+
+        Note: if the level doesn't need to be dropped, it's possible to use `etl.q` instead.
 
         Args:
             drop_level (bool): True to drop the conditions from the returned object.
@@ -211,15 +214,8 @@ class ETLSeriesAccessor(ETLBaseAccessor):
         return zip(self._obj.index.etl.iter(), iter(self._obj))
 
     def _query_dict(self, query: Dict) -> pd.Series:
-        """Given a query dictionary, return a new Series filtered by index."""
-        series = self._obj
-        if not query:
-            return series
-        masks = (
-            series.index.get_level_values(k).isin(v if isinstance(v, list) else [v])
-            for k, v in query.items()
-        )
-        return series.loc[np.all(list(masks), axis=0)]
+        """Given a query dictionary, return the Series filtered by index."""
+        return query_series(self._obj, query)
 
 
 class ETLDataFrameAccessor(ETLBaseAccessor):
@@ -234,31 +230,8 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
         return zip(self._obj.index.etl.iter(), self._obj.itertuples(index=False, name="Values"))
 
     def _query_dict(self, query: Dict) -> pd.DataFrame:
-        """Given a query dictionary, return a new DataFrame filtered by columns and index."""
-        df = self._obj
-        if not query:
-            return df
-        # map each name to columns or index
-        # if the same key is present in both columns and index, use columns
-        mapping = {
-            **{k: "index" for k in df.index.names if k is not None},
-            **{k: "columns" for k in df.columns if k is not None},
-        }
-        # dictionary with query keys split into columns and index
-        q = {"columns": {}, "index": {}}
-        for key, value in query.items():
-            # ensure that all the values are lists
-            value = [value] if not isinstance(value, list) else value
-            # populate the correct columns or index dict
-            q[mapping[key]][key] = value
-        masks = chain(
-            # filter by columns if needed
-            # iterating over the columns is more efficient than calling isin on the dataframe
-            (df[col].isin(values) for col, values in q["columns"].items()),
-            # filter by index if needed
-            (df.index.get_level_values(k).isin(values) for k, values in q["index"].items()),
-        )
-        return df.loc[np.all(list(masks), axis=0)]
+        """Given a query dictionary, return the DataFrame filtered by columns and index."""
+        return query_frame(self._obj, query)
 
     def grouped_by(self, groupby_columns, selected_columns, sort=True, observed=True):
         """Group the dataframe by some columns and yield each record as a tuple (key, df).

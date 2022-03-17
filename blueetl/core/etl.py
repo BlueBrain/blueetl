@@ -2,6 +2,7 @@
 import collections
 import logging
 from abc import ABC, abstractmethod
+from itertools import chain
 from typing import Any, Dict, Optional, Union
 
 import numpy as np
@@ -129,9 +130,13 @@ class ETLBaseAccessor(ABC):
     def q(self, _query: Optional[Dict] = None, /, **params) -> Union[pd.Series, pd.DataFrame]:
         """Given a query dict or some query parameters, return the filtered Series or DataFrame.
 
-        Filter by columns (for DataFrames) and index (for both Series and DataFrames).
-        Query and params cannot be specified together.
-        If they are both empty or unspecified, return a copy of the original Series or DataFrame.
+        Filter by columns (for DataFrames) and index names (for both Series and DataFrames).
+        If a name is present in both columns and index names, only the column is considered.
+
+        Each value can be a scalar or a list. If it's a list, any matching record will be selected.
+
+        Query and params cannot be specified together. If they are both empty or missing,
+        return the original Series or DataFrame.
 
         This method is similar to the `query` method for DataFrames, but it accepts a dict instead
         of a string, and has some limitations on the possible filters to be applied.
@@ -208,13 +213,13 @@ class ETLSeriesAccessor(ETLBaseAccessor):
     def _query_dict(self, query: Dict) -> pd.Series:
         """Given a query dictionary, return a new Series filtered by index."""
         series = self._obj
-        if query:
-            masks = (
-                series.index.get_level_values(k).isin(v if isinstance(v, list) else [v])
-                for k, v in query.items()
-            )
-            series = series[np.all(list(masks), axis=0)]
-        return series.copy()
+        if not query:
+            return series
+        masks = (
+            series.index.get_level_values(k).isin(v if isinstance(v, list) else [v])
+            for k, v in query.items()
+        )
+        return series.loc[np.all(list(masks), axis=0)]
 
 
 class ETLDataFrameAccessor(ETLBaseAccessor):
@@ -231,21 +236,29 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
     def _query_dict(self, query: Dict) -> pd.DataFrame:
         """Given a query dictionary, return a new DataFrame filtered by columns and index."""
         df = self._obj
-        # split query keys into columns and index
+        if not query:
+            return df
+        # map each name to columns or index
+        # if the same key is present in both columns and index, use columns
+        mapping = {
+            **{k: "index" for k in df.index.names if k is not None},
+            **{k: "columns" for k in df.columns if k is not None},
+        }
+        # dictionary with query keys split into columns and index
         q = {"columns": {}, "index": {}}
-        columns_set = set(df.columns)
-        for k, v in query.items():
+        for key, value in query.items():
             # ensure that all the values are lists
-            v = [v] if not isinstance(v, list) else v
-            q["columns" if k in columns_set else "index"][k] = v
-        # filter by columns if needed
-        if q["columns"]:
-            df = df[df[list(q["columns"])].isin(q["columns"]).all(axis=1)]
-        # filter by index if needed
-        if q["index"]:
-            masks = (df.index.get_level_values(k).isin(v) for k, v in q["index"].items())
-            df = df[np.all(list(masks), axis=0)]
-        return df.copy()
+            value = [value] if not isinstance(value, list) else value
+            # populate the correct columns or index dict
+            q[mapping[key]][key] = value
+        masks = chain(
+            # filter by columns if needed
+            # iterating over the columns is more efficient than calling isin on the dataframe
+            (df[col].isin(values) for col, values in q["columns"].items()),
+            # filter by index if needed
+            (df.index.get_level_values(k).isin(values) for k, values in q["index"].items()),
+        )
+        return df.loc[np.all(list(masks), axis=0)]
 
     def grouped_by(self, groupby_columns, selected_columns, sort=True, observed=True):
         """Group the dataframe by some columns and yield each record as a tuple (key, df).

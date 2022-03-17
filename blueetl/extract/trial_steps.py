@@ -19,7 +19,9 @@ class TrialSteps(BaseExtractor):
         cls._validate_columns(df, allow_extra=True)
 
     @classmethod
-    def _load_spikes(cls, simulation, circuit, target, limit, t_start, t_end) -> np.ndarray:
+    def _load_spikes(
+        cls, simulation, circuit, target, limit, initial_offset, t_start, t_end
+    ) -> np.ndarray:
         """
 
         Args:
@@ -35,7 +37,10 @@ class TrialSteps(BaseExtractor):
         if limit and neuron_count > limit:
             gids = np.random.choice(gids, size=limit, replace=False)
         L.info("Selected %s/%s gids", len(gids), neuron_count)
-        spikes = simulation.spikes.get(gids, t_start=t_start, t_end=t_end).index.to_numpy()
+        spikes = simulation.spikes.get(
+            gids, t_start=initial_offset + t_start, t_end=initial_offset + t_end
+        ).index.to_numpy()
+        spikes -= initial_offset
         L.info("Selected %s spikes", len(spikes))
         return spikes
 
@@ -47,6 +52,7 @@ class TrialSteps(BaseExtractor):
         for trial_steps_label, trial_steps_params in config.get("trial_steps", {}).items():
             func = import_by_string(trial_steps_params["function"])
             t_start, t_end = trial_steps_params["bounds"]
+            initial_offset = trial_steps_params["initial_offset"]
             for index, rec in simulations.df.etl.iter():
                 L.info(
                     "Processing trial_steps_label=%s, simulation_id=%s, circuit_id=%s",
@@ -59,6 +65,7 @@ class TrialSteps(BaseExtractor):
                     circuit=rec.circuit,
                     target=target,
                     limit=limit,
+                    initial_offset=initial_offset,
                     t_start=t_start,
                     t_end=t_end,
                 )

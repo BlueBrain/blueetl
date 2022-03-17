@@ -16,15 +16,16 @@ extraction:
     ALL_INH: { synapse_class: [ INH ], $limit: null }
     ALL_EXC: { synapse_class: [ EXC ], $limit: null }
     ALL: { $limit: null }
-  limit: 5000
+  limit: null
   target: hex0
   windows:
     w1: { bounds: [ 2000, 7000 ], window_type: spontaneous }
-    w2: { bounds: [ 0, 100 ], n_trials: 3, trial_steps_value: 1000 }
-    w3: { bounds: [ 0, 25 ], n_trials: 5, trial_steps_label: ts1}
+    w2: { bounds: [ 0, 100 ], initial_offset: 7000, n_trials: 3, trial_steps_value: 1000 }
+    w3: { bounds: [ 0, 25 ], initial_offset: 7000, n_trials: 5, trial_steps_label: ts1}
   trial_steps:
     ts1:
       function: blueetl.external.bnac.calculate_trial_step.onset_from_spikes
+      initial_offset: 7000
       bounds: [ -50, 25 ]
       pre_window: [ -50, 0 ]
       post_window: [ 0, 25 ]

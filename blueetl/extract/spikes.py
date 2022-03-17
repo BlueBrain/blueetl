@@ -21,11 +21,16 @@ class Spikes(BaseExtractor):
     _columns = [SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS, WINDOW, TRIAL, TIME, GID]
 
     @classmethod
-    def _assign_window(cls, df: pd.DataFrame, name: str, trial: int, t_start: float, t_stop: float):
+    def _assign_window(
+        cls, df: pd.DataFrame, name: str, trial: int, offset: float, t_start: float, t_stop: float
+    ):
+        # increment t_start and t_stop because they are relative to offset
+        t_start += offset
+        t_stop += offset
         df = df[(df[TIME] >= t_start) & (df[TIME] < t_stop)].copy()
         df.loc[:, [WINDOW, TRIAL]] = [name, trial]
-        # make the spike times relative to the start of the window
-        df.loc[:, TIME] -= t_start
+        # make the spike times relative to the offset
+        df.loc[:, TIME] -= offset
         return df
 
     @classmethod
@@ -44,7 +49,7 @@ class Spikes(BaseExtractor):
         df = spikes.get(gids).reset_index()
         df = df.rename(columns={"t": TIME})
         df = pd.concat(
-            cls._assign_window(df, rec.window, rec.trial, rec.t_start, rec.t_stop)
+            cls._assign_window(df, rec.window, rec.trial, rec.offset, rec.t_start, rec.t_stop)
             for rec in windows_df.itertuples()
         )
         df = df.reset_index(drop=True)

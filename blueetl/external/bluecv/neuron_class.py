@@ -13,8 +13,7 @@ L = logging.getLogger(__name__)
 
 
 def calculate_features_by_neuron_class(repo, key, df, params):
-    duration = repo.windows.get_duration(key.window)
-    t_start, t_stop = 0, duration
+    t_start, t_stop = repo.windows.get_bounds(key.window)
     # create an array containing multiple arrays of spikes, one for each gid
     spiketrains = df.groupby([GID])[TIME].apply(np.array).to_numpy()
     ST = to_spiketrains(spiketrains, t_start, t_stop)

@@ -77,9 +77,9 @@ def get_initial_spiking_stats(repo, key, df, params):
 def get_histogram_features(repo, key, df, params):
     number_of_trials = repo.windows.get_number_of_trials(key.window)
     duration = repo.windows.get_duration(key.window)
-    duration = int(duration)
+    t_start, t_stop = repo.windows.get_bounds(key.window)
     times = df[TIME].to_numpy()
-    hist, _ = np.histogram(times, range=[0, duration], bins=duration)
+    hist, _ = np.histogram(times, range=[t_start, t_stop], bins=int(duration))
     num_target_cells = len(
         repo.neurons.df.etl.q(circuit_id=key.circuit_id, neuron_class=key.neuron_class)
     )

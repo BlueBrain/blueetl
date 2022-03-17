@@ -10,8 +10,7 @@ L = logging.getLogger(__name__)
 
 
 def calculate_features_by_gid(repo, key, df, params):
-    duration = repo.windows.get_duration(key.window)
-    t_start, t_stop = 0, duration
+    t_start, t_stop = repo.windows.get_bounds(key.window)
     spiketrain = df[TIME].to_numpy()
     functions = {
         "MFR": partial(get_MFR, spiketrain, t_start=t_start, t_stop=t_stop),

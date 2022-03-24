@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from scipy.ndimage import gaussian_filter
 
-from blueetl.constants import GID, TIME, TRIAL, COUNT
+from blueetl.constants import BIN, COUNT, GID, TIME, TIMES, TRIAL
 
 L = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ def get_initial_spiking_stats(repo, key, df, params):
     neurons = repo.neurons.df.etl.q(circuit_id=key.circuit_id, neuron_class=key.neuron_class)
     # first spike for each trial and gid, averaged across all trials where the neuron was present
     first_spike_time_means_cort_zeroed = (
-        df.groupby([TRIAL, GID]).first().groupby(GID).mean().reset_index()
+        df.groupby([TRIAL, GID]).min().groupby(GID).mean().reset_index()
     )
     # same, but including all the existing neurons in the given neuron class and using NaN
     first_spike_time_means_cort_zeroed_by_cell = pd.merge(
@@ -74,10 +74,62 @@ def get_initial_spiking_stats(repo, key, df, params):
     }
 
 
+def get_initial_spiking_stats_2(repo, key, df, params):
+    number_of_trials = repo.windows.get_number_of_trials(key.window)
+    trial_columns = list(range(number_of_trials))
+    duration = repo.windows.get_duration(key.window)
+
+    # first spike for each trial and gid, averaged across all trials where the neuron was present
+    first_spike_time_means_cort_zeroed = (
+        df.groupby([TRIAL, GID])
+        .min()
+        .groupby(GID)[TIME]
+        .mean()
+        .rename("first_spike_time_means_cort_zeroed")
+    )
+
+    # df with index (trial, gid) and columns (count, times)
+    spikes_by_trial = df.groupby([TRIAL, GID])[TIME].agg(**{COUNT: "count", TIMES: list})
+    # add rows with NaN values
+    spikes_by_trial = pd.DataFrame(
+        index=pd.MultiIndex.from_product(
+            [trial_columns, spikes_by_trial.etl.labels_of(GID)], names=[TRIAL, GID]
+        ),
+    ).join(spikes_by_trial)
+
+    mean_spike_counts = spikes_by_trial[COUNT].fillna(0).groupby(GID).mean()
+    mean_spike_counts = mean_spike_counts.rename("mean_spike_counts")
+    mean_of_spike_counts_for_each_trial = (
+        spikes_by_trial[COUNT]
+        .fillna(0)
+        .groupby(TRIAL)
+        .mean()
+        .rename("mean_of_spike_counts_for_each_trial")
+    )
+
+    mean_firing_rates_per_second = mean_spike_counts * 1000.0 / duration
+    mean_firing_rates_per_second = mean_firing_rates_per_second.rename(
+        "mean_firing_rates_per_second"
+    )
+
+    return {
+        "spikes_by_trial": spikes_by_trial,
+        "first_spike_time_means_cort_zeroed": first_spike_time_means_cort_zeroed,
+        "mean_spike_counts": mean_spike_counts,
+        "mean_firing_rates_per_second": mean_firing_rates_per_second,
+        "mean_of_spike_counts_for_each_trial": mean_of_spike_counts_for_each_trial,
+        # scalar values
+        "mean_of_mean_spike_counts": np.nanmean(mean_spike_counts),
+        "mean_of_mean_firing_rates_per_second": np.mean(mean_firing_rates_per_second),
+        "std_of_mean_firing_rates_per_second": np.std(mean_firing_rates_per_second),
+    }
+
+
 def get_histogram_features(repo, key, df, params):
     number_of_trials = repo.windows.get_number_of_trials(key.window)
     duration = repo.windows.get_duration(key.window)
     t_start, t_stop = repo.windows.get_bounds(key.window)
+    # all the spike times are concatenated regardless of the trial
     times = df[TIME].to_numpy()
     hist, _ = np.histogram(times, range=[t_start, t_stop], bins=int(duration))
     num_target_cells = len(
@@ -98,4 +150,89 @@ def get_histogram_features(repo, key, df, params):
         "argmax_spike_times_hist_1ms_bin": np.argmax(hist),
         "spike_times_max_normalised_hist_1ms_bin": norm_hist,
         "smoothed_3ms_spike_times_max_normalised_hist_1ms_bin": norm_smoothed_hist,
+    }
+
+
+def calculate_features(repo, key, df, params):
+    # all neurons, having spikes or not
+    neurons = repo.neurons.df.etl.q(circuit_id=key.circuit_id, neuron_class=key.neuron_class)
+    neurons = pd.DataFrame(index=neurons[GID])
+    number_of_trials = repo.windows.get_number_of_trials(key.window)
+    trial_columns = list(range(number_of_trials))
+
+    spiking_stats = get_initial_spiking_stats_2(repo, key, df, params)
+    histogram_features = get_histogram_features(repo, key, df, params)
+
+    # df with (gid) as index, and features as columns
+    # FIXME: do we really need to return all the neurons and keep joining?
+    by_gid = neurons.join(
+        [
+            spiking_stats["first_spike_time_means_cort_zeroed"],
+            spiking_stats["mean_spike_counts"],
+            spiking_stats["mean_firing_rates_per_second"],
+        ]
+    )
+
+    neurons_by_trial = pd.DataFrame(
+        index=pd.MultiIndex.from_product([trial_columns, neurons.index], names=[TRIAL, GID])
+    )
+    # df with (trial, gid) as index, and features as columns
+    # FIXME: do we really need to return all the neurons and keep joining?
+    by_gid_and_trial = neurons_by_trial.join(
+        [
+            spiking_stats["spikes_by_trial"],
+        ]
+    )
+
+    # df with features as columns and a single row
+    # the index will be dropped when concatenating because it's unnamed
+    by_neuron_class = pd.DataFrame(
+        {
+            "mean_of_mean_spike_counts": spiking_stats["mean_of_mean_spike_counts"],
+            "mean_of_mean_firing_rates_per_second": spiking_stats[
+                "mean_of_mean_firing_rates_per_second"
+            ],
+            "std_of_mean_firing_rates_per_second": spiking_stats[
+                "std_of_mean_firing_rates_per_second"
+            ],
+            "mean_of_spike_times_normalised_hist_1ms_bin": histogram_features[
+                "mean_of_spike_times_normalised_hist_1ms_bin"
+            ],
+            "min_of_spike_times_normalised_hist_1ms_bin": histogram_features[
+                "min_of_spike_times_normalised_hist_1ms_bin"
+            ],
+            "max_of_spike_times_normalised_hist_1ms_bin": histogram_features[
+                "max_of_spike_times_normalised_hist_1ms_bin"
+            ],
+            "argmax_spike_times_hist_1ms_bin": histogram_features[
+                "argmax_spike_times_hist_1ms_bin"
+            ],
+        },
+        index=[0],
+    )
+
+    # df with (trial) as index, and features as columns
+    by_neuron_class_and_trial = spiking_stats["mean_of_spike_counts_for_each_trial"].to_frame()
+
+    # df with (bin) as index, and features as columns
+    histograms = pd.DataFrame(
+        {
+            "spike_times_normalised_hist_1ms_bin": histogram_features[
+                "spike_times_normalised_hist_1ms_bin"
+            ],
+            "spike_times_max_normalised_hist_1ms_bin": histogram_features[
+                "spike_times_max_normalised_hist_1ms_bin"
+            ],
+            "smoothed_3ms_spike_times_max_normalised_hist_1ms_bin": histogram_features[
+                "smoothed_3ms_spike_times_max_normalised_hist_1ms_bin"
+            ],
+        }
+    ).rename_axis(BIN)
+
+    return {
+        "by_gid": by_gid,
+        "by_gid_and_trial": by_gid_and_trial,
+        "by_neuron_class": by_neuron_class,
+        "by_neuron_class_and_trial": by_neuron_class_and_trial,
+        "histograms": histograms,
     }

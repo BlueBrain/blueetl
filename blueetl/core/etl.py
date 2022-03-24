@@ -74,17 +74,37 @@ class ETLBaseAccessor(ABC):
         """
         return self._obj.droplevel(self.complementary_conditions(condition), axis=0)
 
-    def add_condition(self, condition, value, inner=False):
-        """Add a new condition in the outermost or innermost level with the given value.
+    def add_condition(self, condition, value, inner=False, drop=False):
+        """Add a new condition in the outermost or innermost position with the given value.
 
         Args:
             condition: condition to be added.
             value: value of the condition.
             inner (bool): if True, add the condition in the innermost position.
+            drop (bool): if True, drop the existing conditions.
         """
-        result = pd.concat([self._obj], axis="index", keys=[value], names=[condition])
-        if inner:
-            result = result.reorder_levels(list(range(1, result.index.nlevels)) + [0])
+        return self.add_conditions([condition], [value], inner=inner, drop=drop)
+
+    def add_conditions(self, conditions, values, inner=False, drop=False):
+        """Add multiple conditions in the outermost or innermost position with the given values.
+
+        Args:
+            conditions: list of conditions to be added.
+            values: list of values of the condition.
+            inner (bool): if True, add the conditions in the innermost position.
+            drop (bool): if True, drop the existing conditions.
+        """
+        assert len(conditions) == len(values), "Conditions and values must have the same length"
+        result = pd.concat([self._obj], axis="index", keys=[tuple(values)], names=conditions)
+        if drop:
+            # levels to be dropped, for example: [-3, -2, -1]
+            levels = list(range(-len(conditions), 0))
+            result = result.droplevel(levels)
+        elif inner:
+            # rotate the levels: (0 1) 2 3 4 5 -> 2 3 4 5 (0 1)
+            order = list(range(result.index.nlevels))
+            order = order[len(conditions) :] + order[: len(conditions)]
+            result = result.reorder_levels(order)
         return result
 
     def select(self, drop_level=True, **kwargs):

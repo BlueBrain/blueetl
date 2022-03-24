@@ -13,9 +13,9 @@ extraction:
     L4_INH: { layer: [ 4 ], synapse_class: [ INH ] }
     L5_INH: { layer: [ 5 ], synapse_class: [ INH ] }
     L6_INH: { layer: [ 6 ], synapse_class: [ INH ] }
-    ALL_INH: { synapse_class: [ INH ], $limit: null }
-    ALL_EXC: { synapse_class: [ EXC ], $limit: null }
-    ALL: { $limit: null }
+#    ALL_INH: { synapse_class: [ INH ], $limit: null }
+#    ALL_EXC: { synapse_class: [ EXC ], $limit: null }
+#    ALL: { $limit: null }
   limit: null
   target: hex0
   windows:
@@ -39,3 +39,5 @@ analysis:
     neuron_class:
       - function: blueetl.external.bnac.neuron_class.get_initial_spiking_stats
       - function: blueetl.external.bnac.neuron_class.get_histogram_features
+    generic:
+      function: blueetl.external.bnac.neuron_class.calculate_features

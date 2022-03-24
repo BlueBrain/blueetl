@@ -18,6 +18,8 @@ WINDOW_TYPE = "window_type"
 COUNT = "count"
 TRIAL_STEPS_LABEL = "trial_steps_label"
 TRIAL_STEPS_VALUE = "trial_steps_value"
+TIMES = "times"
+BIN = "bin"
 
 DTYPES = {
     GID: np.int64,

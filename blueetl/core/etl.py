@@ -98,7 +98,7 @@ class ETLBaseAccessor(ABC):
         result = pd.concat([self._obj], axis="index", keys=[tuple(values)], names=conditions)
         if drop:
             # levels to be dropped, for example: [-3, -2, -1]
-            levels = list(range(-len(conditions), 0))
+            levels = list(range(-self._obj.columns.nlevels, 0))
             result = result.droplevel(levels)
         elif inner:
             # rotate the levels: (0 1) 2 3 4 5 -> 2 3 4 5 (0 1)

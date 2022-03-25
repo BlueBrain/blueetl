@@ -51,7 +51,7 @@ class FeaturesCollection:
             features_config["name"]: calculate_features_single(
                 repo=self.repo,
                 features_func=features_config["function"],
-                features_groupy=features_config["groupby"],
+                features_groupby=features_config["groupby"],
                 features_params=features_config.get("params", {}),
             )
         }
@@ -60,7 +60,7 @@ class FeaturesCollection:
         return calculate_features_multi(
             repo=self.repo,
             features_func=features_config["function"],
-            features_groupy=features_config["groupby"],
+            features_groupby=features_config["groupby"],
             features_params=features_config.get("params", {}),
         )
 
@@ -71,15 +71,15 @@ class FeaturesCollection:
 
 @timed(L.info, "Completed calculate_features_single")
 def calculate_features_single(
-    repo: Repository, features_func: str, features_groupy: List[str], features_params: Dict
+    repo: Repository, features_func: str, features_groupby: List[str], features_params: Dict
 ) -> pd.DataFrame:
     """Calculate features for the given repository as a single DataFrame.
 
     Args:
         repo: repository containing spikes.
         features_func: string of the function to be executed to calculate the features.
-            The function should return a dict, where each key will be a column of the DataFrame.
-        features_groupy: columns for aggregation.
+            The function should return a dict, where each key will be a column in the DataFrame.
+        features_groupby: columns for aggregation.
         features_params: generic dict of params that will be passed to the function.
 
     Returns:
@@ -89,9 +89,11 @@ def calculate_features_single(
     func = import_by_string(features_func)
     records = []
     key = None
-    for key, df in repo.spikes.df.etl.grouped_by(features_groupy):
+    for key, df in repo.spikes.df.etl.grouped_by(features_groupby):
         record = key._asdict()
-        record.update(func(repo=repo, key=key, df=df, params=features_params))
+        result = func(repo=repo, key=key, df=df, params=features_params)
+        assert isinstance(result, dict), "The returned object must be a dict"
+        record.update(result)
         records.append(record)
     df = pd.DataFrame(records)
     if key:
@@ -101,7 +103,7 @@ def calculate_features_single(
 
 @timed(L.info, "Completed calculate_features_multi")
 def calculate_features_multi(
-    repo: Repository, features_func: str, features_groupy: List[str], features_params: Dict
+    repo: Repository, features_func: str, features_groupby: List[str], features_params: Dict
 ) -> Dict[str, pd.DataFrame]:
     """Calculate features for the given repository as a dict of DataFrames.
 
@@ -109,7 +111,7 @@ def calculate_features_multi(
         repo: repository containing spikes.
         features_func: string of the function to be executed to calculate the features.
             The function should return a dict of DataFrames.
-        features_groupy: columns for aggregation.
+        features_groupby: columns for aggregation.
         features_params: generic dict of params that will be passed to the function.
 
     Returns:
@@ -118,14 +120,15 @@ def calculate_features_multi(
     """
     func = import_by_string(features_func)
     features_records = defaultdict(list)
-    for key, df in repo.spikes.df.etl.grouped_by(features_groupy):
+    for key, df in repo.spikes.df.etl.grouped_by(features_groupby):
         L.info("Calculating features for %s", key)
         record = key._asdict()
         conditions = list(record.keys())
         values = tuple(record.values())
         features_dict = func(repo=repo, key=key, df=df, params=features_params)
+        assert isinstance(features_dict, dict), "The returned object must be a dict"
         for feature_group, result in features_dict.items():
-            assert isinstance(result, pd.DataFrame), "The returned object must be a DataFrame"
+            assert isinstance(result, pd.DataFrame), "Each contained object must be a DataFrame"
             # ignore the index if it's unnamed and with one level; this can be useful
             # for example when the returned DataFrame has a RangeIndex to be dropped
             drop = result.index.names == [None]

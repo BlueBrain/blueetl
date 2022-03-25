@@ -18,7 +18,8 @@ def main():
     np.random.seed(0)
     analysis_config = load_yaml(analysis_config_file)
     a = Analyzer(analysis_config, use_cache=True)
-    a.run()
+    a.extract_repo()
+    a.calculate_features()
     return a
 
 

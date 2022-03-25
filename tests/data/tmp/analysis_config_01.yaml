@@ -21,7 +21,7 @@ extraction:
   windows:
     w1: { bounds: [ 2000, 7000 ], window_type: spontaneous }
     w2: { bounds: [ 0, 100 ], initial_offset: 7000, n_trials: 3, trial_steps_value: 1000 }
-    w3: { bounds: [ 0, 25 ], initial_offset: 7000, n_trials: 5, trial_steps_label: ts1}
+    w3: { bounds: [ 0, 25 ], initial_offset: 7000, n_trials: 5, trial_steps_label: ts1 }
   trial_steps:
     ts1:
       function: blueetl.external.bnac.calculate_trial_step.onset_from_spikes
@@ -33,11 +33,15 @@ extraction:
       histo_bins_per_ms: 5
       threshold_std_multiple: 4
       ms_post_offset: 1
-      fig_paths: []
+      fig_paths: [ ]
 analysis:
   features:
-    neuron_class:
-      - function: blueetl.external.bnac.neuron_class.get_initial_spiking_stats
-      - function: blueetl.external.bnac.neuron_class.get_histogram_features
-    generic:
-      function: blueetl.external.bnac.neuron_class.calculate_features
+    - type: multi
+      groupby: [ simulation_id, circuit_id, neuron_class, window ]
+      function: blueetl.external.bnac.calculate_features.calculate_features_multi
+      params: { }
+    - type: single
+      name: all_in_one
+      groupby: [ simulation_id, circuit_id, neuron_class, window ]
+      function: blueetl.external.bnac.calculate_features.calculate_features_single
+      params: { }

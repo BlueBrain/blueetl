@@ -253,12 +253,22 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
         """Given a query dictionary, return the DataFrame filtered by columns and index."""
         return query_frame(self._obj, query)
 
-    def grouped_by(self, groupby_columns, selected_columns, sort=True, observed=True):
-        """Group the dataframe by some columns and yield each record as a tuple (key, df).
+    def grouped_by(self, groupby_columns, selected_columns=None, sort=True, observed=True):
+        """Group the dataframe by columns and yield each record as a tuple (key, df).
+
+        Args:
+            groupby_columns: list of column names to group by.
+            selected_columns: list of column names to be included in the yielded dataframes.
+            sort: Sort group keys.
+            observed: This only applies if any of the groupers are Categoricals.
+                If True: only show observed values for categorical groupers.
+                If False: show all values for categorical groupers.
 
         Yields:
             a tuple (key, df), where key is a namedtuple with the grouped columns
         """
+        if selected_columns is None:
+            selected_columns = list(set(self._obj.columns).difference(groupby_columns))
         grouped = self._obj.groupby(groupby_columns, sort=sort, observed=observed)
         grouped = grouped[selected_columns]
         RecordKey = collections.namedtuple("RecordKey", groupby_columns)

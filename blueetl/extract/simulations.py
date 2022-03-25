@@ -13,7 +13,7 @@ L = logging.getLogger(__name__)
 
 
 class Simulations(BaseExtractor):
-    _columns = [SIMULATION_PATH, SIMULATION_ID, CIRCUIT_ID, SIMULATION, CIRCUIT]
+    COLUMNS = [SIMULATION_PATH, SIMULATION_ID, CIRCUIT_ID, SIMULATION, CIRCUIT]
 
     @staticmethod
     def _get_circuit_hash(circuit_config):

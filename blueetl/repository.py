@@ -2,6 +2,7 @@ import json
 import logging
 from typing import Any, Dict, Type
 
+from blueetl import DefaultStore
 from blueetl.config.simulations import SimulationsConfig
 from blueetl.extract.neurons import Neurons
 from blueetl.extract.simulations import Simulations
@@ -9,7 +10,6 @@ from blueetl.extract.spikes import Spikes
 from blueetl.extract.trial_steps import TrialSteps
 from blueetl.extract.windows import Windows
 from blueetl.store.base import BaseStore
-from blueetl.store.parquet import ParquetStore as DefaultStore
 from blueetl.utils import timed
 
 L = logging.getLogger(__name__)
@@ -20,13 +20,13 @@ class Repository:
         self,
         simulations_config: SimulationsConfig,
         extraction_config: Dict[str, Any],
-        cache_dir,
-        use_cache: bool = False,
+        store_dir,
         store_class: Type[BaseStore] = DefaultStore,
+        use_cache: bool = False,
     ) -> None:
         self.extraction_config = extraction_config
         self.simulations_config = simulations_config
-        self.store = store_class(cache_dir)
+        self.store = store_class(store_dir)
         self.use_cache = use_cache
         self.simulations = None
         self.neurons = None

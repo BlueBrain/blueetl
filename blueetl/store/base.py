@@ -12,7 +12,7 @@ L = logging.getLogger(__name__)
 class BaseStore(ABC):
     def __init__(self, basedir: Union[str, PathLike]) -> None:
         self.basedir = Path(basedir).resolve()
-        self.basedir.mkdir(exist_ok=True)
+        self.basedir.mkdir(parents=True, exist_ok=True)
 
     @abstractmethod
     def dump(self, df: pd.DataFrame, name: str) -> None:

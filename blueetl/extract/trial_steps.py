@@ -11,7 +11,7 @@ L = logging.getLogger(__name__)
 
 
 class TrialSteps(BaseExtractor):
-    _columns = [SIMULATION_ID, CIRCUIT_ID, TRIAL_STEPS_LABEL, TRIAL_STEPS_VALUE]
+    COLUMNS = [SIMULATION_ID, CIRCUIT_ID, TRIAL_STEPS_LABEL, TRIAL_STEPS_VALUE]
 
     @classmethod
     def _validate(cls, df):
@@ -89,5 +89,5 @@ class TrialSteps(BaseExtractor):
                         **trial_steps_result,
                     }
                 )
-        df = pd.DataFrame(results) if results else pd.DataFrame([], columns=cls._columns)
+        df = pd.DataFrame(results) if results else pd.DataFrame([], columns=cls.COLUMNS)
         return cls(df)

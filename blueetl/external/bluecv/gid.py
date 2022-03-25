@@ -22,9 +22,8 @@ def calculate_features_by_gid(repo, key, df, params):
     }
     result = {}
     for feature_name, feature_config in params.items():
-        if feature_config["enabled"]:
-            feature_params = feature_config.get("params", {})
-            result[feature_name] = functions[feature_name](**feature_params)
+        feature_params = feature_config.get("params", {})
+        result[feature_name] = functions[feature_name](**feature_params)
     return result
 
 

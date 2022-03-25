@@ -6,7 +6,7 @@ from blueetl.utils import ensure_dtypes
 
 
 class BaseExtractor(ABC):
-    _columns = []
+    COLUMNS = []
 
     def __init__(self, df: pd.DataFrame):
         self._validate(df)
@@ -20,7 +20,7 @@ class BaseExtractor(ABC):
     def _validate_columns(cls, df, allow_missing=False, allow_extra=False):
         # check the names of the columns
         actual = set(df.columns)
-        expected = set(cls._columns)
+        expected = set(cls.COLUMNS)
         if not allow_missing and expected - actual:
             raise ValueError(f"Expected columns not present: {expected - actual}")
         if not allow_extra and actual - expected:

@@ -21,7 +21,7 @@ L = logging.getLogger(__name__)
 
 
 class Windows(BaseExtractor):
-    _columns = [
+    COLUMNS = [
         SIMULATION_ID,
         CIRCUIT_ID,
         WINDOW,

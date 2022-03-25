@@ -10,7 +10,7 @@ from blueetl.constants import BIN, COUNT, GID, TIME, TIMES, TRIAL
 L = logging.getLogger(__name__)
 
 
-def get_initial_spiking_stats(repo, key, df, params):
+def get_initial_spiking_stats_v1(repo, key, df, params):
     number_of_trials = repo.windows.get_number_of_trials(key.window)
     trial_columns = list(range(number_of_trials))
     duration = repo.windows.get_duration(key.window)
@@ -74,7 +74,7 @@ def get_initial_spiking_stats(repo, key, df, params):
     }
 
 
-def get_initial_spiking_stats_2(repo, key, df, params):
+def get_initial_spiking_stats_v2(repo, key, df, params):
     number_of_trials = repo.windows.get_number_of_trials(key.window)
     trial_columns = list(range(number_of_trials))
     duration = repo.windows.get_duration(key.window)
@@ -153,35 +153,55 @@ def get_histogram_features(repo, key, df, params):
     }
 
 
-def calculate_features(repo, key, df, params):
+def calculate_features_single(repo, key, df, params):
+    spiking_stats = get_initial_spiking_stats_v1(repo, key, df, params)
+    histogram_features = get_histogram_features(repo, key, df, params)
+    return {**spiking_stats, **histogram_features}
+
+
+def calculate_features_multi(repo, key, df, params):
     # all neurons, having spikes or not
     neurons = repo.neurons.df.etl.q(circuit_id=key.circuit_id, neuron_class=key.neuron_class)
     neurons = pd.DataFrame(index=neurons[GID])
     number_of_trials = repo.windows.get_number_of_trials(key.window)
     trial_columns = list(range(number_of_trials))
 
-    spiking_stats = get_initial_spiking_stats_2(repo, key, df, params)
+    spiking_stats = get_initial_spiking_stats_v2(repo, key, df, params)
     histogram_features = get_histogram_features(repo, key, df, params)
 
     # df with (gid) as index, and features as columns
     # FIXME: do we really need to return all the neurons and keep joining?
-    by_gid = neurons.join(
+    # by_gid = neurons.join(
+    #     [
+    #         spiking_stats["first_spike_time_means_cort_zeroed"],
+    #         spiking_stats["mean_spike_counts"],
+    #         spiking_stats["mean_firing_rates_per_second"],
+    #     ]
+    # )
+    by_gid = pd.concat(
         [
             spiking_stats["first_spike_time_means_cort_zeroed"],
             spiking_stats["mean_spike_counts"],
             spiking_stats["mean_firing_rates_per_second"],
-        ]
+        ],
+        axis=1,
     )
 
-    neurons_by_trial = pd.DataFrame(
-        index=pd.MultiIndex.from_product([trial_columns, neurons.index], names=[TRIAL, GID])
-    )
-    # df with (trial, gid) as index, and features as columns
-    # FIXME: do we really need to return all the neurons and keep joining?
-    by_gid_and_trial = neurons_by_trial.join(
+    # neurons_by_trial = pd.DataFrame(
+    #     index=pd.MultiIndex.from_product([trial_columns, neurons.index], names=[TRIAL, GID])
+    # )
+    # # df with (trial, gid) as index, and features as columns
+    # # FIXME: do we really need to return all the neurons and keep joining?
+    # by_gid_and_trial = neurons_by_trial.join(
+    #     [
+    #         spiking_stats["spikes_by_trial"],
+    #     ]
+    # )
+    by_gid_and_trial = pd.concat(
         [
             spiking_stats["spikes_by_trial"],
-        ]
+        ],
+        axis=1,
     )
 
     # df with features as columns and a single row

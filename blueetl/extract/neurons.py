@@ -12,12 +12,12 @@ L = logging.getLogger(__name__)
 
 
 class Neurons(BaseExtractor):
-    _columns = [CIRCUIT_ID, NEURON_CLASS, GID]
+    COLUMNS = [CIRCUIT_ID, NEURON_CLASS, GID]
 
     def __init__(self, df: pd.DataFrame):
         super().__init__(df)
         # ensure that the neurons are sorted
-        self._df = self._df.sort_values(self._columns, ignore_index=True)
+        self._df = self._df.sort_values(self.COLUMNS, ignore_index=True)
 
     @staticmethod
     def _get_gids(circuit, target, neuron_classes, limit=None):

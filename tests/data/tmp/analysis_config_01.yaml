@@ -39,7 +39,7 @@ analysis:
     - type: multi
       groupby: [ simulation_id, circuit_id, neuron_class, window ]
       function: blueetl.external.bnac.calculate_features.calculate_features_multi
-      params: { all_neurons: true }
+      params: { export_all_neurons: true }
     - type: single
       name: all_in_one
       groupby: [ simulation_id, circuit_id, neuron_class, window ]

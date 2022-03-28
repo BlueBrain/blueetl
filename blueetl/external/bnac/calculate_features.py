@@ -165,21 +165,13 @@ def calculate_features_multi(repo, key, df, params):
     neurons = pd.DataFrame(index=neurons[GID])
     number_of_trials = repo.windows.get_number_of_trials(key.window)
     trial_columns = list(range(number_of_trials))
+    export_all_neurons = params.get("export_all_neurons", False)
 
     spiking_stats = get_initial_spiking_stats_v2(repo, key, df, params)
     histogram_features = get_histogram_features(repo, key, df, params)
 
     # df with (gid) as index, and features as columns
-    if not params.get("all_neurons", False):
-        by_gid = pd.concat(
-            [
-                spiking_stats["first_spike_time_means_cort_zeroed"],
-                spiking_stats["mean_spike_counts"],
-                spiking_stats["mean_firing_rates_per_second"],
-            ],
-            axis=1,
-        )
-    else:
+    if export_all_neurons:
         # return all the neurons, having spikes or not
         by_gid = neurons.join(
             [
@@ -188,16 +180,19 @@ def calculate_features_multi(repo, key, df, params):
                 spiking_stats["mean_firing_rates_per_second"],
             ]
         )
-
-    # df with (trial, gid) as index, and features as columns
-    if not params.get("all_neurons", False):
-        by_gid_and_trial = pd.concat(
+    else:
+        # return only neurons with spikes
+        by_gid = pd.concat(
             [
-                spiking_stats["spikes_by_trial"],
+                spiking_stats["first_spike_time_means_cort_zeroed"],
+                spiking_stats["mean_spike_counts"],
+                spiking_stats["mean_firing_rates_per_second"],
             ],
             axis=1,
         )
-    else:
+
+    # df with (trial, gid) as index, and features as columns
+    if export_all_neurons:
         # return all the neurons, having spikes or not
         neurons_by_trial = pd.DataFrame(
             index=pd.MultiIndex.from_product([trial_columns, neurons.index], names=[TRIAL, GID])
@@ -206,6 +201,14 @@ def calculate_features_multi(repo, key, df, params):
             [
                 spiking_stats["spikes_by_trial"],
             ]
+        )
+    else:
+        # return only neurons with spikes
+        by_gid_and_trial = pd.concat(
+            [
+                spiking_stats["spikes_by_trial"],
+            ],
+            axis=1,
         )
 
     # df with features as columns and a single row

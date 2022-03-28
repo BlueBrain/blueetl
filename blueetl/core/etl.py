@@ -1,13 +1,13 @@
 """Pandas accessors."""
-import collections
 import logging
 from abc import ABC, abstractmethod
+from collections import namedtuple
 from typing import Any, Dict, Optional, Union
 
-import numpy as np
 import pandas as pd
 
 from blueetl.core.utils import query_frame, query_series
+from blueetl.utils import ensure_list
 
 L = logging.getLogger(__name__)
 
@@ -268,12 +268,13 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
             a tuple (key, df), where key is a namedtuple with the grouped columns
         """
         if selected_columns is None:
-            selected_columns = list(set(self._obj.columns).difference(groupby_columns))
+            groupby_set = set(groupby_columns)
+            selected_columns = [col for col in self._obj.columns if col not in groupby_set]
         grouped = self._obj.groupby(groupby_columns, sort=sort, observed=observed)
         grouped = grouped[selected_columns]
-        RecordKey = collections.namedtuple("RecordKey", groupby_columns)
+        RecordKey = namedtuple("RecordKey", groupby_columns)
         for key, df in grouped:
-            yield RecordKey(*key), df
+            yield RecordKey(*ensure_list(key)), df
 
 
 class ETLIndexAccessor:
@@ -290,11 +291,9 @@ class ETLIndexAccessor:
         It works with both Indexes and MultiIndexes.
         """
         names = self._obj.names
-        Index = collections.namedtuple("Index", names, rename=True)
-        if len(names) > 1:
-            yield from (Index(*i) for i in self._obj)
-        else:
-            yield from (Index(i) for i in self._obj)
+        Index = namedtuple("Index", names, rename=True)
+        for i in self._obj:
+            yield Index(*ensure_list(i))
 
 
 def register_accessors():

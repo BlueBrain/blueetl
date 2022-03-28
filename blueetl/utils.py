@@ -31,6 +31,11 @@ def dump_yaml(filepath, data):
         yaml.safe_dump(data, stream=f)
 
 
+def ensure_list(x):
+    """Return x if x is a list or a tuple, [x] otherwise."""
+    return x if isinstance(x, (list, tuple)) else [x]
+
+
 def ensure_dtypes(df: pd.DataFrame) -> pd.DataFrame:
     """Return a DataFrame with the columns cast to the predefined types."""
     return df.astype({k: DTYPES[k] for k in df.columns if k in DTYPES})

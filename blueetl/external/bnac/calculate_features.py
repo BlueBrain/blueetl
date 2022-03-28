@@ -170,39 +170,43 @@ def calculate_features_multi(repo, key, df, params):
     histogram_features = get_histogram_features(repo, key, df, params)
 
     # df with (gid) as index, and features as columns
-    # FIXME: do we really need to return all the neurons and keep joining?
-    # by_gid = neurons.join(
-    #     [
-    #         spiking_stats["first_spike_time_means_cort_zeroed"],
-    #         spiking_stats["mean_spike_counts"],
-    #         spiking_stats["mean_firing_rates_per_second"],
-    #     ]
-    # )
-    by_gid = pd.concat(
-        [
-            spiking_stats["first_spike_time_means_cort_zeroed"],
-            spiking_stats["mean_spike_counts"],
-            spiking_stats["mean_firing_rates_per_second"],
-        ],
-        axis=1,
-    )
+    if not params.get("all_neurons", False):
+        by_gid = pd.concat(
+            [
+                spiking_stats["first_spike_time_means_cort_zeroed"],
+                spiking_stats["mean_spike_counts"],
+                spiking_stats["mean_firing_rates_per_second"],
+            ],
+            axis=1,
+        )
+    else:
+        # return all the neurons, having spikes or not
+        by_gid = neurons.join(
+            [
+                spiking_stats["first_spike_time_means_cort_zeroed"],
+                spiking_stats["mean_spike_counts"],
+                spiking_stats["mean_firing_rates_per_second"],
+            ]
+        )
 
-    # neurons_by_trial = pd.DataFrame(
-    #     index=pd.MultiIndex.from_product([trial_columns, neurons.index], names=[TRIAL, GID])
-    # )
-    # # df with (trial, gid) as index, and features as columns
-    # # FIXME: do we really need to return all the neurons and keep joining?
-    # by_gid_and_trial = neurons_by_trial.join(
-    #     [
-    #         spiking_stats["spikes_by_trial"],
-    #     ]
-    # )
-    by_gid_and_trial = pd.concat(
-        [
-            spiking_stats["spikes_by_trial"],
-        ],
-        axis=1,
-    )
+    # df with (trial, gid) as index, and features as columns
+    if not params.get("all_neurons", False):
+        by_gid_and_trial = pd.concat(
+            [
+                spiking_stats["spikes_by_trial"],
+            ],
+            axis=1,
+        )
+    else:
+        # return all the neurons, having spikes or not
+        neurons_by_trial = pd.DataFrame(
+            index=pd.MultiIndex.from_product([trial_columns, neurons.index], names=[TRIAL, GID])
+        )
+        by_gid_and_trial = neurons_by_trial.join(
+            [
+                spiking_stats["spikes_by_trial"],
+            ]
+        )
 
     # df with features as columns and a single row
     # the index will be dropped when concatenating because it's unnamed

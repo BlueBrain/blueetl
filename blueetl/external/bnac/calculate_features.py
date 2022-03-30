@@ -8,6 +8,7 @@ from scipy.ndimage import gaussian_filter
 from blueetl.constants import BIN, COUNT, GID, TIME, TIMES, TRIAL
 
 L = logging.getLogger(__name__)
+FIRST = "first"
 
 
 def get_initial_spiking_stats_v1(repo, key, df, params):
@@ -79,17 +80,14 @@ def get_initial_spiking_stats_v2(repo, key, df, params):
     trial_columns = list(range(number_of_trials))
     duration = repo.windows.get_duration(key.window)
 
+    # df with index (trial, gid) and columns (count, times)
+    spikes_by_trial = df.groupby([TRIAL, GID])[TIME].agg(
+        **{COUNT: "count", TIMES: list, FIRST: "min"}
+    )
     # first spike for each trial and gid, averaged across all trials where the neuron was present
     first_spike_time_means_cort_zeroed = (
-        df.groupby([TRIAL, GID])
-        .min()
-        .groupby(GID)[TIME]
-        .mean()
-        .rename("first_spike_time_means_cort_zeroed")
+        spikes_by_trial[FIRST].groupby(GID).mean().rename("first_spike_time_means_cort_zeroed")
     )
-
-    # df with index (trial, gid) and columns (count, times)
-    spikes_by_trial = df.groupby([TRIAL, GID])[TIME].agg(**{COUNT: "count", TIMES: list})
     # add rows with NaN values
     spikes_by_trial = pd.DataFrame(
         index=pd.MultiIndex.from_product(

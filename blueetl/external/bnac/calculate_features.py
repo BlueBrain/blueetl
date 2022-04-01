@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from scipy.ndimage import gaussian_filter
 
-from blueetl.constants import BIN, COUNT, GID, TIME, TIMES, TRIAL
+from blueetl.constants import BIN, COUNT, GID, NEURON_CLASS_INDEX, TIME, TIMES, TRIAL
 
 L = logging.getLogger(__name__)
 FIRST = "first"
@@ -160,7 +160,7 @@ def calculate_features_single(repo, key, df, params):
 def calculate_features_multi(repo, key, df, params):
     # all neurons, having spikes or not
     neurons = repo.neurons.df.etl.q(circuit_id=key.circuit_id, neuron_class=key.neuron_class)
-    neurons = pd.DataFrame(index=neurons[GID])
+    neurons = neurons.set_index(GID)[[NEURON_CLASS_INDEX]]
     number_of_trials = repo.windows.get_number_of_trials(key.window)
     trial_columns = list(range(number_of_trials))
     export_all_neurons = params.get("export_all_neurons", False)
@@ -192,9 +192,10 @@ def calculate_features_multi(repo, key, df, params):
     # df with (trial, gid) as index, and features as columns
     if export_all_neurons:
         # return all the neurons, having spikes or not
-        neurons_by_trial = pd.DataFrame(
-            index=pd.MultiIndex.from_product([trial_columns, neurons.index], names=[TRIAL, GID])
-        )
+        tmp_s = neurons[NEURON_CLASS_INDEX]
+        tmp_s = pd.concat([tmp_s for _ in trial_columns], keys=trial_columns, names=[TRIAL])
+        neurons_by_trial = pd.DataFrame(index=pd.MultiIndex.from_frame(tmp_s.reset_index()))
+        neurons_by_trial = neurons_by_trial.reset_index(NEURON_CLASS_INDEX)
         by_gid_and_trial = neurons_by_trial.join(
             [
                 spiking_stats["spikes_by_trial"],

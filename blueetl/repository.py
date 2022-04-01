@@ -4,6 +4,7 @@ from typing import Any, Dict, Type
 
 from blueetl import DefaultStore
 from blueetl.config.simulations import SimulationsConfig
+from blueetl.extract.neuron_classes import NeuronClasses
 from blueetl.extract.neurons import Neurons
 from blueetl.extract.simulations import Simulations
 from blueetl.extract.spikes import Spikes
@@ -30,6 +31,7 @@ class Repository:
         self.use_cache = use_cache
         self.simulations = None
         self.neurons = None
+        self.neuron_classes = None
         self.trial_steps = None
         self.windows = None
         self.spikes = None
@@ -62,6 +64,23 @@ class Repository:
                 )
             L.info("Dumping neurons...")
             self.store.dump(self.neurons.to_pandas(), "neurons")
+
+    def extract_neuron_classes(self):
+        df = self.store.load("neuron_classes") if self.use_cache else None
+        if df is not None:
+            L.info("neuron_classes dataframe loaded from existing data")
+            self.neuron_classes = NeuronClasses.from_pandas(df)
+        else:
+            L.info("Extracting neuron_classes...")
+            with timed(L.info, "Completed neuron_classes extraction"):
+                self.neuron_classes = NeuronClasses.from_neurons(
+                    neurons=self.neurons,
+                    target=self.extraction_config["target"],
+                    neuron_classes=self.extraction_config["neuron_classes"],
+                    limit=self.extraction_config["limit"],
+                )
+            L.info("Dumping neuron_classes...")
+            self.store.dump(self.neuron_classes.to_pandas(), "neuron_classes")
 
     def extract_trial_steps(self):
         df = self.store.load("trial_steps") if self.use_cache else None
@@ -113,6 +132,7 @@ class Repository:
     def extract(self):
         self.extract_simulations()
         self.extract_neurons()
+        self.extract_neuron_classes()
         self.extract_trial_steps()
         self.extract_windows()
         self.extract_spikes()
@@ -122,7 +142,8 @@ class Repository:
         print(json.dumps(self.extraction_config, indent=2))
         print("### simulations_config")
         print(json.dumps(self.simulations_config.to_dict(), indent=2))
-        for name in ["simulations", "neurons", "trial_steps", "windows", "spikes"]:
+        names = ["simulations", "neurons", "neuron_classes", "trial_steps", "windows", "spikes"]
+        for name in names:
             print(f"### {name}.df")
             df = getattr(getattr(self, name), "df")
             print(df)

@@ -8,6 +8,7 @@ SIMULATION = "simulation"
 CIRCUIT_ID = "circuit_id"
 CIRCUIT = "circuit"
 NEURON_CLASS = "neuron_class"
+NEURON_CLASS_INDEX = "neuron_class_index"  # incremental gid index for each neuron class
 WINDOW = "window"
 TRIAL = "trial"
 OFFSET = "offset"

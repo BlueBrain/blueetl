@@ -4,7 +4,7 @@ from itertools import chain
 import numpy as np
 import pandas as pd
 
-from blueetl.constants import CIRCUIT, CIRCUIT_ID, GID, NEURON_CLASS
+from blueetl.constants import CIRCUIT, CIRCUIT_ID, GID, NEURON_CLASS, NEURON_CLASS_INDEX
 from blueetl.extract.base import BaseExtractor
 from blueetl.utils import timed
 
@@ -12,7 +12,7 @@ L = logging.getLogger(__name__)
 
 
 class Neurons(BaseExtractor):
-    COLUMNS = [CIRCUIT_ID, NEURON_CLASS, GID]
+    COLUMNS = [CIRCUIT_ID, NEURON_CLASS, GID, NEURON_CLASS_INDEX]
 
     def __init__(self, df: pd.DataFrame):
         super().__init__(df)
@@ -33,6 +33,7 @@ class Neurons(BaseExtractor):
             neuron_count = len(gids)
             if neuron_limit and neuron_count > neuron_limit:
                 gids = np.random.choice(gids, size=neuron_limit, replace=False)
+            gids.sort()
             result[neuron_class] = gids
             L.info(
                 "Selected gids for %s: %s/%s (limit=%s)",
@@ -50,11 +51,11 @@ class Neurons(BaseExtractor):
         for circuit_id, circuit in grouped.items():
             gids_by_class = cls._get_gids(circuit, target, neuron_classes, limit=limit)
             records.extend(
-                (circuit_id, neuron_class, gid)
+                (circuit_id, neuron_class, gid, neuron_class_index)
                 for neuron_class, gids in gids_by_class.items()
-                for gid in gids
+                for neuron_class_index, gid in enumerate(gids)
             )
-        df = pd.DataFrame.from_records(records, columns=[CIRCUIT_ID, NEURON_CLASS, GID])
+        df = pd.DataFrame.from_records(records, columns=cls.COLUMNS)
         return cls(df)
 
     def count_by_neuron_class(self):

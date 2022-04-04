@@ -32,8 +32,13 @@ class FeaturesCollection:
     def update(self, iterable):
         self.data.update(iterable)
 
+    def dump(self, features: Dict[str, pd.DataFrame]):
+        for df_name, df in features.items():
+            L.info("Dumping features %s...", df_name)
+            self.store.dump(df, df_name)
+
     def dump_all(self):
-        raise NotImplementedError
+        self.dump(self.data)
 
     def print(self):
         print("### features")
@@ -44,7 +49,9 @@ class FeaturesCollection:
     def calculate(self):
         for features_config in self.features_configs:
             method = getattr(self, f"_calculate_{features_config['type']}")
-            self.data.update(method(features_config))
+            new_features = method(features_config)
+            self.data.update(new_features)
+            self.dump(new_features)
 
     def _calculate_single(self, features_config):
         return {

@@ -17,11 +17,10 @@ def main():
     logging.basicConfig(format=logformat, level=loglevel)
     np.random.seed(0)
     analysis_config = load_yaml(analysis_config_file)
-    a = Analyzer(analysis_config, use_cache=True)
-    a.extract_repo()
-    a.calculate_features()
-    return a
+    return Analyzer(analysis_config, use_cache=True)
 
 
 if __name__ == "__main__":
     a = main()
+    a.extract_repo()
+    a.calculate_features()

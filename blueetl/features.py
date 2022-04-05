@@ -5,6 +5,15 @@ from typing import Dict, List, Type
 import pandas as pd
 
 from blueetl import DefaultStore
+from blueetl.constants import (
+    CIRCUIT_ID,
+    GID,
+    NEURON_CLASS,
+    NEURON_CLASS_INDEX,
+    SIMULATION_ID,
+    TRIAL,
+    WINDOW,
+)
 from blueetl.repository import Repository
 from blueetl.store.base import BaseStore
 from blueetl.utils import import_by_string, timed
@@ -76,6 +85,15 @@ class FeaturesCollection:
         return {}
 
 
+def _get_spikes_for_all_neurons_and_windows(repo: Repository) -> pd.DataFrame:
+    """Extend the spikes df to include all the possible neurons and windows, with spikes or not."""
+    return (
+        repo.neurons.df[[CIRCUIT_ID, NEURON_CLASS, GID, NEURON_CLASS_INDEX]]
+        .merge(repo.windows.df[[SIMULATION_ID, CIRCUIT_ID, WINDOW, TRIAL]], how="left")
+        .merge(repo.spikes.df, how="left")
+    )
+
+
 @timed(L.info, "Completed calculate_features_single")
 def calculate_features_single(
     repo: Repository, features_func: str, features_groupby: List[str], features_params: Dict
@@ -96,16 +114,17 @@ def calculate_features_single(
     func = import_by_string(features_func)
     records = []
     key = None
-    for key, df in repo.spikes.df.etl.grouped_by(features_groupby):
+    main_df = _get_spikes_for_all_neurons_and_windows(repo)
+    for key, group_df in main_df.etl.grouped_by(features_groupby):
         record = key._asdict()
-        result = func(repo=repo, key=key, df=df, params=features_params)
+        result = func(repo=repo, key=key, df=group_df, params=features_params)
         assert isinstance(result, dict), "The returned object must be a dict"
         record.update(result)
         records.append(record)
-    df = pd.DataFrame(records)
+    features_df = pd.DataFrame(records)
     if key:
-        df = df.set_index(list(key._fields))
-    return df
+        features_df = features_df.set_index(list(key._fields))
+    return features_df
 
 
 @timed(L.info, "Completed calculate_features_multi")
@@ -127,20 +146,21 @@ def calculate_features_multi(
     """
     func = import_by_string(features_func)
     features_records = defaultdict(list)
-    for key, df in repo.spikes.df.etl.grouped_by(features_groupby):
+    main_df = _get_spikes_for_all_neurons_and_windows(repo)
+    for key, group_df in main_df.etl.grouped_by(features_groupby):
         L.info("Calculating features for %s", key)
         record = key._asdict()
         conditions = list(record.keys())
         values = tuple(record.values())
-        features_dict = func(repo=repo, key=key, df=df, params=features_params)
+        features_dict = func(repo=repo, key=key, df=group_df, params=features_params)
         assert isinstance(features_dict, dict), "The returned object must be a dict"
-        for feature_group, result in features_dict.items():
-            assert isinstance(result, pd.DataFrame), "Each contained object must be a DataFrame"
+        for feature_group, result_df in features_dict.items():
+            assert isinstance(result_df, pd.DataFrame), "Each contained object must be a DataFrame"
             # ignore the index if it's unnamed and with one level; this can be useful
             # for example when the returned DataFrame has a RangeIndex to be dropped
-            drop = result.index.names == [None]
-            result = result.etl.add_conditions(conditions, values, drop=drop)
-            features_records[feature_group].append(result)
+            drop = result_df.index.names == [None]
+            result_df = result_df.etl.add_conditions(conditions, values, drop=drop)
+            features_records[feature_group].append(result_df)
     features = {
         feature_group: pd.concat(df_list) for feature_group, df_list in features_records.items()
     }

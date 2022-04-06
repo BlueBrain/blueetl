@@ -1,4 +1,5 @@
 from abc import ABC
+from typing import List
 
 import pandas as pd
 
@@ -6,7 +7,7 @@ from blueetl.utils import ensure_dtypes
 
 
 class BaseExtractor(ABC):
-    COLUMNS = []
+    COLUMNS: List[str] = []
 
     def __init__(self, df: pd.DataFrame):
         self._validate(df)

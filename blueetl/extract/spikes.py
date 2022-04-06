@@ -9,8 +9,8 @@ from blueetl.constants import (
     SIMULATION,
     SIMULATION_ID,
     TIME,
-    WINDOW,
     TRIAL,
+    WINDOW,
 )
 from blueetl.extract.base import BaseExtractor
 

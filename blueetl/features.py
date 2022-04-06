@@ -33,7 +33,7 @@ class FeaturesCollection:
         self.features_configs = features_configs
         self.repo = repo
         self.store = store_class(store_dir)
-        self.data = {}
+        self.data: Dict[str, pd.DataFrame] = {}
 
     def get(self, name):
         return self.data[name]

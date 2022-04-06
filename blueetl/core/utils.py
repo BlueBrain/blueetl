@@ -1,6 +1,6 @@
 import logging
 from itertools import chain
-from typing import Dict
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
@@ -9,7 +9,7 @@ from pandas.api.types import is_list_like
 L = logging.getLogger(__name__)
 
 
-def query_frame(df: pd.DataFrame, query: Dict) -> pd.DataFrame:
+def query_frame(df: pd.DataFrame, query: Dict[str, Any]) -> pd.DataFrame:
     """Given a query dictionary, return the DataFrame filtered by columns and index."""
     if not query:
         return df
@@ -20,7 +20,7 @@ def query_frame(df: pd.DataFrame, query: Dict) -> pd.DataFrame:
         **{k: "columns" for k in df.columns if k is not None},
     }
     # dictionary with query keys split into columns and index
-    q = {"columns": {}, "index": {}}
+    q: Dict[str, Any] = {"columns": {}, "index": {}}
     for key, value in query.items():
         q[mapping[key]][key] = value
     # filter by columns and index

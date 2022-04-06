@@ -17,7 +17,7 @@ class Neurons(BaseExtractor):
     def __init__(self, df: pd.DataFrame):
         super().__init__(df)
         # ensure that the neurons are sorted
-        self._df = self._df.sort_values(self.COLUMNS, ignore_index=True)
+        self._df: pd.DataFrame = self._df.sort_values(self.COLUMNS, ignore_index=True)
 
     @staticmethod
     def _get_gids(circuit, target, neuron_classes, limit=None):

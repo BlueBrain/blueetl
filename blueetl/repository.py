@@ -29,12 +29,20 @@ class Repository:
         self.simulations_config = simulations_config
         self.store = store_class(store_dir)
         self.use_cache = use_cache
-        self.simulations = None
-        self.neurons = None
-        self.neuron_classes = None
-        self.trial_steps = None
-        self.windows = None
-        self.spikes = None
+        self.simulations: Simulations
+        self.neurons: Neurons
+        self.neuron_classes: NeuronClasses
+        self.trial_steps: TrialSteps
+        self.windows: Windows
+        self.spikes: Spikes
+        self._all_names = [
+            "simulations",
+            "neurons",
+            "neuron_classes",
+            "trial_steps",
+            "windows",
+            "spikes",
+        ]
 
     def extract_simulations(self):
         df = self.store.load("simulations") if self.use_cache else None
@@ -136,6 +144,11 @@ class Repository:
         self.extract_trial_steps()
         self.extract_windows()
         self.extract_spikes()
+        self.check_extractions()
+
+    def check_extractions(self):
+        if any(getattr(self, name, None) is None for name in self._all_names):
+            raise RuntimeError("Not all the dataframes have been extracted")
 
     def print(self):
         print("### extraction_config")

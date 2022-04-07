@@ -24,13 +24,15 @@ class Analyzer:
             use_cache=use_cache,
         )
 
-    def extract_repo(self):
+    def extract_repo(self, debug=False):
         self.repo.extract()
-        self.repo.print()
+        if debug:
+            self.repo.print()
 
-    def calculate_features(self):
+    def calculate_features(self, debug=False):
         self.features.calculate()
-        self.features.print()
+        if debug:
+            self.features.print()
 
     def try_one(self, groupby):
         """Return the first key and df when grouping spikes by the given list of columns.

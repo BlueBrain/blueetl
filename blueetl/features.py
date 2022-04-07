@@ -1,6 +1,7 @@
 import logging
 from collections import defaultdict
-from typing import Dict, List, Type
+from os import PathLike
+from typing import Any, Dict, List, Mapping, Type, Union
 
 import pandas as pd
 
@@ -14,6 +15,7 @@ from blueetl.constants import (
     TRIAL,
     WINDOW,
 )
+from blueetl.extract.feature import Feature
 from blueetl.repository import Repository
 from blueetl.store.base import BaseStore
 from blueetl.utils import import_by_string, timed
@@ -24,63 +26,70 @@ L = logging.getLogger(__name__)
 class FeaturesCollection:
     def __init__(
         self,
-        features_configs,
-        repo,
-        store_dir,
+        features_configs: List[Dict],
+        repo: Repository,
+        store_dir: Union[str, PathLike],
         store_class: Type[BaseStore] = DefaultStore,
         use_cache: bool = False,
-    ):
+    ) -> None:
         self.features_configs = features_configs
         self.repo = repo
         self.store = store_class(store_dir)
-        self.data: Dict[str, pd.DataFrame] = {}
+        self._data: Dict[str, Feature] = {}
 
-    def get(self, name):
-        return self.data[name]
+    def __getattr__(self, name: str) -> Feature:
+        try:
+            return self._data[name]
+        except KeyError:
+            raise AttributeError(f"{self.__class__.__name__!r} object has no attribute {name!r}")
 
-    def update(self, iterable):
-        self.data.update(iterable)
+    @property
+    def names(self) -> List[str]:
+        return sorted(self._data)
 
-    def dump(self, features: Dict[str, pd.DataFrame]):
-        for df_name, df in features.items():
-            L.info("Dumping features %s...", df_name)
-            self.store.dump(df, df_name)
+    def update(self, mapping: Mapping[str, Feature]) -> None:
+        self._data.update(mapping)
 
-    def dump_all(self):
-        self.dump(self.data)
+    def dump(self, features: Dict[str, Feature]) -> None:
+        for name, feature in features.items():
+            L.info("Dumping features %s...", name)
+            self.store.dump(feature.df, name)
 
-    def print(self):
+    def dump_all(self) -> None:
+        self.dump(self._data)
+
+    def print(self) -> None:
         print("### features")
         for k, v in self.data.items():
             print("#", k)
             print(v)
 
-    def calculate(self):
+    def calculate(self) -> None:
         for features_config in self.features_configs:
             method = getattr(self, f"_calculate_{features_config['type']}")
             new_features = method(features_config)
-            self.data.update(new_features)
+            self.update(new_features)
             self.dump(new_features)
 
-    def _calculate_single(self, features_config):
-        return {
-            features_config["name"]: calculate_features_single(
-                repo=self.repo,
-                features_func=features_config["function"],
-                features_groupby=features_config["groupby"],
-                features_params=features_config.get("params", {}),
-            )
-        }
-
-    def _calculate_multi(self, features_config):
-        return calculate_features_multi(
+    def _calculate_single(self, features_config: Dict[str, Any]) -> Dict[str, Feature]:
+        df = calculate_features_single(
             repo=self.repo,
             features_func=features_config["function"],
             features_groupby=features_config["groupby"],
             features_params=features_config.get("params", {}),
         )
+        return {features_config["name"]: Feature.from_pandas(df)}
 
-    def _calculate_comparison(self, features_config):
+    def _calculate_multi(self, features_config: Dict[str, Any]) -> Dict[str, Feature]:
+        df_dict = calculate_features_multi(
+            repo=self.repo,
+            features_func=features_config["function"],
+            features_groupby=features_config["groupby"],
+            features_params=features_config.get("params", {}),
+        )
+        return {name: Feature.from_pandas(df) for name, df in df_dict.items()}
+
+    def _calculate_comparison(self, features_config: Dict[str, Any]) -> Dict[str, Feature]:
         L.warning("Comparison features not implemented")
         return {}
 

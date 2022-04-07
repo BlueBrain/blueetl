@@ -35,7 +35,7 @@ class Repository:
         self.trial_steps: TrialSteps
         self.windows: Windows
         self.spikes: Spikes
-        self._all_names = [
+        self.names = [
             "simulations",
             "neurons",
             "neuron_classes",
@@ -147,7 +147,7 @@ class Repository:
         self.check_extractions()
 
     def check_extractions(self):
-        if any(getattr(self, name, None) is None for name in self._all_names):
+        if any(getattr(self, name, None) is None for name in self.names):
             raise RuntimeError("Not all the dataframes have been extracted")
 
     def print(self):

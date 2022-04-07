@@ -9,20 +9,26 @@ L = logging.getLogger(__name__)
 
 
 class Analyzer:
-    def __init__(self, analysis_config, use_cache=False):
-        self.analysis_config = analysis_config
+    def __init__(self, analysis_config, base_path=".", use_cache=False):
+        self.analysis_config = self._resolve_paths(analysis_config, base_path=base_path)
         self.repo = Repository(
-            simulations_config=SimulationsConfig.load(analysis_config["simulation_campaign"]),
-            extraction_config=analysis_config["extraction"],
-            store_dir=Path(self.analysis_config["output"]) / "repo",
+            simulations_config=SimulationsConfig.load(self.analysis_config["simulation_campaign"]),
+            extraction_config=self.analysis_config["extraction"],
+            store_dir=Path(self.analysis_config["output"], "repo"),
             use_cache=use_cache,
         )
         self.features = FeaturesCollection(
-            features_configs=analysis_config["analysis"]["features"],
+            features_configs=self.analysis_config["analysis"]["features"],
             repo=self.repo,
-            store_dir=Path(self.analysis_config["output"]) / "features",
+            store_dir=Path(self.analysis_config["output"], "features"),
             use_cache=use_cache,
         )
+
+    @staticmethod
+    def _resolve_paths(config, base_path):
+        config["output"] = Path(base_path, config["output"])
+        config["simulation_campaign"] = Path(base_path, config["simulation_campaign"])
+        return config
 
     def extract_repo(self, debug=False):
         self.repo.extract()

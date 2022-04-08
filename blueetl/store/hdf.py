@@ -21,7 +21,7 @@ class HDFStore(BaseStore):
 
     def dump(self, df: pd.DataFrame, name: str) -> None:
         path = self._get_path(name)
-        with timed(L.info, "Writing %s to %s", name, path):
+        with timed(L.debug, "Writing %s to %s", name, path):
             df = _category_to_object(df)
             df.to_hdf(
                 path,
@@ -37,5 +37,5 @@ class HDFStore(BaseStore):
         path = self._get_path(name)
         if not path.exists():
             return None
-        with timed(L.info, "Reading %s from %s", name, path):
+        with timed(L.debug, "Reading %s from %s", name, path):
             return pd.read_hdf(path, key=name)

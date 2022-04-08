@@ -37,7 +37,7 @@ class FeatherStore(BaseStore):
 
     def dump(self, df: pd.DataFrame, name: str) -> None:
         path = self._get_path(name)
-        with timed(L.info, "Writing %s to %s", name, path):
+        with timed(L.debug, "Writing %s to %s", name, path):
             df = _index_to_columns(df)
             df.to_feather(path)
 
@@ -45,6 +45,6 @@ class FeatherStore(BaseStore):
         path = self._get_path(name)
         if not path.exists():
             return None
-        with timed(L.info, "Reading %s from %s", name, path):
+        with timed(L.debug, "Reading %s from %s", name, path):
             df = pd.read_feather(path)
             return _columns_to_index(df)

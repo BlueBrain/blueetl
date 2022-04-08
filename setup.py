@@ -38,6 +38,7 @@ setup(
         "elephant>=0.10.0",
         "quantities>=0.13.0",
         "seaborn>=0.11.2",
+        "scipy>=1.8.0",
         "matplotlib>=3.4.3",
         "xarray>=0.18.0",
         "bluepy>=2.4",

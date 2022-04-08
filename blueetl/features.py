@@ -160,7 +160,7 @@ def calculate_features_multi(
     features_records = defaultdict(list)
     main_df = _get_spikes_for_all_neurons_and_windows(repo)
     for key, group_df in main_df.etl.grouped_by(features_groupby):
-        L.info("Calculating features for %s", key)
+        L.debug("Calculating features for %s", key)
         record = key._asdict()
         conditions = list(record.keys())
         values = tuple(record.values())

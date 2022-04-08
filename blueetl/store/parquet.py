@@ -16,7 +16,7 @@ class ParquetStore(BaseStore):
 
     def dump(self, df: pd.DataFrame, name: str) -> None:
         path = self._get_path(name)
-        with timed(L.info, "Writing %s to %s", name, path):
+        with timed(L.debug, "Writing %s to %s", name, path):
             df.to_parquet(
                 path=path,
                 # engine="auto",
@@ -30,7 +30,7 @@ class ParquetStore(BaseStore):
         path = self._get_path(name)
         if not path.exists():
             return None
-        with timed(L.info, "Reading %s from %s", name, path):
+        with timed(L.debug, "Reading %s from %s", name, path):
             return pd.read_parquet(
                 path=path,
                 # engine="auto",

@@ -32,10 +32,15 @@ class FeaturesCollection:
         store_class: Type[BaseStore] = DefaultStore,
         use_cache: bool = False,
     ) -> None:
-        self.features_configs = features_configs
-        self.repo = repo
-        self.store = store_class(store_dir)
+        self._features_configs = features_configs
+        self._repo = repo
+        self._store = store_class(store_dir)
+        self._use_cache = use_cache
         self._data: Dict[str, Feature] = {}
+
+    @property
+    def names(self) -> List[str]:
+        return sorted(self._data)
 
     def __getattr__(self, name: str) -> Feature:
         try:
@@ -43,17 +48,12 @@ class FeaturesCollection:
         except KeyError:
             raise AttributeError(f"{self.__class__.__name__!r} object has no attribute {name!r}")
 
-    @property
-    def names(self) -> List[str]:
-        return sorted(self._data)
-
     def update(self, mapping: Mapping[str, Feature]) -> None:
         self._data.update(mapping)
 
     def dump(self, features: Dict[str, Feature]) -> None:
         for name, feature in features.items():
-            L.info("Dumping features %s...", name)
-            self.store.dump(feature.df, name)
+            self._store.dump(feature.df, name)
 
     def dump_all(self) -> None:
         self.dump(self._data)
@@ -65,15 +65,18 @@ class FeaturesCollection:
             print(v)
 
     def calculate(self) -> None:
-        for features_config in self.features_configs:
-            method = getattr(self, f"_calculate_{features_config['type']}")
+        features_len = len(self._features_configs)
+        for n, features_config in enumerate(self._features_configs, start=1):
+            features_type = features_config["type"]
+            L.info("Calculating features %s/%s [type: %s]", n, features_len, features_type)
+            method = getattr(self, f"_calculate_{features_type}")
             new_features = method(features_config)
             self.update(new_features)
             self.dump(new_features)
 
     def _calculate_single(self, features_config: Dict[str, Any]) -> Dict[str, Feature]:
         df = calculate_features_single(
-            repo=self.repo,
+            repo=self._repo,
             features_func=features_config["function"],
             features_groupby=features_config["groupby"],
             features_params=features_config.get("params", {}),
@@ -82,7 +85,7 @@ class FeaturesCollection:
 
     def _calculate_multi(self, features_config: Dict[str, Any]) -> Dict[str, Feature]:
         df_dict = calculate_features_multi(
-            repo=self.repo,
+            repo=self._repo,
             features_func=features_config["function"],
             features_groupby=features_config["groupby"],
             features_params=features_config.get("params", {}),

@@ -1,6 +1,10 @@
+import os.path
 import time
 from contextlib import contextmanager
 from importlib import import_module
+from os import PathLike
+from pathlib import Path
+from typing import Union
 
 import pandas as pd
 import yaml
@@ -44,3 +48,12 @@ def ensure_dtypes(df: pd.DataFrame) -> pd.DataFrame:
 def import_by_string(full_name):
     module_name, _, func_name = full_name.rpartition(".")
     return getattr(import_module(module_name), func_name)
+
+
+def resolve_path(*paths: Union[str, PathLike], symlinks=False) -> Path:
+    """Make the path absolute and return a new path object."""
+    if symlinks:
+        # resolve any symlinks
+        return Path(*paths).resolve()
+    # does not resolve symbolic links
+    return Path(os.path.abspath(Path(*paths)))

@@ -1,13 +1,12 @@
 """Simulation Campaign configuration."""
 import logging
-from pathlib import Path
 from typing import Any, Dict, List
 
 import pandas as pd
 import xarray as xr
 
 from blueetl.constants import SIMULATION_PATH
-from blueetl.utils import dump_yaml, load_yaml
+from blueetl.utils import dump_yaml, load_yaml, resolve_path
 
 L = logging.getLogger(__name__)
 
@@ -34,7 +33,7 @@ class SimulationsConfig:
     def _resolve_paths(self):
         path_prefix = self.attrs.get("path_prefix", "")
         for d in self.data:
-            path = Path(path_prefix, d[SIMULATION_PATH]).resolve()
+            path = resolve_path(path_prefix, d[SIMULATION_PATH])
             if path.is_dir():
                 L.warning(
                     "%r is a directory, assuming BlueConfig as the config file", d[SIMULATION_PATH]

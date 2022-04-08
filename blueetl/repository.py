@@ -49,91 +49,97 @@ class Repository:
         return sorted(self._names)
 
     def extract_simulations(self):
-        df = self._store.load("simulations") if self._use_cache else None
+        name = "simulations"
+        df = self._store.load(name) if self._use_cache else None
         if df is not None:
-            L.info("simulations dataframe loaded from existing data")
+            L.info("Loading cached %s", name)
             self.simulations = Simulations.from_pandas(df)
         else:
-            L.info("Extracting simulations...")
-            with timed(L.info, "Completed simulations extraction"):
+            L.info("Extracting %s", name)
+            with timed(L.info, "Completed extraction of %s", name):
                 self.simulations = Simulations.from_config(self._simulations_config)
-            self._store.dump(self.simulations.to_pandas(), "simulations")
+            self._store.dump(self.simulations.to_pandas(), name)
 
     def extract_neurons(self):
-        df = self._store.load("neurons") if self._use_cache else None
+        name = "neurons"
+        df = self._store.load(name) if self._use_cache else None
         if df is not None:
-            L.info("neurons dataframe loaded from existing data")
+            L.info("Loading cached %s", name)
             self.neurons = Neurons.from_pandas(df)
         else:
-            L.info("Extracting neurons...")
-            with timed(L.info, "Completed neurons extraction"):
+            L.info("Extracting %s", name)
+            with timed(L.info, "Completed extraction of %s", name):
                 self.neurons = Neurons.from_simulations(
                     simulations=self.simulations,
                     target=self._extraction_config["target"],
                     neuron_classes=self._extraction_config["neuron_classes"],
                     limit=self._extraction_config["limit"],
                 )
-            self._store.dump(self.neurons.to_pandas(), "neurons")
+            self._store.dump(self.neurons.to_pandas(), name)
 
     def extract_neuron_classes(self):
-        df = self._store.load("neuron_classes") if self._use_cache else None
+        name = "neuron_classes"
+        df = self._store.load(name) if self._use_cache else None
         if df is not None:
-            L.info("neuron_classes dataframe loaded from existing data")
+            L.info("Loading cached %s", name)
             self.neuron_classes = NeuronClasses.from_pandas(df)
         else:
-            L.info("Extracting neuron_classes...")
-            with timed(L.info, "Completed neuron_classes extraction"):
+            L.info("Extracting %s", name)
+            with timed(L.info, "Completed extraction of %s", name):
                 self.neuron_classes = NeuronClasses.from_neurons(
                     neurons=self.neurons,
                     target=self._extraction_config["target"],
                     neuron_classes=self._extraction_config["neuron_classes"],
                     limit=self._extraction_config["limit"],
                 )
-            self._store.dump(self.neuron_classes.to_pandas(), "neuron_classes")
+            self._store.dump(self.neuron_classes.to_pandas(), name)
 
     def extract_trial_steps(self):
-        df = self._store.load("trial_steps") if self._use_cache else None
+        name = "trial_steps"
+        df = self._store.load(name) if self._use_cache else None
         if df is not None:
-            L.info("trial_steps dataframe loaded from existing data")
+            L.info("Loading cached %s", name)
             self.trial_steps = TrialSteps.from_pandas(df)
         else:
-            L.info("Extracting trial_steps...")
-            with timed(L.info, "Completed trial_steps extraction"):
+            L.info("Extracting %s", name)
+            with timed(L.info, "Completed extraction of %s", name):
                 self.trial_steps = TrialSteps.from_simulations(
                     simulations=self.simulations,
                     config=self._extraction_config,
                 )
-            self._store.dump(self.trial_steps.to_pandas(), "trial_steps")
+            self._store.dump(self.trial_steps.to_pandas(), name)
 
     def extract_windows(self):
-        df = self._store.load("windows") if self._use_cache else None
+        name = "windows"
+        df = self._store.load(name) if self._use_cache else None
         if df is not None:
-            L.info("windows dataframe loaded from existing data")
+            L.info("Loading cached %s", name)
             self.windows = Windows.from_pandas(df)
         else:
-            L.info("Extracting windows...")
-            with timed(L.info, "Completed windows extraction"):
+            L.info("Extracting %s", name)
+            with timed(L.info, "Completed extraction of %s", name):
                 self.windows = Windows.from_simulations(
                     simulations=self.simulations,
                     trial_steps=self.trial_steps,
                     config=self._extraction_config,
                 )
-            self._store.dump(self.windows.to_pandas(), "windows")
+            self._store.dump(self.windows.to_pandas(), name)
 
     def extract_spikes(self):
-        df = self._store.load("spikes") if self._use_cache else None
+        name = "spikes"
+        df = self._store.load(name) if self._use_cache else None
         if df is not None:
-            L.info("spikes dataframe loaded from existing data")
+            L.info("Loading cached %s", name)
             self.spikes = Spikes.from_pandas(df)
         else:
-            L.info("Extracting spikes...")
-            with timed(L.info, "Completed spikes extraction"):
+            L.info("Extracting %s", name)
+            with timed(L.info, "Completed extraction of %s", name):
                 self.spikes = Spikes.from_simulations(
                     simulations=self.simulations,
                     neurons=self.neurons,
                     windows=self.windows,
                 )
-            self._store.dump(self.spikes.to_pandas(), "spikes")
+            self._store.dump(self.spikes.to_pandas(), name)
 
     def extract(self):
         self.extract_simulations()

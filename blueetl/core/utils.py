@@ -1,6 +1,6 @@
 import logging
 from itertools import chain
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 import numpy as np
 import pandas as pd
@@ -25,8 +25,8 @@ def query_frame(df: pd.DataFrame, query: Dict[str, Any]) -> pd.DataFrame:
         q[mapping[key]][key] = value
     # filter by columns and index
     masks = chain(
-        (eqin(df[key], value) for key, value in q["columns"].items()),
-        (eqin(df.index.get_level_values(key), value) for key, value in q["index"].items()),
+        (compare(df[key], value) for key, value in q["columns"].items()),
+        (compare(df.index.get_level_values(key), value) for key, value in q["index"].items()),
     )
     return df.loc[np.all(list(masks), axis=0)]
 
@@ -36,21 +36,53 @@ def query_series(series: pd.Series, query: Dict) -> pd.Series:
     if not query:
         return series
     # filter by columns and index
-    masks = (eqin(series.index.get_level_values(key), value) for key, value in query.items())
+    masks = (compare(series.index.get_level_values(key), value) for key, value in query.items())
     return series.loc[np.all(list(masks), axis=0)]
 
 
-def eqin(obj, value):
-    """As 'isin', but value can be a list or a scalar value for equality check.
+def compare(obj: Union[pd.DataFrame, pd.Series, pd.Index], value: Any) -> np.ndarray:
+    """Return the result of the comparison between obj and value.
 
     Args:
         obj: a DataFrame, Series, or Index.
-        value: a scalar or list-like value.
+        value: value used for comparison.
+            - if scalar, use equality
+            - if list-like, use isin
+            - if dict, any supported operator can be specified
+
+    Examples:
+        >>> df = pd.DataFrame({"gid": [0, 2, 3, 7, 8]})
+        >>> compare(df["gid"], 3)
+            array([False, False,  True, False, False])
+        >>> compare(df["gid"], [3, 5, 8])
+            array([False, False,  True, False,  True])
+        >>> compare(df["gid"], {"ge": 3, "lt": 8})
+            array([False, False,  True,  True, False])
+
     """
-    if is_list_like(value):
-        return obj.isin(value)
-    # more efficient than using isin with a list of one element
-    return obj == value
+    if isinstance(value, dict):
+        operators = {
+            "eq": "__eq__",
+            "ne": "__ne__",
+            "le": "__le__",
+            "lt": "__lt__",
+            "ge": "__ge__",
+            "gt": "__gt__",
+            "in": "isin",
+        }
+        masks = []
+        for op, v in value.items():
+            if op in operators:
+                masks.append(getattr(obj, operators[op])(v))
+            else:
+                raise ValueError(f"Unsupported operator: {op}")
+        result = np.all(masks, axis=0) if masks else np.full(len(obj), True)
+    elif is_list_like(value):
+        result = np.asarray(obj.isin(value))
+    else:
+        # more efficient than using isin with a list of one element
+        result = np.asarray(obj == value)
+    return result
 
 
 def safe_concat(iterable, *args, **kwargs):

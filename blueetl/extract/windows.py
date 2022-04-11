@@ -51,7 +51,7 @@ class Windows(BaseExtractor):
     def from_simulations(cls, simulations, trial_steps, config):
         """Load and expand windows for each simulation."""
         results = []
-        for index, rec in simulations.df.etl.iter():
+        for index, rec in simulations.df.etl.q(complete=True).etl.iter():
             for name, win in config["windows"].items():
                 L.info(
                     "Processing simulation_id=%s, circuit_id=%s, window=%s",

@@ -9,16 +9,16 @@ from blueetl.utils import ensure_dtypes
 class BaseExtractor(ABC):
     COLUMNS: List[str] = []
 
-    def __init__(self, df: pd.DataFrame):
+    def __init__(self, df: pd.DataFrame) -> None:
         self._validate(df)
         self._df = ensure_dtypes(df)
 
     @classmethod
-    def _validate(cls, df):
+    def _validate(cls, df: pd.DataFrame) -> None:
         cls._validate_columns(df)
 
     @classmethod
-    def _validate_columns(cls, df, allow_missing=False, allow_extra=False):
+    def _validate_columns(cls, df: pd.DataFrame, allow_missing=False, allow_extra=False) -> None:
         # check the names of the columns
         actual = set(df.columns)
         expected = set(cls.COLUMNS)
@@ -28,12 +28,12 @@ class BaseExtractor(ABC):
             raise ValueError(f"Additional columns not allowed: {actual - expected}")
 
     @property
-    def df(self):
+    def df(self) -> pd.DataFrame:
         return self._df
 
     @classmethod
-    def from_pandas(cls, df):
+    def from_pandas(cls, df: pd.DataFrame) -> "BaseExtractor":
         return cls(df)
 
-    def to_pandas(self):
+    def to_pandas(self) -> pd.DataFrame:
         return self.df

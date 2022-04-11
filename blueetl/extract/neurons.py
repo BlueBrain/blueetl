@@ -14,7 +14,7 @@ L = logging.getLogger(__name__)
 class Neurons(BaseExtractor):
     COLUMNS = [CIRCUIT_ID, NEURON_CLASS, GID, NEURON_CLASS_INDEX]
 
-    def __init__(self, df: pd.DataFrame):
+    def __init__(self, df: pd.DataFrame) -> None:
         super().__init__(df)
         # ensure that the neurons are sorted
         self._df: pd.DataFrame = self._df.sort_values(self.COLUMNS, ignore_index=True)
@@ -46,7 +46,7 @@ class Neurons(BaseExtractor):
 
     @classmethod
     def from_simulations(cls, simulations, target, neuron_classes, limit=None):
-        grouped = simulations.df.groupby([CIRCUIT_ID], sort=False)[CIRCUIT].first()
+        grouped = simulations.df.etl.q(complete=True).groupby([CIRCUIT_ID])[CIRCUIT].first()
         records = []
         for circuit_id, circuit in grouped.items():
             gids_by_class = cls._get_gids(circuit, target, neuron_classes, limit=limit)

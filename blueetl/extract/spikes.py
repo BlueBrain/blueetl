@@ -58,7 +58,7 @@ class Spikes(BaseExtractor):
 
     @classmethod
     def from_simulations(cls, simulations, neurons, windows):
-        merged = pd.merge(simulations.df, neurons.df, sort=False)
+        merged = pd.merge(simulations.df.etl.q(complete=True), neurons.df, sort=False)
         # group the gids together
         columns = [SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS]
         grouped = merged.groupby(columns, sort=False, observed=True).agg(

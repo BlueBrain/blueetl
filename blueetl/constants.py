@@ -7,6 +7,7 @@ SIMULATION_ID = "simulation_id"
 SIMULATION = "simulation"
 CIRCUIT_ID = "circuit_id"
 CIRCUIT = "circuit"
+COMPLETE = "complete"  # True if the spikes can be loaded from the simulation
 NEURON_CLASS = "neuron_class"
 NEURON_CLASS_INDEX = "neuron_class_index"  # incremental gid index for each neuron class
 WINDOW = "window"
@@ -27,6 +28,7 @@ DTYPES = {
     TIME: np.float64,
     SIMULATION_ID: np.int16,
     CIRCUIT_ID: np.int16,
+    COMPLETE: bool,
     NEURON_CLASS: "category",
     WINDOW: "category",
     TRIAL: np.int16,

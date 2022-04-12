@@ -4,6 +4,7 @@ from typing import Any, Dict, Type
 
 from blueetl import DefaultStore
 from blueetl.config.simulations import SimulationsConfig
+from blueetl.constants import SIMULATION_PATH
 from blueetl.extract.neuron_classes import NeuronClasses
 from blueetl.extract.neurons import Neurons
 from blueetl.extract.simulations import Simulations
@@ -151,8 +152,16 @@ class Repository:
         self.check_extractions()
 
     def check_extractions(self):
+        """Check that all the dataframes have been extracted."""
         if any(getattr(self, name, None) is None for name in self.names):
             raise RuntimeError("Not all the dataframes have been extracted")
+
+    def is_complete(self):
+        """Return False when there are simulations ignored because of missing spikes."""
+        extracted_simulations = self.simulations.df[SIMULATION_PATH]
+        all_simulations = self._simulations_config.to_pandas()
+        difference = all_simulations.compare(extracted_simulations)
+        return difference.empty
 
     def print(self):
         print("### extraction_config")

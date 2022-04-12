@@ -46,7 +46,7 @@ class Neurons(BaseExtractor):
 
     @classmethod
     def from_simulations(cls, simulations, target, neuron_classes, limit=None):
-        grouped = simulations.df.etl.q(complete=True).groupby([CIRCUIT_ID])[CIRCUIT].first()
+        grouped = simulations.df.groupby([CIRCUIT_ID])[CIRCUIT].first()
         records = []
         for circuit_id, circuit in grouped.items():
             gids_by_class = cls._get_gids(circuit, target, neuron_classes, limit=limit)

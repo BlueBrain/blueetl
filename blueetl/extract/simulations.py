@@ -8,28 +8,14 @@ from bluepy import Circuit, Simulation
 from bluepy.exceptions import BluePyError
 
 from blueetl.config.simulations import SimulationsConfig
-from blueetl.constants import (
-    CIRCUIT,
-    CIRCUIT_ID,
-    COMPLETE,
-    SIMULATION,
-    SIMULATION_ID,
-    SIMULATION_PATH,
-)
+from blueetl.constants import CIRCUIT, CIRCUIT_ID, SIMULATION, SIMULATION_ID, SIMULATION_PATH
 from blueetl.extract.base import BaseExtractor
 
 L = logging.getLogger(__name__)
 
 
 class Simulations(BaseExtractor):
-    COLUMNS = [SIMULATION_PATH, SIMULATION_ID, CIRCUIT_ID, SIMULATION, CIRCUIT, COMPLETE]
-
-    def __init__(self, df: pd.DataFrame) -> None:
-        super().__init__(df)
-        incomplete_simulations = self.df.etl.q(complete=False)
-        columns = [SIMULATION_PATH, SIMULATION_ID, CIRCUIT_ID]
-        for index, rec in incomplete_simulations[columns].etl.iter():
-            L.warning("Ignored simulation without spikes: %s, %s", index, rec)
+    COLUMNS = [SIMULATION_PATH, SIMULATION_ID, CIRCUIT_ID, SIMULATION, CIRCUIT]
 
     @staticmethod
     def _get_circuit_hash(circuit_config: Dict) -> str:
@@ -55,7 +41,7 @@ class Simulations(BaseExtractor):
     def _is_simulation_complete(simulation: Simulation) -> bool:
         """Return True if the spikes can be loaded from the simulation.
 
-        It can be used to filter the simulations before the simulation campaign is complete.
+        It can be used to ignore a simulation before the simulation campaign is complete.
         """
         try:
             _ = simulation.spikes
@@ -76,19 +62,13 @@ class Simulations(BaseExtractor):
             circuit_id = circuit_hashes.setdefault(circuit_hash, simulation_id)
             circuit = circuits.setdefault(circuit_id, simulation.circuit)
             complete = cls._is_simulation_complete(simulation)
-            records.append(
-                [simulation_id, circuit_id, simulation_path, simulation, circuit, complete]
-            )
-            L.info(
-                "Loading simulation_id=%s, circuit_id=%s, "
-                "circuit_hash=%s, simulation_path=%s, complete=%s",
-                simulation_id,
-                circuit_id,
-                circuit_hash,
-                simulation_path,
-                complete,
-            )
-        columns = [SIMULATION_ID, CIRCUIT_ID, SIMULATION_PATH, SIMULATION, CIRCUIT, COMPLETE]
+            sim_repr = f"{simulation_id=}, {circuit_id=}, {circuit_hash=}, {simulation_path=}"
+            if complete:
+                records.append([simulation_id, circuit_id, simulation_path, simulation, circuit])
+                L.info("Loading simulation: %s", sim_repr)
+            else:
+                L.warning("Ignoring simulation without spikes: %s", sim_repr)
+        columns = [SIMULATION_ID, CIRCUIT_ID, SIMULATION_PATH, SIMULATION, CIRCUIT]
         return pd.DataFrame.from_records(records, columns=columns)
 
     @classmethod
@@ -107,7 +87,7 @@ class Simulations(BaseExtractor):
         new_df = cls._from_paths(simulation_paths.to_list())
         # set the conditions
         new_df.index = simulation_paths.index
-        check_columns = [SIMULATION_PATH, SIMULATION_ID, CIRCUIT_ID, COMPLETE]
+        check_columns = [SIMULATION_PATH, SIMULATION_ID, CIRCUIT_ID]
         difference = new_df[check_columns].compare(df[check_columns])
         if not difference.empty:
             L.error(

@@ -53,7 +53,7 @@ class TrialSteps(BaseExtractor):
             func = import_by_string(trial_steps_params["function"])
             t_start, t_end = trial_steps_params["bounds"]
             initial_offset = trial_steps_params["initial_offset"]
-            for index, rec in simulations.df.etl.q(complete=True).etl.iter():
+            for index, rec in simulations.df.etl.iter():
                 L.info(
                     "Processing trial_steps_label=%s, simulation_id=%s, circuit_id=%s",
                     trial_steps_label,

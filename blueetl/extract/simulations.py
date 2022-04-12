@@ -50,12 +50,20 @@ class Simulations(BaseExtractor):
             return False
 
     @classmethod
-    def _from_paths(cls, simulation_paths: List[str]) -> pd.DataFrame:
-        """Return a dataframe of simulations from a list of simulation paths."""
+    def _from_paths(cls, simulation_paths: pd.Series) -> pd.DataFrame:
+        """Return a dataframe of simulations from a list of simulation paths.
+
+        Args:
+            simulation_paths: Series of paths.
+
+        Returns:
+            DataFrame of simulations, using the same index of simulation_paths.
+            Simulations without spikes are discarded.
+        """
         circuit_hashes: Dict[str, int] = {}  # map circuit_hash -> circuit_id
         circuits: Dict[int, Circuit] = {}  # map circuit_id -> circuit
         records = []
-        for simulation_id, simulation_path in enumerate(simulation_paths):
+        for simulation_id, (index, simulation_path) in enumerate(simulation_paths.etl.iter()):
             simulation = Simulation(simulation_path)
             circuit_hash = cls._get_circuit_hash(simulation.circuit.config)
             # if circuit_hash is new, use simulation_id as circuit_id
@@ -64,29 +72,33 @@ class Simulations(BaseExtractor):
             complete = cls._is_simulation_complete(simulation)
             sim_repr = f"{simulation_id=}, {circuit_id=}, {circuit_hash=}, {simulation_path=}"
             if complete:
-                records.append([simulation_id, circuit_id, simulation_path, simulation, circuit])
+                records.append(
+                    {
+                        SIMULATION_ID: simulation_id,
+                        CIRCUIT_ID: circuit_id,
+                        SIMULATION_PATH: simulation_path,
+                        SIMULATION: simulation,
+                        CIRCUIT: circuit,
+                        **index._asdict(),
+                    }
+                )
                 L.info("Loading simulation: %s", sim_repr)
             else:
                 L.warning("Ignoring simulation without spikes: %s", sim_repr)
-        columns = [SIMULATION_ID, CIRCUIT_ID, SIMULATION_PATH, SIMULATION, CIRCUIT]
-        return pd.DataFrame.from_records(records, columns=columns)
+        return pd.DataFrame(records).set_index(simulation_paths.index.names)
 
     @classmethod
     def from_config(cls, config: SimulationsConfig) -> "Simulations":
         """Load simulations from the given simulation campaign."""
         simulation_paths = config.to_pandas()
-        df = cls._from_paths(simulation_paths.to_list())
-        # set the conditions
-        df.index = simulation_paths.index
+        df = cls._from_paths(simulation_paths)
         return cls(df)
 
     @classmethod
     def from_pandas(cls, df: pd.DataFrame) -> "Simulations":
         """Load simulations from a dataframe containing valid simulation ids and circuit ids."""
         simulation_paths = df[SIMULATION_PATH]
-        new_df = cls._from_paths(simulation_paths.to_list())
-        # set the conditions
-        new_df.index = simulation_paths.index
+        new_df = cls._from_paths(simulation_paths)
         check_columns = [SIMULATION_PATH, SIMULATION_ID, CIRCUIT_ID]
         difference = new_df[check_columns].compare(df[check_columns])
         if not difference.empty:

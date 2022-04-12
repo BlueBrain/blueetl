@@ -2,6 +2,8 @@ import json
 import logging
 from typing import Any, Dict, Type
 
+import pandas as pd
+
 from blueetl import DefaultStore
 from blueetl.config.simulations import SimulationsConfig
 from blueetl.constants import SIMULATION_PATH
@@ -156,12 +158,27 @@ class Repository:
         if any(getattr(self, name, None) is None for name in self.names):
             raise RuntimeError("Not all the dataframes have been extracted")
 
-    def is_complete(self):
-        """Return False when there are simulations ignored because of missing spikes."""
+    def missing_simulations(self):
+        """Return a DataFrame with the simulations ignored because of missing spikes.
+
+        Returns:
+            pd.DataFrame with simulation_path as columns, simulation conditions as index,
+                and one record for each ignored and missing simulation.
+        """
+        all_simulations = self._simulations_config.to_pandas().rename(SIMULATION_PATH)
         extracted_simulations = self.simulations.df[SIMULATION_PATH]
-        all_simulations = self._simulations_config.to_pandas()
-        difference = all_simulations.compare(extracted_simulations)
-        return difference.empty
+        return (
+            pd.merge(
+                all_simulations,
+                extracted_simulations,
+                left_on=[*all_simulations.index.names, SIMULATION_PATH],
+                right_on=[*extracted_simulations.index.names, SIMULATION_PATH],
+                how="left",
+                indicator=True,
+            )
+            .etl.q(_merge="left_only")
+            .drop(columns="_merge")
+        )
 
     def print(self):
         print("### extraction_config")

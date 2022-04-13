@@ -51,6 +51,26 @@ class Repository:
     def names(self):
         return sorted(self._names)
 
+    def __getstate__(self):
+        """Get the object state when the object is pickled."""
+        if not self.is_extracted():
+            # ensure that the dataframes are extracted and stored to disk
+            L.info("Extracting dataframes before serialization")
+            self.extract()
+        # Copy the object's state from self.__dict__
+        state = self.__dict__.copy()
+        for name in self.names:
+            # Remove the unpicklable entries.
+            state.pop(name, None)
+        return state
+
+    def __setstate__(self, state):
+        """Set the object state when the object is unpickled."""
+        # Restore instance attributes
+        self.__dict__.update(state)
+        # Restore the previous state.
+        self.extract()
+
     def extract_simulations(self):
         name = "simulations"
         df = self._store.load(name) if self._use_cache else None
@@ -153,9 +173,13 @@ class Repository:
         self.extract_spikes()
         self.check_extractions()
 
+    def is_extracted(self):
+        """Return True if all the dataframes have been extracted."""
+        return all(getattr(self, name, None) is not None for name in self.names)
+
     def check_extractions(self):
         """Check that all the dataframes have been extracted."""
-        if any(getattr(self, name, None) is None for name in self.names):
+        if not self.is_extracted():
             raise RuntimeError("Not all the dataframes have been extracted")
 
     def missing_simulations(self):

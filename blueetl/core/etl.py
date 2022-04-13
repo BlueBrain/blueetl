@@ -2,10 +2,12 @@
 import logging
 from abc import ABC, abstractmethod
 from collections import namedtuple
-from typing import Any, Dict, Optional, Union
+from functools import partial
+from typing import Any, Callable, Dict, Iterator, List, NamedTuple, Optional, Tuple, Union
 
 import pandas as pd
 
+from blueetl.core.parallel import run_parallel
 from blueetl.core.utils import query_frame, query_series
 from blueetl.utils import ensure_list
 
@@ -253,12 +255,23 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
         """Given a query dictionary, return the DataFrame filtered by columns and index."""
         return query_frame(self._obj, query)
 
-    def grouped_by(self, groupby_columns, selected_columns=None, sort=True, observed=True):
+    def grouped_by(
+        self,
+        groupby_columns: List[str],
+        selected_columns: Optional[List[str]] = None,
+        sort: bool = True,
+        observed: bool = True,
+    ) -> Iterator[Tuple[NamedTuple, pd.DataFrame]]:
         """Group the dataframe by columns and yield each record as a tuple (key, df).
+
+        It can be used as a replacement for the iteration over df.groupby, but:
+            - the yielded keys are namedtuples, instead of tuples
+            - the yielded dataframes contain only the varying columns, instead of all the columns
 
         Args:
             groupby_columns: list of column names to group by.
             selected_columns: list of column names to be included in the yielded dataframes.
+                If None, only the varying columns are included.
             sort: Sort group keys.
             observed: This only applies if any of the groupers are Categoricals.
                 If True: only show observed values for categorical groupers.
@@ -272,9 +285,44 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
             selected_columns = [col for col in self._obj.columns if col not in groupby_set]
         grouped = self._obj.groupby(groupby_columns, sort=sort, observed=observed)
         grouped = grouped[selected_columns]
-        RecordKey = namedtuple("RecordKey", groupby_columns)
+        RecordKey = namedtuple("RecordKey", groupby_columns)  # type: ignore
         for key, df in grouped:
             yield RecordKey(*ensure_list(key)), df
+
+    def group_run_parallel(
+        self,
+        groupby_columns: List[str],
+        selected_columns: Optional[List[str]] = None,
+        sort: bool = True,
+        observed: bool = True,
+        func: Optional[Callable] = None,
+        jobs: Optional[int] = None,
+        backend: Optional[str] = None,
+    ) -> List[Any]:
+        """Call grouped_by and apply the given function in parallel, returning the results.
+
+        Args:
+            groupby_columns: see grouped_by.
+            selected_columns: see grouped_by.
+            sort: see grouped_by.
+            observed: see grouped_by.
+            func: callable accepting the parameters: key, df, ctx,
+                where key is a NamedTuple, df a DataFrame, ctx a TaskContext.
+            jobs: number of jobs (see run_parallel)
+            backend: parallel backend (see run_parallel)
+
+        Returns:
+            list of results.
+        """
+        assert func is not None, "A function accepting (key, df, ctx) must be specified."
+        grouped = self.grouped_by(
+            groupby_columns=groupby_columns,
+            selected_columns=selected_columns,
+            sort=sort,
+            observed=observed,
+        )
+        tasks_generator = (partial(func, key=key, df=group_df) for key, group_df in grouped)
+        return run_parallel(tasks_generator, jobs=jobs, backend=backend)
 
 
 class ETLIndexAccessor:

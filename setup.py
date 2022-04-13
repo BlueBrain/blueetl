@@ -42,6 +42,7 @@ setup(
         "matplotlib>=3.4.3",
         "xarray>=0.18.0",
         "bluepy>=2.4",
+        "joblib>=1.1.0",
     ],
     packages=find_packages(),
     python_requires=">=3.7",

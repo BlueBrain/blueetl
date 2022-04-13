@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from scipy.ndimage import gaussian_filter
 
-from blueetl.constants import BIN, COUNT, GID, NEURON_CLASS_INDEX, TIME, TRIAL
+from blueetl.constants import BIN, COUNT, GID, NEURON_CLASS_INDEX, TIME, TIMES, TRIAL
 
 L = logging.getLogger(__name__)
 FIRST = "first"
@@ -19,7 +19,7 @@ def get_initial_spiking_stats(repo, key, df, params):
         **{
             COUNT: "count",
             FIRST: "min",
-            # TIMES: lambda x: [i for i in x if not np.isnan(i)],  # slow
+            TIMES: lambda x: [i for i in x if not np.isnan(i)],  # slow
         }
     )
     # first spike for each trial and gid, averaged across all trials where the neuron was present

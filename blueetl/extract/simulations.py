@@ -50,11 +50,14 @@ class Simulations(BaseExtractor):
             return False
 
     @classmethod
-    def _from_paths(cls, simulation_paths: pd.Series) -> pd.DataFrame:
+    def _from_paths(cls, simulation_paths: pd.Series, load_spikes: bool = True) -> pd.DataFrame:
         """Return a dataframe of simulations from a list of simulation paths.
 
         Args:
             simulation_paths: Series of paths.
+            load_spikes: if True, load the spikes to verify that they are available,
+                and add the simulation only in that case.
+                If False, don't load the spikes and always add the simulation.
 
         Returns:
             DataFrame of simulations, using the same index of simulation_paths.
@@ -69,9 +72,8 @@ class Simulations(BaseExtractor):
             # if circuit_hash is new, use simulation_id as circuit_id
             circuit_id = circuit_hashes.setdefault(circuit_hash, simulation_id)
             circuit = circuits.setdefault(circuit_id, simulation.circuit)
-            complete = cls._is_simulation_complete(simulation)
             sim_repr = f"{simulation_id=}, {circuit_id=}, {circuit_hash=}, {simulation_path=}"
-            if complete:
+            if not load_spikes or cls._is_simulation_complete(simulation):
                 records.append(
                     {
                         SIMULATION_ID: simulation_id,
@@ -82,7 +84,7 @@ class Simulations(BaseExtractor):
                         **index._asdict(),
                     }
                 )
-                L.info("Loading simulation: %s", sim_repr)
+                L.info("Extracting simulation: %s", sim_repr)
             else:
                 L.warning("Ignoring simulation without spikes: %s", sim_repr)
         return pd.DataFrame(records).set_index(simulation_paths.index.names)
@@ -91,14 +93,14 @@ class Simulations(BaseExtractor):
     def from_config(cls, config: SimulationsConfig) -> "Simulations":
         """Load simulations from the given simulation campaign."""
         simulation_paths = config.to_pandas()
-        df = cls._from_paths(simulation_paths)
+        df = cls._from_paths(simulation_paths, load_spikes=True)
         return cls(df)
 
     @classmethod
     def from_pandas(cls, df: pd.DataFrame) -> "Simulations":
         """Load simulations from a dataframe containing valid simulation ids and circuit ids."""
         simulation_paths = df[SIMULATION_PATH]
-        new_df = cls._from_paths(simulation_paths)
+        new_df = cls._from_paths(simulation_paths, load_spikes=False)
         check_columns = [SIMULATION_PATH, SIMULATION_ID, CIRCUIT_ID]
         difference = new_df[check_columns].compare(df[check_columns])
         if not difference.empty:

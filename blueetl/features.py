@@ -1,20 +1,24 @@
 import logging
 from collections import defaultdict
+from functools import partial
 from os import PathLike
-from typing import Any, Dict, List, Mapping, Type, Union
+from typing import Any, Callable, Dict, List, Mapping, NamedTuple, Optional, Type, Union
 
 import pandas as pd
 
 from blueetl import DefaultStore
 from blueetl.constants import (
+    CIRCUIT,
     CIRCUIT_ID,
     GID,
     NEURON_CLASS,
     NEURON_CLASS_INDEX,
+    SIMULATION,
     SIMULATION_ID,
     TRIAL,
     WINDOW,
 )
+from blueetl.core.parallel import TaskContext, run_parallel
 from blueetl.extract.feature import Feature
 from blueetl.repository import Repository
 from blueetl.store.base import BaseStore
@@ -141,30 +145,37 @@ def calculate_features_single(
 
 @timed(L.info, "Completed calculate_features_multi")
 def calculate_features_multi(
-    repo: Repository, features_func: str, features_groupby: List[str], features_params: Dict
+    repo: Repository,
+    features_func: str,
+    features_groupby: List[str],
+    features_params: Dict,
+    jobs: Optional[int] = None,
+    backend: Optional[str] = None,
 ) -> Dict[str, pd.DataFrame]:
-    """Calculate features for the given repository as a dict of DataFrames.
+    """Calculate features in parallel for the given repository as a dict of DataFrames.
 
     Args:
         repo: repository containing spikes.
         features_func: string of the function to be executed to calculate the features.
-            The function should return a dict of DataFrames.
+            The function should accept (repo, key, df, params) and return a dict of DataFrames.
         features_groupby: columns for aggregation.
         features_params: generic dict of params that will be passed to the function.
+        jobs: number of jobs (see run_parallel)
+        backend: parallel backend (see run_parallel)
 
     Returns:
         dict of DataFrames
 
     """
-    func = import_by_string(features_func)
-    features_records = defaultdict(list)
-    main_df = _get_spikes_for_all_neurons_and_windows(repo)
-    for key, group_df in main_df.etl.grouped_by(features_groupby):
+
+    def func_wrapper(key: NamedTuple, df: pd.DataFrame, ctx: TaskContext):
+        # logging.basicConfig(level=ctx.log_level)
+        features_records = {}
         L.debug("Calculating features for %s", key)
         record = key._asdict()
         conditions = list(record.keys())
         values = tuple(record.values())
-        features_dict = func(repo=repo, key=key, df=group_df, params=features_params)
+        features_dict = func(repo=repo, key=key, df=df, params=features_params)
         assert isinstance(features_dict, dict), "The returned object must be a dict"
         for feature_group, result_df in features_dict.items():
             assert isinstance(result_df, pd.DataFrame), "Each contained object must be a DataFrame"
@@ -172,8 +183,77 @@ def calculate_features_multi(
             # for example when the returned DataFrame has a RangeIndex to be dropped
             drop = result_df.index.names == [None]
             result_df = result_df.etl.add_conditions(conditions, values, drop=drop)
-            features_records[feature_group].append(result_df)
-    features = {
-        feature_group: pd.concat(df_list) for feature_group, df_list in features_records.items()
+            features_records[feature_group] = result_df
+        return features_records
+
+    func = import_by_string(features_func)
+    main_df = _get_spikes_for_all_neurons_and_windows(repo)
+    # list of dicts: feature_group -> dataframe
+    results = main_df.etl.group_run_parallel(
+        features_groupby, func=func_wrapper, jobs=jobs, backend=backend
+    )
+    # concatenate all the dataframes having the same feature_group label
+    all_features_records = defaultdict(list)
+    for result in results:
+        for feature_group, tmp_df in result.items():
+            all_features_records[feature_group].append(tmp_df)
+    # build the final dict of dataframes
+    return {
+        feature_group: pd.concat(df_list) for feature_group, df_list in all_features_records.items()
     }
-    return features
+
+
+def iter_by_simulation(
+    repo: Repository,
+    func: Callable,
+    jobs: Optional[int] = None,
+    backend: Optional[str] = None,
+) -> List[Any]:
+    """
+
+    Args:
+        repo: repository instance.
+        func: callable accepting
+            simulation_index: NamedTuple
+            simulation_row: NamedTuple
+            simulation_spikes: pd.DataFrame
+            simulation_windows: pd.DataFrame
+            circuit_neurons: pd.DataFrame
+            circuit_neuron_classes: pd.DataFrame
+        jobs: number of jobs (see run_parallel)
+        backend: parallel backend (see run_parallel)
+
+    Returns:
+        list of results
+    """
+
+    def func_wrapper(ctx: TaskContext, **kwargs):
+        # logging.basicConfig(level=ctx.log_level)
+        return func(**kwargs)
+
+    def tasks_generator():
+        for circuit_id in repo.simulations.df[CIRCUIT_ID].unique():
+            circuit_neurons = repo.neurons.df.etl.q(circuit_id=circuit_id)
+            circuit_neuron_classes = repo.neuron_classes.df.etl.q(circuit_id=circuit_id)
+            it = (
+                repo.simulations.df.drop(columns=[CIRCUIT, SIMULATION])
+                .etl.q(circuit_id=circuit_id)
+                .etl.iter()
+            )
+            for simulation_index, simulation_row in it:
+                simulation_id = simulation_row.simulation_id
+                simulation_spikes = repo.spikes.df.etl.q(simulation_id=simulation_id)
+                simulation_windows = repo.windows.df.etl.q(simulation_id=simulation_id)
+                yield (
+                    partial(
+                        func_wrapper,
+                        simulation_index=simulation_index,
+                        simulation_row=simulation_row,
+                        simulation_spikes=simulation_spikes,
+                        simulation_windows=simulation_windows,
+                        circuit_neurons=circuit_neurons,
+                        circuit_neuron_classes=circuit_neuron_classes,
+                    )
+                )
+
+    return run_parallel(tasks_generator(), jobs=jobs, backend=backend)

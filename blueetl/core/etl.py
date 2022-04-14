@@ -322,6 +322,35 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
         tasks_generator = (Task(partial(func, key=key, df=group_df)) for key, group_df in grouped)
         return run_parallel(tasks_generator, jobs=jobs, backend=backend)
 
+    def group_apply_parallel(
+        self,
+        groupby_columns: List[str],
+        selected_columns: Optional[List[str]] = None,
+        *,
+        sort: bool = True,
+        observed: bool = True,
+        func: Optional[Callable] = None,
+        jobs: Optional[int] = None,
+        backend: Optional[str] = None,
+    ) -> pd.DataFrame:
+        """Call grouped_by and apply the given function in parallel, returning a DataFrame.
+
+        To work as expected, func should return a DataFrame and all the DataFrames should have
+        the same index and columns.
+
+        Still experimental.
+        """
+        results = self.group_run_parallel(
+            groupby_columns=groupby_columns,
+            selected_columns=selected_columns,
+            sort=sort,
+            observed=observed,
+            func=func,
+            jobs=jobs,
+            backend=backend,
+        )
+        return pd.concat(results)
+
 
 class ETLIndexAccessor:
     def __init__(self, pandas_obj):

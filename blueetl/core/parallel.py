@@ -45,8 +45,9 @@ class Task:
 
 def run_parallel(
     tasks: Iterable[Callable[[TaskContext], Any]],
-    jobs: Optional[int],
-    backend: Optional[str],
+    jobs: Optional[int] = None,
+    backend: Optional[str] = None,
+    verbose: Optional[int] = None,
     base_seed: Optional[int] = None,
 ) -> List[Any]:
     """Run tasks in parallel.
@@ -59,6 +60,7 @@ def run_parallel(
         backend: backend passed to joblib. If not specified, use the BLUEETL_JOBLIB_BACKEND env
             variable, or use the joblib default (loky).
             Possible values: loky, multiprocessing, threading.
+        verbose: verbosity of joblib. If not specified, use the BLUEETL_JOBLIB_VERBOSE.
         base_seed: initial base seed. If specified, a different seed is added to the task context,
             and passed to each callable object.
 
@@ -66,11 +68,14 @@ def run_parallel(
         list of objects returned by the callable objects, in the same order.
     """
     loglevel = L.getEffectiveLevel()
-    verbose = os.getenv(BLUEETL_JOBLIB_VERBOSE)
-    verbose = int(verbose) if verbose else 0 if loglevel >= logging.WARNING else 10
-    jobs = jobs or os.getenv(BLUEETL_JOBLIB_JOBS)
-    jobs = int(jobs) if jobs else max((os.cpu_count() or 1) // 2, 1)
-    backend = backend or os.getenv(BLUEETL_JOBLIB_BACKEND)
+    if verbose is None:
+        verbose_env = os.getenv(BLUEETL_JOBLIB_VERBOSE)
+        verbose = int(verbose_env) if verbose_env else 0 if loglevel >= logging.WARNING else 10
+    if not jobs:
+        jobs_env = os.getenv(BLUEETL_JOBLIB_JOBS)
+        jobs = int(jobs_env) if jobs_env else max((os.cpu_count() or 1) // 2, 1)
+    if not backend:
+        backend = os.getenv(BLUEETL_JOBLIB_BACKEND)
     parallel = Parallel(n_jobs=jobs, backend=backend, verbose=verbose)
     return parallel(
         delayed(task)(

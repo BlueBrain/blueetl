@@ -24,10 +24,10 @@ def timed(log, msg, *args):
         log(f"{msg} [{elapsed:.2f} seconds]", *args)
 
 
-def setup_logging(loglevel, logformat=None):
+def setup_logging(loglevel, logformat=None, **logparams):
     """Setup logging."""
     logformat = logformat or "%(asctime)s %(levelname)s %(name)s: %(message)s"
-    logging.basicConfig(format=logformat, level=loglevel)
+    logging.basicConfig(format=logformat, level=loglevel, **logparams)
 
 
 def load_yaml(filepath):

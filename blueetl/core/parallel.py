@@ -7,7 +7,11 @@ import numpy as np
 from joblib import Parallel, delayed
 
 from blueetl.core import L
-from blueetl.core.constants import BLUEETL_JOBLIB_JOBS, BLUEETL_JOBLIB_VERBOSE
+from blueetl.core.constants import (
+    BLUEETL_JOBLIB_BACKEND,
+    BLUEETL_JOBLIB_JOBS,
+    BLUEETL_JOBLIB_VERBOSE,
+)
 from blueetl.utils import setup_logging
 
 
@@ -15,18 +19,27 @@ from blueetl.utils import setup_logging
 class TaskContext:
     task_id: int
     loglevel: int
-    seed: Optional[int]
+    seed: Optional[int] = None
+    ppid: Optional[int] = None
 
 
 class Task:
     def __init__(self, func: Callable) -> None:
         self.func = func
 
-    def __call__(self, ctx: TaskContext) -> Any:
+    def _setup_logging(self, ctx):
         logformat = f"%(asctime)s %(levelname)s %(name)s [task={ctx.task_id}]: %(message)s"
-        setup_logging(loglevel=ctx.loglevel, logformat=logformat)
+        setup_logging(loglevel=ctx.loglevel, logformat=logformat, force=True)
+
+    def _setup_seed(self, ctx):
         if ctx.seed is not None:
             np.random.seed(ctx.seed)
+
+    def __call__(self, ctx: TaskContext) -> Any:
+        if ctx.ppid and ctx.ppid != os.getpid():
+            # setup logging and seed only when the task is executed in a subprocess
+            self._setup_logging(ctx)
+            self._setup_seed(ctx)
         return self.func()
 
 
@@ -43,7 +56,8 @@ def run_parallel(
             The callable must accept a single parameter ctx, that will contain a TaskContext.
         jobs: number of jobs. If not specified, use the BLUEETL_PARALLEL_JOBS env variable,
             or use half of the available cpus. Set to 1 to disable parallelization.
-        backend: backend passed to joblib. If not specified, use the joblib default (loky).
+        backend: backend passed to joblib. If not specified, use the BLUEETL_JOBLIB_BACKEND env
+            variable, or use the joblib default (loky).
             Possible values: loky, multiprocessing, threading.
         base_seed: initial base seed. If specified, a different seed is added to the task context,
             and passed to each callable object.
@@ -56,6 +70,7 @@ def run_parallel(
     verbose = int(verbose) if verbose else 0 if loglevel >= logging.WARNING else 10
     jobs = jobs or os.getenv(BLUEETL_JOBLIB_JOBS)
     jobs = int(jobs) if jobs else max((os.cpu_count() or 1) // 2, 1)
+    backend = backend or os.getenv(BLUEETL_JOBLIB_BACKEND)
     parallel = Parallel(n_jobs=jobs, backend=backend, verbose=verbose)
     return parallel(
         delayed(task)(
@@ -63,6 +78,7 @@ def run_parallel(
                 task_id=i,
                 loglevel=loglevel,
                 seed=None if base_seed is None else base_seed + i,
+                ppid=os.getpid(),
             )
         )
         for i, task in enumerate(tasks)

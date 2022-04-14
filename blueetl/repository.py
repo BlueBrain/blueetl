@@ -3,6 +3,7 @@ import logging
 from typing import Any, Dict, Type
 
 import pandas as pd
+from lazy_object_proxy import Proxy
 
 from blueetl import DefaultStore
 from blueetl.config.simulations import SimulationsConfig
@@ -32,12 +33,6 @@ class Repository:
         self._simulations_config = simulations_config
         self._store = store_class(store_dir)
         self._use_cache = use_cache
-        self.simulations: Simulations
-        self.neurons: Neurons
-        self.neuron_classes: NeuronClasses
-        self.trial_steps: TrialSteps
-        self.windows: Windows
-        self.spikes: Spikes
         self._names = {
             "simulations",
             "neurons",
@@ -46,6 +41,15 @@ class Repository:
             "windows",
             "spikes",
         }
+        self._init_proxies()
+
+    def _init_proxies(self):
+        self.simulations: Simulations = Proxy(self._extract_simulations)
+        self.neurons: Neurons = Proxy(self._extract_neurons)
+        self.neuron_classes: NeuronClasses = Proxy(self._extract_neuron_classes)
+        self.trial_steps: TrialSteps = Proxy(self._extract_trial_steps)
+        self.windows: Windows = Proxy(self._extract_windows)
+        self.spikes: Spikes = Proxy(self._extract_spikes)
 
     @property
     def names(self):
@@ -69,113 +73,118 @@ class Repository:
         # Restore instance attributes
         self.__dict__.update(state)
         # Restore the previous state.
-        self.extract()
+        self._init_proxies()
 
-    def extract_simulations(self):
+    def _extract_simulations(self) -> Simulations:
         name = "simulations"
         df = self._store.load(name) if self._use_cache else None
         if df is not None:
-            L.info("Loading cached %s", name)
-            self.simulations = Simulations.from_pandas(df)
+            L.debug("Loading cached %s", name)
+            instance = Simulations.from_pandas(df)
         else:
-            L.info("Extracting %s", name)
+            L.debug("Extracting %s", name)
             with timed(L.info, "Completed extraction of %s", name):
-                self.simulations = Simulations.from_config(self._simulations_config)
-            self._store.dump(self.simulations.to_pandas(), name)
+                instance = Simulations.from_config(self._simulations_config)
+            self._store.dump(instance.to_pandas(), name)
+        return instance
 
-    def extract_neurons(self):
+    def _extract_neurons(self) -> Neurons:
         name = "neurons"
         df = self._store.load(name) if self._use_cache else None
         if df is not None:
-            L.info("Loading cached %s", name)
-            self.neurons = Neurons.from_pandas(df)
+            L.debug("Loading cached %s", name)
+            instance = Neurons.from_pandas(df)
         else:
-            L.info("Extracting %s", name)
+            L.debug("Extracting %s", name)
             with timed(L.info, "Completed extraction of %s", name):
-                self.neurons = Neurons.from_simulations(
+                instance = Neurons.from_simulations(
                     simulations=self.simulations,
                     target=self._extraction_config["target"],
                     neuron_classes=self._extraction_config["neuron_classes"],
                     limit=self._extraction_config["limit"],
                 )
-            self._store.dump(self.neurons.to_pandas(), name)
+            self._store.dump(instance.to_pandas(), name)
+        return instance
 
-    def extract_neuron_classes(self):
+    def _extract_neuron_classes(self) -> NeuronClasses:
         name = "neuron_classes"
         df = self._store.load(name) if self._use_cache else None
         if df is not None:
-            L.info("Loading cached %s", name)
-            self.neuron_classes = NeuronClasses.from_pandas(df)
+            L.debug("Loading cached %s", name)
+            instance = NeuronClasses.from_pandas(df)
         else:
-            L.info("Extracting %s", name)
+            L.debug("Extracting %s", name)
             with timed(L.info, "Completed extraction of %s", name):
-                self.neuron_classes = NeuronClasses.from_neurons(
+                instance = NeuronClasses.from_neurons(
                     neurons=self.neurons,
                     target=self._extraction_config["target"],
                     neuron_classes=self._extraction_config["neuron_classes"],
                     limit=self._extraction_config["limit"],
                 )
-            self._store.dump(self.neuron_classes.to_pandas(), name)
+            self._store.dump(instance.to_pandas(), name)
+        return instance
 
-    def extract_trial_steps(self):
+    def _extract_trial_steps(self) -> TrialSteps:
         name = "trial_steps"
         df = self._store.load(name) if self._use_cache else None
         if df is not None:
-            L.info("Loading cached %s", name)
-            self.trial_steps = TrialSteps.from_pandas(df)
+            L.debug("Loading cached %s", name)
+            instance = TrialSteps.from_pandas(df)
         else:
-            L.info("Extracting %s", name)
+            L.debug("Extracting %s", name)
             with timed(L.info, "Completed extraction of %s", name):
-                self.trial_steps = TrialSteps.from_simulations(
+                instance = TrialSteps.from_simulations(
                     simulations=self.simulations,
                     config=self._extraction_config,
                 )
-            self._store.dump(self.trial_steps.to_pandas(), name)
+            self._store.dump(instance.to_pandas(), name)
+        return instance
 
-    def extract_windows(self):
+    def _extract_windows(self) -> Windows:
         name = "windows"
         df = self._store.load(name) if self._use_cache else None
         if df is not None:
-            L.info("Loading cached %s", name)
-            self.windows = Windows.from_pandas(df)
+            L.debug("Loading cached %s", name)
+            instance = Windows.from_pandas(df)
         else:
-            L.info("Extracting %s", name)
+            L.debug("Extracting %s", name)
             with timed(L.info, "Completed extraction of %s", name):
-                self.windows = Windows.from_simulations(
+                instance = Windows.from_simulations(
                     simulations=self.simulations,
                     trial_steps=self.trial_steps,
                     config=self._extraction_config,
                 )
-            self._store.dump(self.windows.to_pandas(), name)
+            self._store.dump(instance.to_pandas(), name)
+        return instance
 
-    def extract_spikes(self):
+    def _extract_spikes(self) -> Spikes:
         name = "spikes"
         df = self._store.load(name) if self._use_cache else None
         if df is not None:
-            L.info("Loading cached %s", name)
-            self.spikes = Spikes.from_pandas(df)
+            L.debug("Loading cached %s", name)
+            instance = Spikes.from_pandas(df)
         else:
-            L.info("Extracting %s", name)
+            L.debug("Extracting %s", name)
             with timed(L.info, "Completed extraction of %s", name):
-                self.spikes = Spikes.from_simulations(
+                instance = Spikes.from_simulations(
                     simulations=self.simulations,
                     neurons=self.neurons,
                     windows=self.windows,
                 )
-            self._store.dump(self.spikes.to_pandas(), name)
+            self._store.dump(instance.to_pandas(), name)
+        return instance
 
     def extract(self):
-        self.extract_simulations()
-        self.extract_neurons()
-        self.extract_neuron_classes()
-        self.extract_trial_steps()
-        self.extract_windows()
-        self.extract_spikes()
+        """Extract all the dataframes."""
+        for name in self.names:
+            # resolve all the proxies
+            proxy = getattr(self, name)
+            getattr(proxy, "__wrapped__")
         self.check_extractions()
 
     def is_extracted(self):
         """Return True if all the dataframes have been extracted."""
-        return all(getattr(self, name, None) is not None for name in self.names)
+        return all(getattr(self, name).__resolved__ for name in self.names)
 
     def check_extractions(self):
         """Check that all the dataframes have been extracted."""

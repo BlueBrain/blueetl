@@ -18,7 +18,7 @@ from blueetl.constants import (
     TRIAL,
     WINDOW,
 )
-from blueetl.core.parallel import TaskContext, run_parallel
+from blueetl.core.parallel import Task, TaskContext, run_parallel
 from blueetl.extract.feature import Feature
 from blueetl.repository import Repository
 from blueetl.store.base import BaseStore
@@ -168,8 +168,8 @@ def calculate_features_multi(
 
     """
 
-    def func_wrapper(key: NamedTuple, df: pd.DataFrame, ctx: TaskContext):
-        # logging.basicConfig(level=ctx.log_level)
+    def func_wrapper(key: NamedTuple, df: pd.DataFrame):
+        # executed in a subprocess
         features_records = {}
         L.debug("Calculating features for %s", key)
         record = key._asdict()
@@ -203,7 +203,7 @@ def calculate_features_multi(
     }
 
 
-def iter_by_simulation(
+def call_by_simulation(
     repo: Repository,
     func: Callable,
     jobs: Optional[int] = None,
@@ -213,7 +213,7 @@ def iter_by_simulation(
 
     Args:
         repo: repository instance.
-        func: callable accepting
+        func: callable called for each simulation, accepting
             simulation_index: NamedTuple
             simulation_row: NamedTuple
             simulation_spikes: pd.DataFrame
@@ -226,10 +226,6 @@ def iter_by_simulation(
     Returns:
         list of results
     """
-
-    def func_wrapper(ctx: TaskContext, **kwargs):
-        # logging.basicConfig(level=ctx.log_level)
-        return func(**kwargs)
 
     def tasks_generator():
         for circuit_id in repo.simulations.df[CIRCUIT_ID].unique():
@@ -244,9 +240,9 @@ def iter_by_simulation(
                 simulation_id = simulation_row.simulation_id
                 simulation_spikes = repo.spikes.df.etl.q(simulation_id=simulation_id)
                 simulation_windows = repo.windows.df.etl.q(simulation_id=simulation_id)
-                yield (
+                yield Task(
                     partial(
-                        func_wrapper,
+                        func,
                         simulation_index=simulation_index,
                         simulation_row=simulation_row,
                         simulation_spikes=simulation_spikes,

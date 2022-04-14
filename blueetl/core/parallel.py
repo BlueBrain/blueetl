@@ -3,16 +3,31 @@ import os
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, List, Optional
 
+import numpy as np
 from joblib import Parallel, delayed
 
-from blueetl.core.utils import L
+from blueetl.core import L
+from blueetl.core.constants import BLUEETL_JOBLIB_JOBS, BLUEETL_JOBLIB_VERBOSE
+from blueetl.utils import setup_logging
 
 
 @dataclass
 class TaskContext:
     task_id: int
-    log_level: int
+    loglevel: int
     seed: Optional[int]
+
+
+class Task:
+    def __init__(self, func: Callable) -> None:
+        self.func = func
+
+    def __call__(self, ctx: TaskContext) -> Any:
+        logformat = f"%(asctime)s %(levelname)s %(name)s [task={ctx.task_id}]: %(message)s"
+        setup_logging(loglevel=ctx.loglevel, logformat=logformat)
+        if ctx.seed is not None:
+            np.random.seed(ctx.seed)
+        return self.func()
 
 
 def run_parallel(
@@ -36,18 +51,17 @@ def run_parallel(
     Returns:
         list of objects returned by the callable objects, in the same order.
     """
-    log_level = L.getEffectiveLevel()
-    # If verbose is more than 10, all iterations are printed to stderr.
-    # Above 50, the output is sent to stdout.
-    verbose = 0 if log_level >= logging.WARNING else 10
-    if jobs is None:
-        jobs = int(os.getenv("BLUEETL_PARALLEL_JOBS", "0")) or max((os.cpu_count() or 1) // 2, 1)
+    loglevel = L.getEffectiveLevel()
+    verbose = os.getenv(BLUEETL_JOBLIB_VERBOSE)
+    verbose = int(verbose) if verbose else 0 if loglevel >= logging.WARNING else 10
+    jobs = jobs or os.getenv(BLUEETL_JOBLIB_JOBS)
+    jobs = int(jobs) if jobs else max((os.cpu_count() or 1) // 2, 1)
     parallel = Parallel(n_jobs=jobs, backend=backend, verbose=verbose)
     return parallel(
         delayed(task)(
             ctx=TaskContext(
                 task_id=i,
-                log_level=log_level,
+                loglevel=loglevel,
                 seed=None if base_seed is None else base_seed + i,
             )
         )

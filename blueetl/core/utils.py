@@ -1,12 +1,9 @@
-import logging
 from itertools import chain
 from typing import Any, Dict, Union
 
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_list_like
-
-L = logging.getLogger(__name__)
 
 
 def query_frame(df: pd.DataFrame, query: Dict[str, Any]) -> pd.DataFrame:

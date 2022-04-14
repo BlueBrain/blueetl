@@ -1,3 +1,4 @@
+import logging
 import os.path
 import time
 from contextlib import contextmanager
@@ -21,6 +22,12 @@ def timed(log, msg, *args):
     finally:
         elapsed = time.monotonic() - start_time
         log(f"{msg} [{elapsed:.2f} seconds]", *args)
+
+
+def setup_logging(loglevel, logformat=None):
+    """Setup logging."""
+    logformat = logformat or "%(asctime)s %(levelname)s %(name)s: %(message)s"
+    logging.basicConfig(format=logformat, level=loglevel)
 
 
 def load_yaml(filepath):

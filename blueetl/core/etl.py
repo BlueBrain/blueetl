@@ -1,5 +1,4 @@
 """Pandas accessors."""
-import logging
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from functools import partial
@@ -7,11 +6,10 @@ from typing import Any, Callable, Dict, Iterator, List, NamedTuple, Optional, Tu
 
 import pandas as pd
 
-from blueetl.core.parallel import run_parallel
+from blueetl.core import L
+from blueetl.core.parallel import Task, run_parallel
 from blueetl.core.utils import query_frame, query_series
 from blueetl.utils import ensure_list
-
-L = logging.getLogger(__name__)
 
 # Naming conventions
 #  level: number, or name of the level in the MultiIndex
@@ -293,6 +291,7 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
         self,
         groupby_columns: List[str],
         selected_columns: Optional[List[str]] = None,
+        *,
         sort: bool = True,
         observed: bool = True,
         func: Optional[Callable] = None,
@@ -306,22 +305,21 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
             selected_columns: see grouped_by.
             sort: see grouped_by.
             observed: see grouped_by.
-            func: callable accepting the parameters: key, df, ctx,
-                where key is a NamedTuple, df a DataFrame, ctx a TaskContext.
+            func: callable accepting the parameters: key (NamedTuple), df (pd.DataFrame)
             jobs: number of jobs (see run_parallel)
             backend: parallel backend (see run_parallel)
 
         Returns:
             list of results.
         """
-        assert func is not None, "A function accepting (key, df, ctx) must be specified."
+        assert func is not None, "A callable must be specified."
         grouped = self.grouped_by(
             groupby_columns=groupby_columns,
             selected_columns=selected_columns,
             sort=sort,
             observed=observed,
         )
-        tasks_generator = (partial(func, key=key, df=group_df) for key, group_df in grouped)
+        tasks_generator = (Task(partial(func, key=key, df=group_df)) for key, group_df in grouped)
         return run_parallel(tasks_generator, jobs=jobs, backend=backend)
 
 

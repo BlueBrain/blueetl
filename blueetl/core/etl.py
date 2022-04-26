@@ -26,75 +26,90 @@ class ETLBaseAccessor(ABC):
         self._obj = pandas_obj
 
     @staticmethod
-    def _validate(obj):
+    def _validate(obj) -> None:
         """Validate the wrapped object."""
         # assert all(obj.index.names), "All the index levels must have a name"
         # assert len(set(obj.index.names)) == obj.index.nlevels, "The level names must be unique"
 
-    def conditions(self):
+    def conditions(self) -> List[str]:
         """Names for each of the index levels."""
         return self._obj.index.names
 
-    def complementary_conditions(self, conditions):
+    def complementary_conditions(self, conditions: Union[str, List[str]]) -> List[str]:
         """Return the difference between the object conditions and the specified conditions.
 
         Args:
             conditions: single condition or list of conditions used to calculate the difference.
         """
-        if not isinstance(conditions, (tuple, list)):
-            conditions = [conditions]
+        conditions = ensure_list(conditions)
         # TODO: raise a KeyError if any condition is not found in self.conditions?
         return self._obj.index.names.difference(conditions)
 
-    def labels(self):
-        """Unique labels for each level."""
-        return [self.labels_of(condition) for condition in self.conditions()]
+    def labels(self, conditions: Optional[List[str]] = None) -> List[pd.Index]:
+        """Unique labels for each level, or for the specified levels.
 
-    def labels_of(self, condition):
+        Args:
+            conditions: list of condition names, or None to consider all the levels.
+
+        Returns:
+            list of indexes with unique labels, one for each level.
+        """
+        conditions = conditions or self.conditions()
+        return [self.labels_of(condition) for condition in conditions]
+
+    def labels_of(self, condition: str) -> pd.Index:
         """Unique labels for a specific level in the index.
 
         Args:
-            condition (str): condition name.
+            condition: condition name.
+
+        Returns:
+            indexes with unique labels.
         """
         return self._obj.index.unique(condition)
 
-    def remove_condition(self, condition):
+    def remove_conditions(
+        self, conditions: Union[str, List[str]]
+    ) -> Union[pd.Series, pd.DataFrame]:
         """Remove one or more conditions.
 
         Args:
-            condition: single condition or list of conditions to remove.
-        """
-        return self._obj.droplevel(condition, axis=0)
+            conditions: single condition or list of conditions to remove.
 
-    def keep_condition(self, condition):
+        Returns:
+            resulting Series or DataFrame.
+        """
+        return self._obj.droplevel(conditions, axis=0)
+
+    def keep_conditions(self, conditions: Union[str, List[str]]) -> Union[pd.Series, pd.DataFrame]:
         """Remove the conditions not specified.
 
         Args:
-            condition: single condition or list of conditions to keep.
-        """
-        return self._obj.droplevel(self.complementary_conditions(condition), axis=0)
+            conditions: single condition or list of conditions to keep.
 
-    def add_condition(self, condition, value, inner=False, drop=False):
-        """Add a new condition in the outermost or innermost position with the given value.
+        Returns:
+            resulting Series or DataFrame.
+        """
+        return self._obj.droplevel(self.complementary_conditions(conditions), axis=0)
+
+    def add_conditions(
+        self, conditions: Union[str, List[str]], values: Any, inner=False, drop=False
+    ) -> Union[pd.Series, pd.DataFrame]:
+        """Add one or multiple conditions into the outermost or innermost position.
 
         Args:
-            condition: condition to be added.
-            value: value of the condition.
-            inner (bool): if True, add the condition in the innermost position.
-            drop (bool): if True, drop the existing conditions.
-        """
-        return self.add_conditions([condition], [value], inner=inner, drop=drop)
-
-    def add_conditions(self, conditions, values, inner=False, drop=False):
-        """Add multiple conditions in the outermost or innermost position with the given values.
-
-        Args:
-            conditions: list of conditions to be added.
-            values: list of values of the condition.
+            conditions: single conditions or list of conditions to be added.
+            values: single value or list of values, one for each condition.
             inner (bool): if True, add the conditions in the innermost position.
             drop (bool): if True, drop the existing conditions.
+
+        Returns:
+            resulting Series or DataFrame.
         """
-        assert len(conditions) == len(values), "Conditions and values must have the same length"
+        conditions = ensure_list(conditions)
+        values = ensure_list(values)
+        if len(conditions) != len(values):
+            raise ValueError("Conditions and values must have the same length")
         result = pd.concat([self._obj], axis="index", keys=[tuple(values)], names=conditions)
         if drop:
             # levels to be dropped, for example: [-3, -2, -1]
@@ -107,10 +122,11 @@ class ETLBaseAccessor(ABC):
             result = result.reorder_levels(order)
         return result
 
-    def select(self, drop_level=True, **kwargs):
+    def select(self, drop_level=True, **kwargs) -> Union[pd.Series, pd.DataFrame]:
         """Filter the series or dataframe based on some conditions on the index.
 
         Note: if the level doesn't need to be dropped, it's possible to use `etl.q` instead.
+        TODO: consider if it can be deprecated in favour of etl.q, and removed.
 
         Args:
             drop_level (bool): True to drop the conditions from the returned object.
@@ -121,12 +137,12 @@ class ETLBaseAccessor(ABC):
         labels, values = zip(*kwargs.items())
         return self._obj.xs(level=labels, key=values, drop_level=drop_level, axis=0)
 
-    filter = select  # FIXME: deprecated and to be removed
-
     def select_one(self, drop_level=True, **kwargs):
         return self.select(drop_level=drop_level, **kwargs).iat[0]
 
-    def groupby_excluding(self, conditions, *args, **kwargs):
+    def groupby_except(
+        self, conditions: Union[str, List[str]], *args, **kwargs
+    ) -> Union[pd.Series, pd.DataFrame]:
         """Group by all the conditions except for the ones specified.
 
         Args:
@@ -135,7 +151,7 @@ class ETLBaseAccessor(ABC):
         complementary_conditions = self.complementary_conditions(conditions)
         return self._obj.groupby(complementary_conditions, *args, **kwargs)
 
-    def pool(self, conditions, func):
+    def pool(self, conditions: Union[str, List[str]], func) -> Union[pd.Series, pd.DataFrame]:
         """Remove one or more conditions grouping by the remaining conditions.
 
         Args:
@@ -144,7 +160,7 @@ class ETLBaseAccessor(ABC):
                 If the returned value is a Series, it will be used as an additional level
                 in the MultiIndex of the returned object.
         """
-        return self.groupby_excluding(conditions).apply(func)
+        return self.groupby_except(conditions).apply(func)
 
     @abstractmethod
     def _query_dict(self, query: Dict) -> Union[pd.Series, pd.DataFrame]:
@@ -253,7 +269,7 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
         """Given a query dictionary, return the DataFrame filtered by columns and index."""
         return query_frame(self._obj, query)
 
-    def grouped_by(
+    def groupby_iter(
         self,
         groupby_columns: List[str],
         selected_columns: Optional[List[str]] = None,
@@ -287,7 +303,7 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
         for key, df in grouped:
             yield RecordKey(*ensure_list(key)), df
 
-    def group_run_parallel(
+    def groupby_run_parallel(
         self,
         groupby_columns: List[str],
         selected_columns: Optional[List[str]] = None,
@@ -298,13 +314,13 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
         jobs: Optional[int] = None,
         backend: Optional[str] = None,
     ) -> List[Any]:
-        """Call grouped_by and apply the given function in parallel, returning the results.
+        """Call groupby_iter and apply the given function in parallel, returning the results.
 
         Args:
-            groupby_columns: see grouped_by.
-            selected_columns: see grouped_by.
-            sort: see grouped_by.
-            observed: see grouped_by.
+            groupby_columns: see groupby_iter.
+            selected_columns: see groupby_iter.
+            sort: see groupby_iter.
+            observed: see groupby_iter.
             func: callable accepting the parameters: key (NamedTuple), df (pd.DataFrame)
             jobs: number of jobs (see run_parallel)
             backend: parallel backend (see run_parallel)
@@ -313,7 +329,7 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
             list of results.
         """
         assert func is not None, "A callable must be specified."
-        grouped = self.grouped_by(
+        grouped = self.groupby_iter(
             groupby_columns=groupby_columns,
             selected_columns=selected_columns,
             sort=sort,
@@ -322,7 +338,7 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
         tasks_generator = (Task(partial(func, key=key, df=group_df)) for key, group_df in grouped)
         return run_parallel(tasks_generator, jobs=jobs, backend=backend)
 
-    def group_apply_parallel(
+    def groupby_apply_parallel(
         self,
         groupby_columns: List[str],
         selected_columns: Optional[List[str]] = None,
@@ -333,14 +349,14 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
         jobs: Optional[int] = None,
         backend: Optional[str] = None,
     ) -> pd.DataFrame:
-        """Call grouped_by and apply the given function in parallel, returning a DataFrame.
+        """Call groupby_iter and apply the given function in parallel, returning a DataFrame.
 
         To work as expected, func should return a DataFrame and all the DataFrames should have
         the same index and columns.
 
         Still experimental.
         """
-        results = self.group_run_parallel(
+        results = self.groupby_run_parallel(
             groupby_columns=groupby_columns,
             selected_columns=selected_columns,
             sort=sort,
@@ -382,3 +398,14 @@ def register_accessors():
     pd.api.extensions.register_series_accessor("etl")(ETLSeriesAccessor)
     pd.api.extensions.register_dataframe_accessor("etl")(ETLDataFrameAccessor)
     pd.api.extensions.register_index_accessor("etl")(ETLIndexAccessor)
+
+
+# TODO: deprecated, to be removed
+ETLBaseAccessor.filter = ETLBaseAccessor.select  # type: ignore
+ETLBaseAccessor.remove_condition = ETLBaseAccessor.remove_conditions  # type: ignore
+ETLBaseAccessor.keep_condition = ETLBaseAccessor.keep_conditions  # type: ignore
+ETLBaseAccessor.add_condition = ETLBaseAccessor.add_conditions  # type: ignore
+ETLBaseAccessor.groupby_excluding = ETLBaseAccessor.groupby_except  # type: ignore
+ETLDataFrameAccessor.grouped_by = ETLDataFrameAccessor.groupby_iter  # type: ignore
+ETLDataFrameAccessor.group_run_parallel = ETLDataFrameAccessor.groupby_run_parallel  # type: ignore
+ETLDataFrameAccessor.group_apply_parallel = ETLDataFrameAccessor.groupby_apply_parallel  # type: ignore

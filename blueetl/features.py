@@ -131,7 +131,7 @@ def calculate_features_single(
     records = []
     key = None
     main_df = _get_spikes_for_all_neurons_and_windows(repo)
-    for key, group_df in main_df.etl.grouped_by(features_groupby):
+    for key, group_df in main_df.etl.groupy_iter(features_groupby):
         record = key._asdict()
         result = func(repo=repo, key=key, df=group_df, params=features_params)
         assert isinstance(result, dict), "The returned object must be a dict"
@@ -189,7 +189,7 @@ def calculate_features_multi(
     func = import_by_string(features_func)
     main_df = _get_spikes_for_all_neurons_and_windows(repo)
     # list of dicts: feature_group -> dataframe
-    results = main_df.etl.group_run_parallel(
+    results = main_df.etl.groupby_run_parallel(
         features_groupby, func=func_wrapper, jobs=jobs, backend=backend
     )
     # concatenate all the dataframes having the same feature_group label

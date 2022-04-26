@@ -52,5 +52,5 @@ class Analyzer:
         Returns:
             The first key and df.
         """
-        key, df = next(self.repo.spikes.df.etl.grouped_by(groupby))
+        key, df = next(self.repo.spikes.df.etl.groupby_iter(groupby))
         return key, df

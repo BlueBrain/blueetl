@@ -35,9 +35,7 @@ class SimulationsConfig:
         for d in self.data:
             path = resolve_path(path_prefix, d[SIMULATION_PATH])
             if path.is_dir():
-                L.warning(
-                    "%r is a directory, assuming BlueConfig as the config file", d[SIMULATION_PATH]
-                )
+                L.warning("%r is a directory, using BlueConfig", d[SIMULATION_PATH])
                 path = path / "BlueConfig"
             d[SIMULATION_PATH] = str(path)
 

@@ -1,9 +1,9 @@
 import json
 import logging
+from functools import cached_property
 from typing import Any, Dict, Type
 
 import pandas as pd
-from lazy_object_proxy import Proxy
 
 from blueetl import DefaultStore
 from blueetl.config.simulations import SimulationsConfig
@@ -41,39 +41,49 @@ class Repository:
             "windows",
             "spikes",
         }
-        self._init_proxies()
-
-    def _init_proxies(self):
-        self.simulations: Simulations = Proxy(self._extract_simulations)
-        self.neurons: Neurons = Proxy(self._extract_neurons)
-        self.neuron_classes: NeuronClasses = Proxy(self._extract_neuron_classes)
-        self.trial_steps: TrialSteps = Proxy(self._extract_trial_steps)
-        self.windows: Windows = Proxy(self._extract_windows)
-        self.spikes: Spikes = Proxy(self._extract_spikes)
-
-    @property
-    def names(self):
-        return sorted(self._names)
 
     def __getstate__(self):
         """Get the object state when the object is pickled."""
         if not self.is_extracted():
-            # ensure that the dataframes are extracted and stored to disk
+            # ensure that the dataframes are extracted and stored to disk,
+            # because we want to be able to use the cached data in the subprocesses.
             L.info("Extracting dataframes before serialization")
             self.extract()
-        # Copy the object's state from self.__dict__
-        state = self.__dict__.copy()
-        for name in self.names:
-            # Remove the unpicklable entries.
-            state.pop(name, None)
-        return state
+        # Copy the object's state from self.__dict__, excluding the unpicklable entries.
+        return {k: v for k, v in self.__dict__.items() if k not in self.names}
 
     def __setstate__(self, state):
         """Set the object state when the object is unpickled."""
         # Restore instance attributes
         self.__dict__.update(state)
-        # Restore the previous state.
-        self._init_proxies()
+
+    @property
+    def names(self):
+        return sorted(self._names)
+
+    @cached_property
+    def simulations(self) -> Simulations:
+        return self._extract_simulations()
+
+    @cached_property
+    def neurons(self) -> Neurons:
+        return self._extract_neurons()
+
+    @cached_property
+    def neuron_classes(self) -> NeuronClasses:
+        return self._extract_neuron_classes()
+
+    @cached_property
+    def trial_steps(self) -> TrialSteps:
+        return self._extract_trial_steps()
+
+    @cached_property
+    def windows(self) -> Windows:
+        return self._extract_windows()
+
+    @cached_property
+    def spikes(self) -> Spikes:
+        return self._extract_spikes()
 
     def _extract_simulations(self) -> Simulations:
         name = "simulations"
@@ -174,19 +184,18 @@ class Repository:
             self._store.dump(instance.to_pandas(), name)
         return instance
 
-    def extract(self):
+    def extract(self) -> None:
         """Extract all the dataframes."""
         for name in self.names:
-            # resolve all the proxies
-            proxy = getattr(self, name)
-            getattr(proxy, "__wrapped__")
+            getattr(self, name)
         self.check_extractions()
 
-    def is_extracted(self):
+    def is_extracted(self) -> bool:
         """Return True if all the dataframes have been extracted."""
-        return all(getattr(self, name).__resolved__ for name in self.names)
+        # a cached_property is stored as an attribute after it's accessed
+        return all(name in self.__dict__ for name in self.names)
 
-    def check_extractions(self):
+    def check_extractions(self) -> None:
         """Check that all the dataframes have been extracted."""
         if not self.is_extracted():
             raise RuntimeError("Not all the dataframes have been extracted")

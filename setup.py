@@ -43,7 +43,6 @@ setup(
         "xarray>=0.18.0",
         "bluepy>=2.4",
         "joblib>=1.1.0",
-        "lazy-object-proxy>=1.7.1",
     ],
     packages=find_packages(),
     python_requires=">=3.7",

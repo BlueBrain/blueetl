@@ -131,7 +131,7 @@ def calculate_features_single(
     records = []
     key = None
     main_df = _get_spikes_for_all_neurons_and_windows(repo)
-    for key, group_df in main_df.etl.groupy_iter(features_groupby):
+    for key, group_df in main_df.etl.groupby_iter(features_groupby):
         record = key._asdict()
         result = func(repo=repo, key=key, df=group_df, params=features_params)
         assert isinstance(result, dict), "The returned object must be a dict"

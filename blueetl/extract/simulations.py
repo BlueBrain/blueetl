@@ -17,6 +17,11 @@ L = logging.getLogger(__name__)
 class Simulations(BaseExtractor):
     COLUMNS = [SIMULATION_PATH, SIMULATION_ID, CIRCUIT_ID, SIMULATION, CIRCUIT]
 
+    @classmethod
+    def _validate(cls, df):
+        # allow additional arbitrary columns containing the simulation conditions
+        cls._validate_columns(df, allow_extra=True)
+
     @staticmethod
     def _get_circuit_hash(circuit_config: Dict) -> str:
         # TODO: verify which keys to consider, or use the circuit path?
@@ -50,13 +55,15 @@ class Simulations(BaseExtractor):
             return False
 
     @classmethod
-    def _from_paths(cls, simulation_paths: pd.Series, load_spikes: bool = True) -> pd.DataFrame:
+    def _from_paths(cls, simulation_paths: pd.DataFrame, load_spikes: bool = True) -> pd.DataFrame:
         """Return a dataframe of simulations from a list of simulation paths.
 
         Args:
-            simulation_paths: Series of paths.
+            simulation_paths: DataFrame containing the simulation paths.
+                Any additional columns besides (simulation_path, simulation_id, circuit_id)
+                are returned unchanged in the resulting DataFrame.
             load_spikes: if True, load the spikes to verify that they are available,
-                and add the simulation only in that case.
+                and add the simulation to the resulting DataFrame only in that case.
                 If False, don't load the spikes and always add the simulation.
 
         Returns:
@@ -66,7 +73,8 @@ class Simulations(BaseExtractor):
         circuit_hashes: Dict[str, int] = {}  # map circuit_hash -> circuit_id
         circuits: Dict[int, Circuit] = {}  # map circuit_id -> circuit
         records = []
-        for simulation_id, (index, simulation_path) in enumerate(simulation_paths.etl.iter()):
+        for simulation_id, (_, rec) in enumerate(simulation_paths.etl.iter()):
+            simulation_path = rec.simulation_path
             simulation = Simulation(simulation_path)
             circuit_hash = cls._get_circuit_hash(simulation.circuit.config)
             # if circuit_hash is new, use simulation_id as circuit_id
@@ -76,31 +84,30 @@ class Simulations(BaseExtractor):
             if not load_spikes or cls._is_simulation_complete(simulation):
                 records.append(
                     {
+                        **rec._asdict(),  # must be first for lower precedence in case of collisions
                         SIMULATION_ID: simulation_id,
                         CIRCUIT_ID: circuit_id,
                         SIMULATION_PATH: simulation_path,
                         SIMULATION: simulation,
                         CIRCUIT: circuit,
-                        **index._asdict(),
                     }
                 )
                 L.info("Extracting simulation: %s", sim_repr)
             else:
                 L.warning("Ignoring simulation without spikes: %s", sim_repr)
-        return pd.DataFrame(records).set_index(simulation_paths.index.names)
+        return pd.DataFrame(records)
 
     @classmethod
     def from_config(cls, config: SimulationsConfig) -> "Simulations":
         """Load simulations from the given simulation campaign."""
-        simulation_paths = config.to_pandas()
-        df = cls._from_paths(simulation_paths, load_spikes=True)
-        return cls(df)
+        df = config.to_pandas()
+        new_df = cls._from_paths(df, load_spikes=True)
+        return cls(new_df)
 
     @classmethod
     def from_pandas(cls, df: pd.DataFrame) -> "Simulations":
         """Load simulations from a dataframe containing valid simulation ids and circuit ids."""
-        simulation_paths = df[SIMULATION_PATH]
-        new_df = cls._from_paths(simulation_paths, load_spikes=False)
+        new_df = cls._from_paths(df, load_spikes=False)
         check_columns = [SIMULATION_PATH, SIMULATION_ID, CIRCUIT_ID]
         difference = new_df[check_columns].compare(df[check_columns])
         if not difference.empty:

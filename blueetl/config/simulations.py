@@ -1,7 +1,9 @@
 """Simulation Campaign configuration."""
 import logging
-from typing import Any, Dict, List
+from os import PathLike
+from typing import Dict, List, Optional, Union
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 
@@ -14,87 +16,141 @@ L = logging.getLogger(__name__)
 class SimulationsConfig:
     """Result of a Simulation Campaign."""
 
-    def __init__(self, name: str, attrs: Dict, data: List[Dict[str, Any]]):
+    def __init__(
+        self,
+        data: pd.DataFrame,
+        name: Optional[str] = None,
+        attrs: Optional[Dict] = None,
+        conditions: Optional[List[str]] = None,
+    ) -> None:
         """Init the configuration.
 
         Args:
-            name: name of the Simulation Campaign
-            attrs: custom attributes
-            data: list of dicts, one for each generated simulation. Each dict should contain:
-                - path: path to the simulation configuration.
-                - parameters identifying the simulation (for example: seed, ca...).
-                  The value of each coordinate needs to be the single value used in this simulation.
+            data: DataFrame of simulation paths, having as columns: simulation_path,
+                and the parameters used for each simulation (for example: seed, ca...).
+            name: optional name of the Simulation Campaign.
+                If not specified, use 'data.name'.
+            attrs: optional dict of custom attributes.
+                If not specified, use 'data.attrs'.
+            conditions: optional list of parameters used the simulations.
+                If not specified, all the columns of data except simulation_path are used.
         """
-        self.name = name or ""
-        self.attrs = attrs or {}
-        self.data = data or []
+        data = data.copy()
+        if name is not None:
+            data.name = name
+        if attrs is not None:
+            data.attrs = attrs
+        self._conditions = conditions or [c for c in data.columns if c != SIMULATION_PATH]
+        self._data = data
         self._resolve_paths()
+        self._validate()
 
     def _resolve_paths(self):
+        def _to_absolute(path):
+            full_path = resolve_path(path_prefix, path)
+            if full_path.is_dir():
+                L.warning("%s is a directory, using BlueConfig", path)
+                full_path = full_path / "BlueConfig"
+            if not full_path.exists():
+                L.warning("%s doesn't exist, proceeding anyway", path)
+            return str(full_path)
+
         path_prefix = self.attrs.get("path_prefix", "")
-        for d in self.data:
-            path = resolve_path(path_prefix, d[SIMULATION_PATH])
-            if path.is_dir():
-                L.warning("%r is a directory, using BlueConfig", d[SIMULATION_PATH])
-                path = path / "BlueConfig"
-            d[SIMULATION_PATH] = str(path)
+        self.data[SIMULATION_PATH] = self.data[SIMULATION_PATH].apply(_to_absolute)
+
+    def _validate(self):
+        if SIMULATION_PATH not in self.data.columns:
+            raise ValueError(f"Missing required column: {SIMULATION_PATH}")
+        diff = set(self.conditions) - set(self.data.columns)
+        if diff:
+            raise Exception(f"Invalid extra conditions: {diff}")
+
+    @property
+    def name(self) -> str:
+        return self.data.name or ""
+
+    @property
+    def attrs(self) -> Dict:
+        return self.data.attrs
+
+    @property
+    def conditions(self) -> List[str]:
+        return self._conditions
+
+    @property
+    def data(self):
+        return self._data
+
+    def to_pandas(self):
+        return self.data.copy()
 
     @classmethod
-    def load(cls, path):
-        """Load the configuration from file."""
+    def load(cls, path: Union[str, PathLike]) -> "SimulationsConfig":
+        """Load the configuration from file.
+
+        Args:
+            path: path to the configuration file.
+        """
         config = load_yaml(path)
-        keys = set(config)
-        if keys == {"name", "attrs", "data", "dims", "coords"}:
-            L.info("Detected xarray config")
+        if config.get("format") == "blueetl":
+            L.info("Detected blueetl configuration format")
+            return cls.from_dict(config)
+        if set(config) == {"name", "attrs", "data", "dims", "coords"}:
+            L.info("Detected xarray configuration format")
             da = xr.DataArray.from_dict(config)
             return cls.from_xarray(da)
-        if keys == {"name", "attrs", "data"}:
-            L.info("Detected internal config")
-            return cls.from_dict(config)
-        raise ValueError("Unable to detect the configuration type")
-
-    @classmethod
-    def from_dict(cls, d):
-        """Load the configuration from dict."""
-        return cls(**d)
-
-    @classmethod
-    def from_pandas(cls, s):
-        """Load the configuration from pandas.Series."""
-        return cls(
-            name=s.name,
-            attrs=s.attrs,
-            data=s.rename(SIMULATION_PATH).reset_index().to_dict(orient="records"),
-        )
-
-    @classmethod
-    def from_xarray(cls, da):
-        """Load the configuration from xarray.DataArray."""
-        return cls(
-            name=da.name,
-            attrs=da.attrs,
-            data=da.to_series().rename(SIMULATION_PATH).reset_index().to_dict(orient="records"),
-        )
+        raise ValueError("Unable to detect the configuration format")
 
     def dump(self, path):
         """Save the configuration to file."""
         dump_yaml(path, data=self.to_dict())
 
+    @classmethod
+    def from_dict(cls, d):
+        """Load the configuration from dict."""
+        data = pd.DataFrame.from_dict(d["data"])
+        return cls(data=data, name=d["name"], attrs=d["attrs"], conditions=d["conditions"])
+
     def to_dict(self):
         """Convert the configuration to dict."""
-        return {"name": self.name, "attrs": self.attrs, "data": self.data}
 
-    def to_pandas(self):
-        """Convert the configuration to pandas.Series."""
-        df = pd.DataFrame.from_dict(self.data)
-        s = df.set_index([col for col in df.columns if col != SIMULATION_PATH])[SIMULATION_PATH]
-        s.attrs = self.attrs
-        s.name = self.name
-        return s
+        return {
+            "format": "blueetl",
+            "version": 1,
+            "name": self.name,
+            "attrs": self.attrs,
+            "conditions": self.conditions,
+            "data": self.data.to_dict(orient="records"),
+        }
+
+    @classmethod
+    def from_xarray(cls, da):
+        """Load the configuration from xarray.DataArray."""
+        data = da.rename(SIMULATION_PATH).to_dataframe().reset_index()
+        return cls(data=data, name=da.name, attrs=da.attrs)
 
     def to_xarray(self):
         """Convert the configuration to xarray.DataArray."""
-        s = self.to_pandas()
-        da = xr.DataArray.from_series(s)
-        da.attrs = s.attrs
+        s = self.data.set_index(self.conditions)[SIMULATION_PATH]
+        s.name = self.name
+        # may be added by bbp-workflow when using coupled coordinates
+        coupled = "coupled"
+        if coupled not in self.conditions:
+            # generated with the task GenerateSimulationCampaign
+            da = xr.DataArray.from_series(s)
+            da.attrs = self.attrs
+        else:
+            # generated with the task GenerateCoupledCoordsSimulationCampaign
+            index, indexer = s.index.sortlevel(coupled)
+            if not np.array_equal(indexer, np.arange(len(indexer))):
+                raise ValueError("Incorrect coupled indexer")
+            index = s.index.droplevel(coupled)
+            da = xr.DataArray(
+                list(s),
+                name=s.name,
+                dims=coupled,
+                coords={coupled: index},
+                attrs=self.attrs,
+            )
+            da = da.reset_index(coupled)
         return da

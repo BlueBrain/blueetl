@@ -15,6 +15,36 @@ module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 VERSION = module.__version__
 
+REQUIREMENTS = {
+    "core": [
+        "numpy>=1.19.4",
+        "pandas>=1.2.5",
+        "pyyaml>=5.4.1",
+        "joblib>=1.1.0",
+    ],
+    "extra": [
+        "tables>=3.6.1",  # needed by pandas to read and write hdf files
+        "pyarrow>=7",  # needed by pandas to read and write feather or parquet files
+        "elephant>=0.10.0",
+        "quantities>=0.13.0",
+        "seaborn>=0.11.2",
+        "scipy>=1.8.0",
+        "matplotlib>=3.4.3",
+        "xarray>=0.18.0",
+        "bluepy>=2.4",
+    ],
+    "spa": [
+        "simProjectAnalysis @ git+ssh://git@bbpgitlab.epfl.ch/conn/personal/reimann/bbp-analysis-framework.git@newbluepy#egg=simProjectAnalysis",
+        "progressbar>=2.5",  # needed by simProjectAnalysis
+        "future",  # needed by simProjectAnalysis
+        "interval>=1.0.0",  # to avoid a DependencyWarning in NeuroTools
+    ],
+    "docs": [
+        "sphinx",
+        "sphinx-bluebrain-theme",
+    ],
+}
+
 setup(
     name="blueetl",
     author="bbp-ou-nse",
@@ -29,31 +59,13 @@ setup(
         "Source": "git@bbpgitlab.epfl.ch:nse/blueetl.git",
     },
     license="BBP-internal-confidential",
-    install_requires=[
-        "numpy>=1.19.4",
-        "pandas>=1.2.5",
-        "pyyaml>=5.4.1",
-        "tables>=3.6.1",  # needed by pandas to read and write hdf files
-        "pyarrow>=7",  # needed by pandas to read and write feather or parquet files
-        "elephant>=0.10.0",
-        "quantities>=0.13.0",
-        "seaborn>=0.11.2",
-        "scipy>=1.8.0",
-        "matplotlib>=3.4.3",
-        "xarray>=0.18.0",
-        "bluepy>=2.4",
-        "joblib>=1.1.0",
-    ],
+    install_requires=REQUIREMENTS["core"],
     packages=find_packages(),
     python_requires=">=3.7",
     extras_require={
-        "docs": ["sphinx", "sphinx-bluebrain-theme"],
-        "spa": [
-            "simProjectAnalysis @ git+ssh://git@bbpgitlab.epfl.ch/conn/personal/reimann/bbp-analysis-framework.git@newbluepy#egg=simProjectAnalysis",
-            "progressbar>=2.5",  # needed by simProjectAnalysis
-            "future",  # needed by simProjectAnalysis
-            "interval>=1.0.0",  # to avoid a DependencyWarning in NeuroTools
-        ],
+        "docs": REQUIREMENTS["docs"],
+        "spa": REQUIREMENTS["spa"],
+        "all": REQUIREMENTS["extra"],
     },
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
@@ -63,6 +75,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Topic :: Scientific/Engineering :: Bio-Informatics",
     ],
 )

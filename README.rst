@@ -11,11 +11,19 @@ In a virtualenv, to install the full package, execute::
 
     pip install -i https://bbpteam.epfl.ch/repository/devpi/simple/ 'blueetl[all]'
 
-If instead you need only the core transformations to extend Pandas with `.etl` methods, use::
+If instead you need only the core transformations to extend Pandas with ``.etl`` methods, use::
 
     pip install -i https://bbpteam.epfl.ch/repository/devpi/simple/ 'blueetl'
 
-WIP
+If you want to try the latest code not release yet, you can use respectively::
+
+    pip install -i https://bbpteam.epfl.ch/repository/devpi/simple/ 'git+ssh://git@bbpgitlab.epfl.ch/nse/blueetl.git@main#egg=blueetl[all]'
+
+and::
+
+    pip install -i https://bbpteam.epfl.ch/repository/devpi/simple/ 'git+ssh://git@bbpgitlab.epfl.ch/nse/blueetl.git@main#egg=blueetl'
+
+where ``@main`` can be omitted when requesting the default branch, or can be replaced with the desired branch.
 
 
 Examples (WIP)
@@ -85,6 +93,41 @@ Result::
        1   3  7  8.700121
        3   2  8  7.991586
        4   4  1  4.614794
+
+
+If the keys used to filter are variable, it's possible to pass a dict instead:
+
+.. code-block:: python
+
+    for column in ["a", "b", "c"]:
+        print(f"### Filter by {column}")
+        print(df.etl.q({column: 7}))
+
+Result::
+
+    ### Filter by a
+       a  b         c
+    i0 i1
+    0  4   7  1  8.326198
+    ### Filter by b
+           a  b         c
+    i0 i1
+    0  0   5  7  9.255966
+    1  1   3  7  8.700121
+       2   5  7  9.786183
+    ### Filter by c
+    Empty DataFrame
+    Columns: [a, b, c]
+    Index: []
+
+
+Alternatively, you can just use the standard python dict unpacking syntax with ``**``:
+
+.. code-block:: python
+
+    for column in ["a", "b", "c"]:
+        print(f"### Filter by {column}")
+        print(df.etl.q(**{column: 7}))
 
 
 See also the jupyter notebooks in the ``notebooks`` directory.

@@ -9,6 +9,7 @@ from blueetl.utils import load_yaml
 
 analysis_config_file = "./tests/data/tmp/analysis_config_01.yaml"
 # analysis_config_file = "./tests/data/tmp/analysis_config_02.yaml"
+# analysis_config_file = "./tests/data/tmp/analysis_config_04_NSETM-1891.yaml"
 
 
 def main():

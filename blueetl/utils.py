@@ -39,7 +39,7 @@ def load_yaml(filepath):
 def dump_yaml(filepath, data):
     """Dump to YAML file."""
     with open(filepath, "w", encoding="utf-8") as f:
-        yaml.safe_dump(data, stream=f)
+        yaml.safe_dump(data, stream=f, sort_keys=False)
 
 
 def ensure_list(x):

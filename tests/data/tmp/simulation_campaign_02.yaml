@@ -1,5 +1,8 @@
+format: blueetl
+version: 1
 name: bluecv
 attrs:
+conditions: [ seed ]
 data:
   - simulation_path: '/gpfs/bbp.cscs.ch/data/scratch/proj83/home/bolanos/shot_noise_nd/hex_O1_superscan/output/perlayer/lognormal/awakequiet/Ca1p1/mean40/stdev30/rateVPM0p0/ratePOM0p0/fibersVPM0p1/fibersPOM0p0/latencyVPM1p63_0p22/latencyPOM2p98_0p32/inputRep5/inputRepDelay1000/seed294851/BlueConfig'
     seed: 294851

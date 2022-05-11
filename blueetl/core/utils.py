@@ -66,6 +66,7 @@ def compare(obj: Union[pd.DataFrame, pd.Series, pd.Index], value: Any) -> np.nda
             "ge": "__ge__",
             "gt": "__gt__",
             "in": "isin",
+            "isin": "isin",
         }
         masks = []
         for op, v in value.items():
@@ -87,18 +88,31 @@ def safe_concat(iterable, *args, **kwargs):
 
     Args:
         iterable: iterable of Series or DataFrames.
-            All the objects must be of the same type and they must have the same index,
+            All the objects must be of the same type, and they must have the same index,
             or an exception is raised.
 
     Returns:
         (pd.Series, pd.DataFrame) result of the concatenation, same type of the input elements.
     """
 
+    def _reorder_levels(obj, order):
+        # wrap reorder_levels to ensure that some c
+        if len(order) != obj.index.nlevels:
+            # reorder_levels would raise an AssertionError
+            raise RuntimeError(
+                f"Length of order must be same as number of "
+                f"levels ({obj.index.nlevels}), got {len(order)}"
+            )
+        if diff := set(order).difference(obj.index.names):
+            # reorder_levels would raise a KeyError
+            raise RuntimeError(f"Levels not found: {''.join(diff)}")
+        return obj.reorder_levels(order)
+
     def _ordered(obj):
         nonlocal order
         if order is None:
             order = obj.index.names
-        return obj if order == obj.index.names else obj.reorder_levels(order)
+        return obj if order == obj.index.names else _reorder_levels(obj, order)
 
     order = None
     return pd.concat((_ordered(obj) for obj in iterable), *args, **kwargs)

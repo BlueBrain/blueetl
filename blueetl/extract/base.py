@@ -1,9 +1,11 @@
 from abc import ABC
-from typing import List
+from typing import List, Type, TypeVar
 
 import pandas as pd
 
 from blueetl.utils import ensure_dtypes
+
+ExtractorT = TypeVar("ExtractorT", bound="BaseExtractor")
 
 
 class BaseExtractor(ABC):
@@ -32,7 +34,7 @@ class BaseExtractor(ABC):
         return self._df
 
     @classmethod
-    def from_pandas(cls, df: pd.DataFrame) -> "BaseExtractor":
+    def from_pandas(cls: Type[ExtractorT], df: pd.DataFrame) -> ExtractorT:
         return cls(df)
 
     def to_pandas(self) -> pd.DataFrame:

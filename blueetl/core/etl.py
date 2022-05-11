@@ -113,7 +113,7 @@ class ETLBaseAccessor(ABC):
         result = pd.concat([self._obj], axis="index", keys=[tuple(values)], names=conditions)
         if drop:
             # levels to be dropped, for example: [-3, -2, -1]
-            levels = list(range(-self._obj.columns.nlevels, 0))
+            levels = list(range(-self._obj.index.nlevels, 0))
             result = result.droplevel(levels)
         elif inner:
             # rotate the levels: (0 1) 2 3 4 5 -> 2 3 4 5 (0 1)
@@ -136,9 +136,6 @@ class ETLBaseAccessor(ABC):
             return self._obj
         labels, values = zip(*kwargs.items())
         return self._obj.xs(level=labels, key=values, drop_level=drop_level, axis=0)
-
-    def select_one(self, drop_level=True, **kwargs):
-        return self.select(drop_level=drop_level, **kwargs).iat[0]
 
     def groupby_except(
         self, conditions: Union[str, List[str]], *args, **kwargs
@@ -221,26 +218,6 @@ class ETLSeriesAccessor(ETLBaseAccessor):
         """
         return self._obj.apply(func).stack()
 
-    # def merge(self, other):
-    #     # FIXME: to be removed if redundant
-    #     return pd.concat([self._obj, other.reindex_like(self._obj)])
-    #
-    # def map(self, func):
-    #     # FIXME: to be removed if redundant
-    #     return self._obj.map(func)
-
-    # def remodel(self, func):
-    #     """Apply func and return a new Series.
-    #
-    #     Args:
-    #         func: generator function accepting the Series as argument, and yielding tuples
-    #             (value, conditions) that will be concatenated to build a new Series.
-    #
-    #     Returns:
-    #         (pd.Series) result of the concatenation.
-    #     """
-    #     return concat_tuples(func(self._obj))
-
     def iter(self):
         """Iterate over the items, yielding a tuple (named_index, value) for each element.
 
@@ -280,12 +257,12 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
 
         It can be used as a replacement for the iteration over df.groupby, but:
             - the yielded keys are namedtuples, instead of tuples
-            - the yielded dataframes contain only the varying columns, instead of all the columns
+            - the yielded dataframes contain only the selected columns, if specified
 
         Args:
             groupby_columns: list of column names to group by.
             selected_columns: list of column names to be included in the yielded dataframes.
-                If None, only the varying columns are included.
+                If None, all the columns are included.
             sort: Sort group keys.
             observed: This only applies if any of the groupers are Categoricals.
                 If True: only show observed values for categorical groupers.
@@ -294,11 +271,9 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
         Yields:
             a tuple (key, df), where key is a namedtuple with the grouped columns
         """
-        if selected_columns is None:
-            groupby_set = set(groupby_columns)
-            selected_columns = [col for col in self._obj.columns if col not in groupby_set]
         grouped = self._obj.groupby(groupby_columns, sort=sort, observed=observed)
-        grouped = grouped[selected_columns]
+        if selected_columns:
+            grouped = grouped[selected_columns]
         RecordKey = namedtuple("RecordKey", groupby_columns)  # type: ignore
         for key, df in grouped:
             yield RecordKey(*ensure_list(key)), df
@@ -351,8 +326,8 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
     ) -> pd.DataFrame:
         """Call groupby_iter and apply the given function in parallel, returning a DataFrame.
 
-        To work as expected, func should return a DataFrame and all the DataFrames should have
-        the same index and columns.
+        To work as expected, func should return a DataFrame or a Series, and all the returned
+        objects should have the same index and columns.
 
         Still experimental.
         """
@@ -398,14 +373,3 @@ def register_accessors():
     pd.api.extensions.register_series_accessor("etl")(ETLSeriesAccessor)
     pd.api.extensions.register_dataframe_accessor("etl")(ETLDataFrameAccessor)
     pd.api.extensions.register_index_accessor("etl")(ETLIndexAccessor)
-
-
-# TODO: deprecated, to be removed
-ETLBaseAccessor.filter = ETLBaseAccessor.select  # type: ignore
-ETLBaseAccessor.remove_condition = ETLBaseAccessor.remove_conditions  # type: ignore
-ETLBaseAccessor.keep_condition = ETLBaseAccessor.keep_conditions  # type: ignore
-ETLBaseAccessor.add_condition = ETLBaseAccessor.add_conditions  # type: ignore
-ETLBaseAccessor.groupby_excluding = ETLBaseAccessor.groupby_except  # type: ignore
-ETLDataFrameAccessor.grouped_by = ETLDataFrameAccessor.groupby_iter  # type: ignore
-ETLDataFrameAccessor.group_run_parallel = ETLDataFrameAccessor.groupby_run_parallel  # type: ignore
-ETLDataFrameAccessor.group_apply_parallel = ETLDataFrameAccessor.groupby_apply_parallel  # type: ignore

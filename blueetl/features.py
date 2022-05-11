@@ -64,7 +64,7 @@ class FeaturesCollection:
 
     def print(self) -> None:
         print("### features")
-        for k, v in self.data.items():
+        for k, v in self._data.items():
             print("#", k)
             print(v)
 
@@ -85,7 +85,8 @@ class FeaturesCollection:
             features_groupby=features_config["groupby"],
             features_params=features_config.get("params", {}),
         )
-        return {features_config["name"]: Feature.from_pandas(df)}
+        name = str(features_config["name"])
+        return {name: Feature.from_pandas(df)}
 
     def _calculate_multi(self, features_config: Dict[str, Any]) -> Dict[str, Feature]:
         df_dict = calculate_features_multi(

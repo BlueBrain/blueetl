@@ -14,7 +14,7 @@ def _count_by_neuron_class(data):
     return df.set_index([CIRCUIT_ID, NEURON_CLASS])[GID]
 
 
-def test_from_neurons():
+def test_neuron_classes_from_neurons():
     mock_neurons = MagicMock()
     mock_neurons.count_by_neuron_class.return_value = _count_by_neuron_class(
         [
@@ -58,7 +58,7 @@ def test_from_neurons():
     assert_frame_equal(result.df, expected_df)
 
 
-def test_from_neurons_without_neurons():
+def test_neuron_classes_from_neurons_without_neurons():
     mock_neurons = MagicMock()
     mock_neurons.count_by_neuron_class.return_value = _count_by_neuron_class([])
     with pytest.raises(RuntimeError, match="All neuron classes are empty"):

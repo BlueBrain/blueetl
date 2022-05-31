@@ -15,6 +15,7 @@ class Analyzer:
             simulations_config=SimulationsConfig.load(self.analysis_config["simulation_campaign"]),
             extraction_config=self.analysis_config["extraction"],
             store_dir=Path(self.analysis_config["output"], "repo"),
+            simulation_ids=set(self.analysis_config.get("simulation_ids", [])),
             use_cache=use_cache,
         )
         self.features = FeaturesCollection(

@@ -1,7 +1,7 @@
 import hashlib
 import json
 import logging
-from typing import Dict, List
+from typing import Dict, Optional, Set
 
 import pandas as pd
 from bluepy import Circuit, Simulation
@@ -55,7 +55,12 @@ class Simulations(BaseExtractor):
             return False
 
     @classmethod
-    def _from_paths(cls, simulation_paths: pd.DataFrame, load_spikes: bool = True) -> pd.DataFrame:
+    def _from_paths(
+        cls,
+        simulation_paths: pd.DataFrame,
+        load_spikes: bool = True,
+        simulation_ids: Optional[Set[int]] = None,
+    ) -> pd.DataFrame:
         """Return a dataframe of simulations from a list of simulation paths.
 
         Args:
@@ -65,6 +70,7 @@ class Simulations(BaseExtractor):
             load_spikes: if True, load the spikes to verify that they are available,
                 and add the simulation to the resulting DataFrame only in that case.
                 If False, don't load the spikes and always add the simulation.
+            simulation_ids: if specified, load only the given simulations.
 
         Returns:
             DataFrame of simulations, using the same index of simulation_paths.
@@ -73,18 +79,25 @@ class Simulations(BaseExtractor):
         circuit_hashes: Dict[str, int] = {}  # map circuit_hash -> circuit_id
         circuits: Dict[int, Circuit] = {}  # map circuit_id -> circuit
         records = []
+        columns = simulation_paths.columns
         for simulation_id, (_, rec) in enumerate(simulation_paths.etl.iter()):
-            simulation_path = rec.simulation_path
+            rec = dict(zip(columns, rec))
+            simulation_path = rec[SIMULATION_PATH]
             simulation = Simulation(simulation_path)
             circuit_hash = cls._get_circuit_hash(simulation.circuit.config)
             # if circuit_hash is new, use simulation_id as circuit_id
             circuit_id = circuit_hashes.setdefault(circuit_hash, simulation_id)
             circuit = circuits.setdefault(circuit_id, simulation.circuit)
             sim_repr = f"{simulation_id=}, {circuit_id=}, {circuit_hash=}, {simulation_path=}"
-            if not load_spikes or cls._is_simulation_complete(simulation):
+            if simulation_ids and simulation_id not in simulation_ids:
+                L.warning("Ignoring simulation not selected by id: %s", sim_repr)
+            elif load_spikes and not cls._is_simulation_complete(simulation):
+                L.warning("Ignoring simulation without spikes: %s", sim_repr)
+            else:
+                L.info("Extracting simulation: %s", sim_repr)
                 records.append(
                     {
-                        **rec._asdict(),  # must be first for lower precedence in case of collisions
+                        **rec,  # must be first for lower precedence in case of collisions
                         SIMULATION_ID: simulation_id,
                         CIRCUIT_ID: circuit_id,
                         SIMULATION_PATH: simulation_path,
@@ -92,16 +105,15 @@ class Simulations(BaseExtractor):
                         CIRCUIT: circuit,
                     }
                 )
-                L.info("Extracting simulation: %s", sim_repr)
-            else:
-                L.warning("Ignoring simulation without spikes: %s", sim_repr)
         return pd.DataFrame(records)
 
     @classmethod
-    def from_config(cls, config: SimulationsConfig) -> "Simulations":
+    def from_config(
+        cls, config: SimulationsConfig, simulation_ids: Optional[Set[int]] = None
+    ) -> "Simulations":
         """Load simulations from the given simulation campaign."""
         df = config.to_pandas()
-        new_df = cls._from_paths(df, load_spikes=True)
+        new_df = cls._from_paths(df, load_spikes=True, simulation_ids=simulation_ids)
         return cls(new_df)
 
     @classmethod

@@ -1,7 +1,7 @@
 import json
 import logging
 from functools import cached_property
-from typing import Any, Dict, Type
+from typing import Any, Dict, Optional, Set, Type
 
 import pandas as pd
 
@@ -27,10 +27,12 @@ class Repository:
         extraction_config: Dict[str, Any],
         store_dir,
         store_class: Type[BaseStore] = DefaultStore,
+        simulation_ids: Optional[Set[int]] = None,
         use_cache: bool = False,
     ) -> None:
         self._extraction_config = extraction_config
         self._simulations_config = simulations_config
+        self._simulation_ids = simulation_ids
         self._store = store_class(store_dir)
         self._use_cache = use_cache
         self._names = {
@@ -94,7 +96,9 @@ class Repository:
         else:
             L.debug("Extracting %s", name)
             with timed(L.info, "Completed extraction of %s", name):
-                instance = Simulations.from_config(self._simulations_config)
+                instance = Simulations.from_config(
+                    self._simulations_config, simulation_ids=self._simulation_ids
+                )
             self._store.dump(instance.to_pandas(), name)
         return instance
 

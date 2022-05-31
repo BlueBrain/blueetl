@@ -1,4 +1,5 @@
 import logging
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
@@ -16,6 +17,8 @@ from blueetl.constants import (
     WINDOW_TYPE,
 )
 from blueetl.extract.base import BaseExtractor
+from blueetl.extract.simulations import Simulations
+from blueetl.extract.trial_steps import TrialSteps
 
 L = logging.getLogger(__name__)
 
@@ -48,7 +51,9 @@ class Windows(BaseExtractor):
             raise ValueError("Inconsistent trial index in some window(s)")
 
     @classmethod
-    def from_simulations(cls, simulations, trial_steps, config):
+    def from_simulations(
+        cls, simulations: Simulations, trial_steps: TrialSteps, config: Dict[str, Any]
+    ) -> "Windows":
         """Load and expand windows for each simulation."""
         results = []
         for _, rec in simulations.df.etl.iter():

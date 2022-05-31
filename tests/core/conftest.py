@@ -48,3 +48,16 @@ def index1():
                names=['i0', 'i1'])
     """
     return pd.MultiIndex.from_product([["a", "b"], ["c", "d"]], names=["i0", "i1"])
+
+
+@pytest.fixture
+def index2():
+    """Return a MultiIndex without names.
+
+    MultiIndex([('a', 'c'),
+                ('a', 'd'),
+                ('b', 'c'),
+                ('b', 'd')],
+               )
+    """
+    return pd.MultiIndex.from_product([["a", "b"], ["c", "d"]])

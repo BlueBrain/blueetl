@@ -407,12 +407,25 @@ def test_iter(dataframe1):
     it = obj.etl.iter()
     assert isinstance(it, Iterator)
     index, value = next(it)
+    assert isinstance(index, tuple)
+    assert isinstance(value, tuple)
     assert index == ("a", "c")
     assert value == (0, 4)
     assert index.i0 == "a"
     assert index.i1 == "c"
     assert value.v0 == 0
     assert value.v1 == 4
+
+
+def test_iterdict(dataframe1):
+    obj = dataframe1
+    it = obj.etl.iterdict()
+    assert isinstance(it, Iterator)
+    index, value = next(it)
+    assert isinstance(index, dict)
+    assert isinstance(value, dict)
+    assert index == {"i0": "a", "i1": "c"}
+    assert value == {"v0": 0, "v1": 4}
 
 
 @pytest.mark.parametrize(

@@ -226,6 +226,22 @@ class ETLSeriesAccessor(ETLBaseAccessor):
         """
         return zip(self._obj.index.etl.iter(), iter(self._obj))
 
+    def iterdict(self):
+        """Iterate over the items, yielding a tuple (named_index, value) for each element.
+
+        The returned named_index is a dict representing the value of the index.
+        The returned value is the actual value of each element of the series.
+
+        This method can be used as an alternative to ``iter`` when:
+
+        - The index names contain invalid identifiers, or
+        - it's more convenient to work with dictionaries.
+
+        Valid identifiers consist of letters, digits, and underscores but do not start
+        with a digit or underscore and cannot be a Python keyword.
+        """
+        return zip(self._obj.index.etl.iterdict(), iter(self._obj))
+
     def _query_dict(self, query: Dict) -> pd.Series:
         """Given a query dictionary, return the Series filtered by index."""
         return query_series(self._obj, query)
@@ -241,6 +257,26 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
         The returned ``value`` is a namedtuple as returned by pandas.DataFrame.itertuples.
         """
         return zip(self._obj.index.etl.iter(), self._obj.itertuples(index=False, name="Values"))
+
+    def iterdict(self):
+        """Iterate over the items, yielding a tuple (named_index, value) for each element.
+
+        The returned ``named_index`` is a dict representing the value of the index.
+        The returned ``value`` is a dict containing a key for each column.
+
+        This method can be used as an alternative to ``iter`` when:
+
+        - The column or index names contain invalid identifiers, or
+        - it's more convenient to work with dictionaries.
+
+        Valid identifiers consist of letters, digits, and underscores but do not start
+        with a digit or underscore and cannot be a Python keyword.
+        """
+        columns = self._obj.columns
+        for named_index, value in zip(
+            self._obj.index.etl.iterdict(), self._obj.itertuples(index=False)
+        ):
+            yield named_index, dict(zip(columns, value))
 
     def _query_dict(self, query: Dict) -> pd.DataFrame:
         """Given a query dictionary, return the DataFrame filtered by columns and index."""
@@ -348,6 +384,16 @@ class ETLIndexAccessor:
         """Initialize the accessor."""
         self._obj = pandas_obj
 
+    def _mangle_names(self):
+        """Return the index names, replacing missing names with ilevel_N, where N is the level.
+
+        The name ilevel_N is the same name used by convention in DataFrame.query to identify
+        the index levels without a name in a MultiIndex.
+        """
+        return [
+            name if name is not None else f"ilevel_{i}" for i, name in enumerate(self._obj.names)
+        ]
+
     def iter(self):
         """Iterate over the index, yielding a namedtuple for each element.
 
@@ -356,10 +402,24 @@ class ETLIndexAccessor:
 
         It works with both Indexes and MultiIndexes.
         """
-        names = self._obj.names
+        names = self._mangle_names()
         Index = namedtuple("Index", names, rename=True)
         for i in self._obj:
             yield Index(*ensure_list(i))
+
+    def iterdict(self):
+        """Iterate over the index, yielding a dict for each element.
+
+        This method can be used as an alternative to ``iter`` when:
+
+        - The index names contain invalid identifiers, or
+        - it's more convenient to work with dictionaries.
+
+        It works with both Indexes and MultiIndexes.
+        """
+        names = self._mangle_names()
+        for i in self._obj:
+            yield dict(zip(names, ensure_list(i)))
 
 
 def register_accessors():

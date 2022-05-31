@@ -407,7 +407,18 @@ def test_iter(series1):
     it = obj.etl.iter()
     assert isinstance(it, Iterator)
     index, value = next(it)
+    assert isinstance(index, tuple)
     assert index == ("a", "c")
     assert value == 0
     assert index.i0 == "a"
     assert index.i1 == "c"
+
+
+def test_iterdict(series1):
+    obj = series1
+    it = obj.etl.iterdict()
+    assert isinstance(it, Iterator)
+    index, value = next(it)
+    assert isinstance(index, dict)
+    assert index == {"i0": "a", "i1": "c"}
+    assert value == 0

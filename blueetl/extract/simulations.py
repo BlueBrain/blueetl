@@ -79,9 +79,7 @@ class Simulations(BaseExtractor):
         circuit_hashes: Dict[str, int] = {}  # map circuit_hash -> circuit_id
         circuits: Dict[int, Circuit] = {}  # map circuit_id -> circuit
         records = []
-        columns = simulation_paths.columns
-        for simulation_id, (_, rec) in enumerate(simulation_paths.etl.iter()):
-            rec = dict(zip(columns, rec))
+        for simulation_id, (_, rec) in enumerate(simulation_paths.etl.iterdict()):
             simulation_path = rec[SIMULATION_PATH]
             simulation = Simulation(simulation_path)
             circuit_hash = cls._get_circuit_hash(simulation.circuit.config)

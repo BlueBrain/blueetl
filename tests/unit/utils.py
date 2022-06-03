@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 import xarray as xr
 
-TEST_DATA_PATH = Path(__file__).parent / "data"
+TEST_DATA_PATH = Path(__file__).parent.parent / "data"
 
 
 def assert_frame_equal(actual, expected):

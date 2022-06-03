@@ -80,11 +80,15 @@ class Simulations(BaseExtractor):
         circuits: Dict[int, Circuit] = {}  # map circuit_id -> circuit
         records = []
         for simulation_id, (_, rec) in enumerate(simulation_paths.etl.iterdict()):
+            # use the cached simulation_id if available
+            simulation_id = rec.get(SIMULATION_ID, simulation_id)
+            # use the cached circuit_id if available, or fallback to simulation_id
+            circuit_id = rec.get(CIRCUIT_ID, simulation_id)
             simulation_path = rec[SIMULATION_PATH]
             simulation = Simulation(simulation_path)
             circuit_hash = cls._get_circuit_hash(simulation.circuit.config)
-            # if circuit_hash is new, use simulation_id as circuit_id
-            circuit_id = circuit_hashes.setdefault(circuit_hash, simulation_id)
+            # if circuit_hash is not new, use the previous circuit_id
+            circuit_id = circuit_hashes.setdefault(circuit_hash, circuit_id)
             circuit = circuits.setdefault(circuit_id, simulation.circuit)
             sim_repr = f"{simulation_id=}, {circuit_id=}, {circuit_hash=}, {simulation_path=}"
             if simulation_ids and simulation_id not in simulation_ids:
@@ -103,6 +107,8 @@ class Simulations(BaseExtractor):
                         CIRCUIT: circuit,
                     }
                 )
+        if not records:
+            raise RuntimeError("No simulations can be extracted")
         return pd.DataFrame(records)
 
     @classmethod

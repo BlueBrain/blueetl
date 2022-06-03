@@ -123,7 +123,7 @@ def test_simulations_from_config_without_spikes(mock_simulation_class):
             {"simulation_path": "path2", "seed": 11, "Grating Orientation (degrees)": 45},
         ]
     )
-    # mock the spikes attribute to simulate an incomplete simulation
+    # mock the spikes property to simulate an incomplete simulation
     type(mock_simulation0).spikes = PropertyMock(side_effect=BluePyError)
 
     result = test_module.Simulations.from_config(config)
@@ -151,7 +151,7 @@ def test_simulations_from_config_without_spikes(mock_simulation_class):
 
 
 @patch(f"{test_module.__name__}.Simulation", autospec=True)
-def test_simulations_from_pandas(mock_simulation_class):
+def test_simulations_from_pandas_load_complete_campaign(mock_simulation_class):
     mock_simulation0 = _get_mock_simulation()
     mock_simulation1 = _get_mock_simulation()
     mock_circuit0 = mock_simulation0.circuit
@@ -193,6 +193,62 @@ def test_simulations_from_pandas(mock_simulation_class):
                 "Grating Orientation (degrees)": 45,
                 "simulation_id": 1,
                 "circuit_id": 0,
+                "simulation": mock_simulation1,
+                "circuit": mock_circuit0,
+            },
+        ]
+    )
+    expected_df = expected_df.astype({CIRCUIT_ID: np.int16, SIMULATION_ID: np.int16})
+    assert isinstance(result, test_module.Simulations)
+    assert_frame_equal(result.df, expected_df)
+
+    assert mock_simulation_class.call_count == 2
+    assert mock_circuit0 != mock_circuit1
+
+
+@patch(f"{test_module.__name__}.Simulation", autospec=True)
+def test_simulations_from_pandas_load_incomplete_campaign(mock_simulation_class):
+    mock_simulation0 = _get_mock_simulation()
+    mock_simulation1 = _get_mock_simulation()
+    mock_circuit0 = mock_simulation0.circuit
+    mock_circuit1 = mock_simulation1.circuit
+    mock_simulation_class.side_effect = [mock_simulation0, mock_simulation1]
+    df = pd.DataFrame(
+        [
+            {
+                "simulation_path": "path1",
+                "seed": 10,
+                "Grating Orientation (degrees)": 0,
+                "simulation_id": 10,
+                "circuit_id": 5,
+            },
+            {
+                "simulation_path": "path2",
+                "seed": 11,
+                "Grating Orientation (degrees)": 45,
+                "simulation_id": 11,
+                "circuit_id": 5,
+            },
+        ]
+    )
+    result = test_module.Simulations.from_pandas(df)
+    expected_df = pd.DataFrame(
+        [
+            {
+                "simulation_path": "path1",
+                "seed": 10,
+                "Grating Orientation (degrees)": 0,
+                "simulation_id": 10,
+                "circuit_id": 5,
+                "simulation": mock_simulation0,
+                "circuit": mock_circuit0,
+            },
+            {
+                "simulation_path": "path2",
+                "seed": 11,
+                "Grating Orientation (degrees)": 45,
+                "simulation_id": 11,
+                "circuit_id": 5,
                 "simulation": mock_simulation1,
                 "circuit": mock_circuit0,
             },

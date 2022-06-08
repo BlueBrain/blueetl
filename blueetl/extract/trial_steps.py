@@ -14,6 +14,8 @@ class TrialSteps(BaseExtractor):
     COLUMNS = [SIMULATION_ID, CIRCUIT_ID, TRIAL_STEPS_LABEL, TRIAL_STEPS_VALUE]
     # allow additional columns that can be used to store more details
     _allow_extra_columns = True
+    # trial_steps are optional
+    _allow_empty_data = True
 
     @classmethod
     def _load_spikes(

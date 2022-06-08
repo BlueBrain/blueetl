@@ -14,6 +14,7 @@ class BaseExtractor(ABC):
     COLUMNS: List[str] = []
     _allow_missing_columns = False
     _allow_extra_columns = False
+    _allow_empty_data = False
 
     def __init__(self, df: pd.DataFrame) -> None:
         self._validate(df)
@@ -26,7 +27,7 @@ class BaseExtractor(ABC):
 
     @classmethod
     def _validate_data(cls, df: pd.DataFrame) -> None:
-        if len(df) == 0:
+        if not cls._allow_empty_data and len(df) == 0:
             raise RuntimeError(f"No data in {cls.__name__}")
 
     @classmethod

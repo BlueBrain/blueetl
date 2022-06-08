@@ -70,8 +70,6 @@ class Neurons(BaseExtractor):
                 for neuron_class, gids in gids_by_class.items()
                 for neuron_class_index, gid in enumerate(gids)
             )
-        if not records:
-            raise RuntimeError("All neuron classes are empty")
         df = pd.DataFrame.from_records(records, columns=cls.COLUMNS)
         return cls(df)
 

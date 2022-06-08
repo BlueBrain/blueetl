@@ -16,11 +16,8 @@ L = logging.getLogger(__name__)
 
 class Simulations(BaseExtractor):
     COLUMNS = [SIMULATION_PATH, SIMULATION_ID, CIRCUIT_ID, SIMULATION, CIRCUIT]
-
-    @classmethod
-    def _validate(cls, df):
-        # allow additional arbitrary columns containing the simulation conditions
-        cls._validate_columns(df, allow_extra=True)
+    # allow additional columns containing the simulation conditions
+    _allow_extra_columns = True
 
     @staticmethod
     def _get_circuit_hash(circuit_config: Dict) -> str:
@@ -49,6 +46,7 @@ class Simulations(BaseExtractor):
         It can be used to ignore a simulation before the simulation campaign is complete.
         """
         try:
+            # loading spikes can be slow, depending on their size
             _ = simulation.spikes
             return True
         except BluePyError:
@@ -107,8 +105,9 @@ class Simulations(BaseExtractor):
                         CIRCUIT: circuit,
                     }
                 )
-        if not records:
-            raise RuntimeError("No simulations can be extracted")
+        if len(set(circuit_hashes.values())) != len(circuit_hashes):
+            L.error("Multiple circuits have the same circuit_id, you may need to delete the cache.")
+            raise RuntimeError("Inconsistent simulations")
         return pd.DataFrame(records)
 
     @classmethod
@@ -117,22 +116,15 @@ class Simulations(BaseExtractor):
     ) -> "Simulations":
         """Load simulations from the given simulation campaign."""
         df = config.to_pandas()
-        new_df = cls._from_paths(df, load_spikes=True, simulation_ids=simulation_ids)
-        return cls(new_df)
+        df = cls._from_paths(df, load_spikes=True, simulation_ids=simulation_ids)
+        return cls(df)
 
     @classmethod
-    def from_pandas(cls, df: pd.DataFrame) -> "Simulations":
+    def from_pandas(cls, df: pd.DataFrame, **query) -> "Simulations":
         """Load simulations from a dataframe containing valid simulation ids and circuit ids."""
-        new_df = cls._from_paths(df, load_spikes=False)
-        check_columns = [SIMULATION_PATH, SIMULATION_ID, CIRCUIT_ID]
-        difference = new_df[check_columns].compare(df[check_columns])
-        if not difference.empty:
-            L.error(
-                "Inconsistent dataframes, you may need to delete the cache. Differences:\n%s",
-                difference,
-            )
-            raise RuntimeError("Inconsistent dataframes")
-        return cls(new_df)
+        simulation_ids = query.get("simulation_ids")
+        df = cls._from_paths(df, load_spikes=False, simulation_ids=simulation_ids)
+        return cls(df)
 
     def to_pandas(self) -> pd.DataFrame:
         """Dump simulations to a dataframe that can be serialized and stored."""

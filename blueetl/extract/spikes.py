@@ -66,7 +66,7 @@ class Spikes(BaseExtractor):
         )
         df_list = []
         for index, rec in grouped.etl.iter():
-            # TODO: load spikes in parallel?
+            # TODO: verify if loading spikes in parallel can improve the performance
             L.info(
                 "Processing simulation_id=%s, circuit_id=%s, neuron_class=%s: %s gids",
                 *index,

@@ -38,7 +38,7 @@ class Windows(BaseExtractor):
 
     @classmethod
     def _validate(cls, df):
-        cls._validate_columns(df)
+        super()._validate(df)
         # check that all the trials in the same window have the same t_start, t_stop, duration
         if not np.all(df.groupby(WINDOW)[[T_START, T_STOP, DURATION]].nunique() == 1):
             raise ValueError("Inconsistent window t_start, t_stop, or duration in some trial(s)")

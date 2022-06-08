@@ -7,7 +7,7 @@ import pandas as pd
 
 from blueetl import DefaultStore
 from blueetl.config.simulations import SimulationsConfig
-from blueetl.constants import SIMULATION_PATH
+from blueetl.constants import CIRCUIT_ID, SIMULATION_ID, SIMULATION_PATH
 from blueetl.extract.neuron_classes import NeuronClasses
 from blueetl.extract.neurons import Neurons
 from blueetl.extract.simulations import Simulations
@@ -92,7 +92,7 @@ class Repository:
         df = self._store.load(name) if self._use_cache else None
         if df is not None:
             L.debug("Loading cached %s", name)
-            instance = Simulations.from_pandas(df)
+            instance = Simulations.from_pandas(df, simulation_ids=self._simulation_ids)
         else:
             L.debug("Extracting %s", name)
             with timed(L.info, "Completed extraction of %s", name):
@@ -107,7 +107,11 @@ class Repository:
         df = self._store.load(name) if self._use_cache else None
         if df is not None:
             L.debug("Loading cached %s", name)
-            instance = Neurons.from_pandas(df)
+            query = {}
+            if self._simulation_ids:
+                selected_sims = self.simulations.df.etl.q(simulation_id=list(self._simulation_ids))
+                query = {CIRCUIT_ID: sorted(set(selected_sims[CIRCUIT_ID]))}
+            instance = Neurons.from_pandas(df, **query)
         else:
             L.debug("Extracting %s", name)
             with timed(L.info, "Completed extraction of %s", name):
@@ -125,7 +129,11 @@ class Repository:
         df = self._store.load(name) if self._use_cache else None
         if df is not None:
             L.debug("Loading cached %s", name)
-            instance = NeuronClasses.from_pandas(df)
+            query = {}
+            if self._simulation_ids:
+                selected_sims = self.simulations.df.etl.q(simulation_id=list(self._simulation_ids))
+                query = {CIRCUIT_ID: sorted(set(selected_sims[CIRCUIT_ID]))}
+            instance = NeuronClasses.from_pandas(df, **query)
         else:
             L.debug("Extracting %s", name)
             with timed(L.info, "Completed extraction of %s", name):
@@ -143,7 +151,8 @@ class Repository:
         df = self._store.load(name) if self._use_cache else None
         if df is not None:
             L.debug("Loading cached %s", name)
-            instance = TrialSteps.from_pandas(df)
+            query = {SIMULATION_ID: list(self._simulation_ids)} if self._simulation_ids else {}
+            instance = TrialSteps.from_pandas(df, **query)
         else:
             L.debug("Extracting %s", name)
             with timed(L.info, "Completed extraction of %s", name):
@@ -159,7 +168,8 @@ class Repository:
         df = self._store.load(name) if self._use_cache else None
         if df is not None:
             L.debug("Loading cached %s", name)
-            instance = Windows.from_pandas(df)
+            query = {SIMULATION_ID: list(self._simulation_ids)} if self._simulation_ids else {}
+            instance = Windows.from_pandas(df, **query)
         else:
             L.debug("Extracting %s", name)
             with timed(L.info, "Completed extraction of %s", name):
@@ -176,7 +186,8 @@ class Repository:
         df = self._store.load(name) if self._use_cache else None
         if df is not None:
             L.debug("Loading cached %s", name)
-            instance = Spikes.from_pandas(df)
+            query = {SIMULATION_ID: list(self._simulation_ids)} if self._simulation_ids else {}
+            instance = Spikes.from_pandas(df, **query)
         else:
             L.debug("Extracting %s", name)
             with timed(L.info, "Completed extraction of %s", name):

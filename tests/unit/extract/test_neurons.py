@@ -7,9 +7,11 @@ from pandas.testing import assert_frame_equal, assert_series_equal
 
 from blueetl.constants import CIRCUIT, CIRCUIT_ID, GID, NEURON_CLASS, SIMULATION, SIMULATION_ID
 from blueetl.extract.neurons import Neurons
+from blueetl.utils import ensure_dtypes
 
 
 def _get_cells():
+    """Return a DataFrame as returned by circuit.cells.get()."""
     return pd.DataFrame(
         [
             {
@@ -48,6 +50,7 @@ def _get_cells():
 
 
 def test_neurons_from_simulations():
+    # set the seed because the neurons may be chosen randomly
     np.random.seed(0)
     mock_circuit = Mock()
     mock_circuit.cells.get.return_value = _get_cells()
@@ -99,7 +102,7 @@ def test_neurons_from_simulations():
         ],
     )
     expected_df = expected_df.sort_values([CIRCUIT_ID, NEURON_CLASS, GID], ignore_index=True)
-    expected_df = expected_df.astype({CIRCUIT_ID: np.int16, NEURON_CLASS: "category"})
+    expected_df = ensure_dtypes(expected_df)
     assert isinstance(result, Neurons)
     assert_frame_equal(result.df, expected_df)
     assert mock_circuit.cells.get.call_count == 1
@@ -122,7 +125,7 @@ def test_neurons_from_simulations_without_neurons():
     neuron_classes = {
         "EMPTY": {"layer": [999]},
     }
-    with pytest.raises(RuntimeError, match="All neuron classes are empty"):
+    with pytest.raises(RuntimeError, match="No data in Neurons"):
         Neurons.from_simulations(
             simulations=mock_simulations, target="hex0", neuron_classes=neuron_classes, limit=None
         )
@@ -161,7 +164,7 @@ def test_neurons_count_by_neuron_class():
     )
     neurons = Neurons(df)
     result = neurons.count_by_neuron_class()
-    expected_series = (
+    expected_series = ensure_dtypes(
         pd.DataFrame(
             [
                 [0, "NC1", 2],
@@ -170,8 +173,6 @@ def test_neurons_count_by_neuron_class():
             ],
             columns=[CIRCUIT_ID, NEURON_CLASS, GID],
         )
-        .astype({CIRCUIT_ID: np.int16, NEURON_CLASS: "category"})
-        .set_index([CIRCUIT_ID, NEURON_CLASS])[GID]
-    )
+    ).set_index([CIRCUIT_ID, NEURON_CLASS])[GID]
 
     assert_series_equal(result, expected_series)

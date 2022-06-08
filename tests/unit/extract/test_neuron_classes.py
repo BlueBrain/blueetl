@@ -1,15 +1,16 @@
 from unittest.mock import MagicMock
 
-import numpy as np
 import pandas as pd
 import pytest
 from pandas.testing import assert_frame_equal
 
 from blueetl.constants import CIRCUIT_ID, COUNT, GID, NEURON_CLASS
 from blueetl.extract.neuron_classes import NeuronClasses
+from blueetl.utils import ensure_dtypes
 
 
 def _count_by_neuron_class(data):
+    """Return a Series as returned by neurons.count_by_neuron_class()."""
     df = pd.DataFrame(data, columns=[CIRCUIT_ID, NEURON_CLASS, GID])
     return df.set_index([CIRCUIT_ID, NEURON_CLASS])[GID]
 
@@ -54,14 +55,14 @@ def test_neuron_classes_from_neurons():
             },
         ]
     )
-    expected_df = expected_df.astype({CIRCUIT_ID: np.int16, NEURON_CLASS: "category"})
+    expected_df = ensure_dtypes(expected_df)
     assert_frame_equal(result.df, expected_df)
 
 
 def test_neuron_classes_from_neurons_without_neurons():
     mock_neurons = MagicMock()
     mock_neurons.count_by_neuron_class.return_value = _count_by_neuron_class([])
-    with pytest.raises(RuntimeError, match="All neuron classes are empty"):
+    with pytest.raises(RuntimeError, match="No data in NeuronClasses"):
         NeuronClasses.from_neurons(
             mock_neurons,
             target="atarget",

@@ -12,23 +12,13 @@ L = logging.getLogger(__name__)
 
 class TrialSteps(BaseExtractor):
     COLUMNS = [SIMULATION_ID, CIRCUIT_ID, TRIAL_STEPS_LABEL, TRIAL_STEPS_VALUE]
-
-    @classmethod
-    def _validate(cls, df):
-        # allow additional arbitrary columns useful for inspection
-        cls._validate_columns(df, allow_extra=True)
+    # allow additional columns that can be used to store more details
+    _allow_extra_columns = True
 
     @classmethod
     def _load_spikes(
         cls, simulation, circuit, target, limit, initial_offset, t_start, t_end
     ) -> np.ndarray:
-        """
-
-        Args:
-
-        Returns:
-
-        """
         # circuit is passed explicitly instead of loading it from simulation.circuit
         # to take advantage of any circuit already loaded in memory
         with timed(L.info, "Cells loaded from circuit"):

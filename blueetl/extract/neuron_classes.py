@@ -11,15 +11,9 @@ L = logging.getLogger(__name__)
 
 
 class NeuronClasses(BaseExtractor):
-    COLUMNS = [
-        CIRCUIT_ID,
-        NEURON_CLASS,
-        COUNT,
-    ]
-
-    @classmethod
-    def _validate(cls, df):
-        cls._validate_columns(df, allow_extra=True)
+    COLUMNS = [CIRCUIT_ID, NEURON_CLASS, COUNT]
+    # allow additional columns containing the attributes of the neuron classes
+    _allow_extra_columns = True
 
     @classmethod
     def from_neurons(
@@ -45,7 +39,5 @@ class NeuronClasses(BaseExtractor):
                     **neuron_class_conf,
                 }
             )
-        if not results:
-            raise RuntimeError("All neuron classes are empty")
         df = pd.DataFrame(results)
         return cls(df)

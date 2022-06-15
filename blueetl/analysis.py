@@ -10,12 +10,14 @@ L = logging.getLogger(__name__)
 
 class Analyzer:
     def __init__(self, analysis_config, base_path=".", use_cache=False):
+        assert (
+            "simulation_ids" not in analysis_config
+        ), "The key simulation_ids has been replaced by extraction->simulations->simulation_id"
         self.analysis_config = self._resolve_paths(analysis_config, base_path=base_path)
         self.repo = Repository(
             simulations_config=SimulationsConfig.load(self.analysis_config["simulation_campaign"]),
             extraction_config=self.analysis_config["extraction"],
             store_dir=Path(self.analysis_config["output"], "repo"),
-            simulation_ids=set(self.analysis_config.get("simulation_ids", [])),
             use_cache=use_cache,
         )
         self.features = FeaturesCollection(

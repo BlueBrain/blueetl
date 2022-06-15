@@ -1,7 +1,8 @@
 import json
 import logging
 from functools import cached_property
-from typing import Any, Dict, Optional, Set, Type
+from pathlib import Path
+from typing import Any, Dict, List, Type
 
 import pandas as pd
 
@@ -25,14 +26,12 @@ class Repository:
         self,
         simulations_config: SimulationsConfig,
         extraction_config: Dict[str, Any],
-        store_dir,
+        store_dir: Path,
         store_class: Type[BaseStore] = DefaultStore,
-        simulation_ids: Optional[Set[int]] = None,
         use_cache: bool = False,
     ) -> None:
         self._extraction_config = extraction_config
         self._simulations_config = simulations_config
-        self._simulation_ids = simulation_ids
         self._store = store_class(store_dir)
         self._use_cache = use_cache
         self._names = {
@@ -87,17 +86,26 @@ class Repository:
     def spikes(self) -> Spikes:
         return self._extract_spikes()
 
+    @property
+    def _simulations_query(self) -> Dict:
+        return self._extraction_config.get("simulations", {})
+
+    @property
+    def _simulation_ids(self) -> List[int]:
+        return self.simulations.df[SIMULATION_ID].to_list()
+
     def _extract_simulations(self) -> Simulations:
         name = "simulations"
         df = self._store.load(name) if self._use_cache else None
         if df is not None:
-            L.debug("Loading cached %s", name)
-            instance = Simulations.from_pandas(df, simulation_ids=self._simulation_ids)
+            L.info("Loading cached %s", name)
+            instance = Simulations.from_pandas(df, query=self._simulations_query)
         else:
-            L.debug("Extracting %s", name)
+            L.info("Extracting %s", name)
             with timed(L.info, "Completed extraction of %s", name):
                 instance = Simulations.from_config(
-                    self._simulations_config, simulation_ids=self._simulation_ids
+                    config=self._simulations_config,
+                    query=self._simulations_query,
                 )
             self._store.dump(instance.to_pandas(), name)
         return instance
@@ -106,14 +114,14 @@ class Repository:
         name = "neurons"
         df = self._store.load(name) if self._use_cache else None
         if df is not None:
-            L.debug("Loading cached %s", name)
+            L.info("Loading cached %s", name)
             query = {}
             if self._simulation_ids:
                 selected_sims = self.simulations.df.etl.q(simulation_id=list(self._simulation_ids))
                 query = {CIRCUIT_ID: sorted(set(selected_sims[CIRCUIT_ID]))}
-            instance = Neurons.from_pandas(df, **query)
+            instance = Neurons.from_pandas(df, query=query)
         else:
-            L.debug("Extracting %s", name)
+            L.info("Extracting %s", name)
             with timed(L.info, "Completed extraction of %s", name):
                 instance = Neurons.from_simulations(
                     simulations=self.simulations,
@@ -128,14 +136,14 @@ class Repository:
         name = "neuron_classes"
         df = self._store.load(name) if self._use_cache else None
         if df is not None:
-            L.debug("Loading cached %s", name)
+            L.info("Loading cached %s", name)
             query = {}
             if self._simulation_ids:
                 selected_sims = self.simulations.df.etl.q(simulation_id=list(self._simulation_ids))
                 query = {CIRCUIT_ID: sorted(set(selected_sims[CIRCUIT_ID]))}
-            instance = NeuronClasses.from_pandas(df, **query)
+            instance = NeuronClasses.from_pandas(df, query=query)
         else:
-            L.debug("Extracting %s", name)
+            L.info("Extracting %s", name)
             with timed(L.info, "Completed extraction of %s", name):
                 instance = NeuronClasses.from_neurons(
                     neurons=self.neurons,
@@ -150,11 +158,11 @@ class Repository:
         name = "trial_steps"
         df = self._store.load(name) if self._use_cache else None
         if df is not None:
-            L.debug("Loading cached %s", name)
+            L.info("Loading cached %s", name)
             query = {SIMULATION_ID: list(self._simulation_ids)} if self._simulation_ids else {}
-            instance = TrialSteps.from_pandas(df, **query)
+            instance = TrialSteps.from_pandas(df, query=query)
         else:
-            L.debug("Extracting %s", name)
+            L.info("Extracting %s", name)
             with timed(L.info, "Completed extraction of %s", name):
                 instance = TrialSteps.from_simulations(
                     simulations=self.simulations,
@@ -167,11 +175,11 @@ class Repository:
         name = "windows"
         df = self._store.load(name) if self._use_cache else None
         if df is not None:
-            L.debug("Loading cached %s", name)
+            L.info("Loading cached %s", name)
             query = {SIMULATION_ID: list(self._simulation_ids)} if self._simulation_ids else {}
-            instance = Windows.from_pandas(df, **query)
+            instance = Windows.from_pandas(df, query=query)
         else:
-            L.debug("Extracting %s", name)
+            L.info("Extracting %s", name)
             with timed(L.info, "Completed extraction of %s", name):
                 instance = Windows.from_simulations(
                     simulations=self.simulations,
@@ -185,11 +193,11 @@ class Repository:
         name = "spikes"
         df = self._store.load(name) if self._use_cache else None
         if df is not None:
-            L.debug("Loading cached %s", name)
+            L.info("Loading cached %s", name)
             query = {SIMULATION_ID: list(self._simulation_ids)} if self._simulation_ids else {}
-            instance = Spikes.from_pandas(df, **query)
+            instance = Spikes.from_pandas(df, query=query)
         else:
-            L.debug("Extracting %s", name)
+            L.info("Extracting %s", name)
             with timed(L.info, "Completed extraction of %s", name):
                 instance = Spikes.from_simulations(
                     simulations=self.simulations,

@@ -1,6 +1,6 @@
 import logging
 from abc import ABC
-from typing import List, Type, TypeVar
+from typing import Dict, List, Optional, Type, TypeVar
 
 import pandas as pd
 
@@ -45,7 +45,9 @@ class BaseExtractor(ABC):
         return self._df
 
     @classmethod
-    def from_pandas(cls: Type[ExtractorT], df: pd.DataFrame, **query) -> ExtractorT:
+    def from_pandas(
+        cls: Type[ExtractorT], df: pd.DataFrame, query: Optional[Dict] = None
+    ) -> ExtractorT:
         if query:
             L.debug("Filtering dataframe by %s", query)
             df = df.etl.q(query)

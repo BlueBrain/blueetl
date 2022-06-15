@@ -85,7 +85,7 @@ def test_simulations_from_config_filtered_by_simulation_id(mock_simulation_class
             {"simulation_path": "path2", "seed": 11, "Grating Orientation (degrees)": 45},
         ]
     )
-    result = test_module.Simulations.from_config(config, simulation_ids={1})
+    result = test_module.Simulations.from_config(config, query={"simulation_id": [1]})
 
     expected_df = pd.DataFrame(
         [
@@ -99,6 +99,7 @@ def test_simulations_from_config_filtered_by_simulation_id(mock_simulation_class
                 "circuit": mock_circuit0,
             },
         ],
+        index=[1],
     )
     expected_df = ensure_dtypes(expected_df)
     assert isinstance(result, test_module.Simulations)
@@ -140,6 +141,7 @@ def test_simulations_from_config_without_spikes(mock_simulation_class):
                 "circuit": mock_circuit0,
             },
         ],
+        index=[1],
     )
     expected_df = ensure_dtypes(expected_df)
     assert isinstance(result, test_module.Simulations)
@@ -322,7 +324,7 @@ def test_simulations_from_pandas_filtered_by_simulation_id(mock_simulation_class
             },
         ]
     )
-    result = test_module.Simulations.from_pandas(df, simulation_ids={1})
+    result = test_module.Simulations.from_pandas(df, query={"simulation_id": [1]})
     expected_df = pd.DataFrame(
         [
             {
@@ -334,7 +336,8 @@ def test_simulations_from_pandas_filtered_by_simulation_id(mock_simulation_class
                 "simulation": mock_simulation1,
                 "circuit": mock_circuit0,
             },
-        ]
+        ],
+        index=[1],
     )
     expected_df = ensure_dtypes(expected_df)
     assert isinstance(result, test_module.Simulations)

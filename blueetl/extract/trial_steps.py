@@ -24,7 +24,8 @@ class TrialSteps(BaseExtractor):
         # circuit is passed explicitly instead of loading it from simulation.circuit
         # to take advantage of any circuit already loaded in memory
         with timed(L.info, "Cells loaded from circuit"):
-            gids = circuit.cells.get(group={"$target": target}, properties=[]).index.to_numpy()
+            cells_group = {"$target": target} if target else None
+            gids = circuit.cells.get(group=cells_group, properties=[]).index.to_numpy()
         neuron_count = len(gids)
         if limit and neuron_count > limit:
             gids = np.random.choice(gids, size=limit, replace=False)

@@ -1,7 +1,7 @@
 include:
   - project: nse/ci
     file:
-      - /ci/lib/tox-docker.yml
+      - /ci/lib/tox-bb5.yml
       - /ci/jobs/check-version.yml
       - /ci/jobs/check-packaging.yml
       - /ci/jobs/lint.yml
@@ -14,3 +14,8 @@ include:
       - /ci/jobs/publish-package.yml
 #      - /ci/jobs/publish-docs.yml
       - /ci/jobs/tag.yml
+
+functional:
+  extends: .tox-template
+  variables:
+    TOXENV: functional

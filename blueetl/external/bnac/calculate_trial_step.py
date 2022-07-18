@@ -61,6 +61,7 @@ def onset_from_spikes(spikes, params):
 
 
 def plot(smoothed_histogram, params, onset_dict):
+    # pylint: disable=import-outside-toplevel
     import matplotlib
 
     matplotlib.use("agg")

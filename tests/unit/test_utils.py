@@ -73,3 +73,34 @@ def test_resolve_path(tmp_path):
 
     result = test_module.resolve_path(tmp_path, subdir, non_existent, symlinks=True)
     assert result == non_existent_absolute
+
+
+def test_dump_load_yaml_roundtrip(tmp_path):
+    data = {
+        "dict": {"str": "mystr", "int": 123},
+        "list_of_int": [1, 2, 3],
+        "list_of_str": ["1", "2", "3"],
+        "path": Path("/custom/path"),
+    }
+    expected_content = """
+dict:
+  str: mystr
+  int: 123
+list_of_int:
+- 1
+- 2
+- 3
+list_of_str:
+- '1'
+- '2'
+- '3'
+path: !path '/custom/path'
+    """
+    filepath = tmp_path / "test.yaml"
+
+    test_module.dump_yaml(filepath, data)
+    dumped_content = filepath.read_text(encoding="utf-8")
+    assert dumped_content.strip() == expected_content.strip()
+
+    loaded_data = test_module.load_yaml(filepath)
+    assert loaded_data == data

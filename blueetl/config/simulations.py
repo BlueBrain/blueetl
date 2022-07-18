@@ -65,6 +65,18 @@ class SimulationsConfig:
         if diff:
             raise Exception(f"Invalid extra conditions: {diff}")
 
+    def __eq__(self, other: object) -> bool:
+        """Return True if the objects are considered equal, False otherwise."""
+        if not isinstance(other, SimulationsConfig):
+            # https://docs.python.org/3/library/constants.html#NotImplemented
+            return NotImplemented
+        return (
+            self.name == other.name
+            and self.attrs == other.attrs
+            and self.conditions == other.conditions
+            and self.data.equals(other.data)
+        )
+
     @property
     def name(self) -> str:
         return self.data.name or ""

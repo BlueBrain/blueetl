@@ -55,6 +55,7 @@ class Windows(BaseExtractor):
         cls, simulations: Simulations, trial_steps: TrialSteps, config: Dict[str, Any]
     ) -> "Windows":
         """Load and expand windows for each simulation."""
+        # pylint: disable=too-many-locals
         results = []
         for _, rec in simulations.df.etl.iter():
             for name, win in config["windows"].items():

@@ -1,3 +1,4 @@
+# pylint: disable=wildcard-import,unused-import,unused-wildcard-import
 import logging
 
 import numpy as np
@@ -18,7 +19,7 @@ def main():
     logging.basicConfig(format=logformat, level=loglevel)
     np.random.seed(0)
     analysis_config = load_yaml(analysis_config_file)
-    return Analyzer(analysis_config, use_cache=True)
+    return Analyzer(analysis_config)
 
 
 if __name__ == "__main__":

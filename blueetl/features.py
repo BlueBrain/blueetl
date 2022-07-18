@@ -1,12 +1,11 @@
 import logging
 from collections import defaultdict
 from functools import partial
-from os import PathLike
-from typing import Any, Callable, Dict, List, Mapping, NamedTuple, Optional, Type, Union
+from typing import Any, Callable, Dict, List, Mapping, NamedTuple, Optional
 
 import pandas as pd
 
-from blueetl import DefaultStore
+from blueetl.cache import CacheManager
 from blueetl.constants import (
     CIRCUIT,
     CIRCUIT_ID,
@@ -18,10 +17,9 @@ from blueetl.constants import (
     TRIAL,
     WINDOW,
 )
-from blueetl.core.parallel import Task, TaskContext, run_parallel
+from blueetl.core.parallel import Task, run_parallel
 from blueetl.extract.feature import Feature
 from blueetl.repository import Repository
-from blueetl.store.base import BaseStore
 from blueetl.utils import import_by_string, timed
 
 L = logging.getLogger(__name__)
@@ -32,14 +30,11 @@ class FeaturesCollection:
         self,
         features_configs: List[Dict],
         repo: Repository,
-        store_dir: Union[str, PathLike],
-        store_class: Type[BaseStore] = DefaultStore,
-        use_cache: bool = False,
+        cache_manager: CacheManager,
     ) -> None:
         self._features_configs = features_configs
         self._repo = repo
-        self._store = store_class(store_dir)
-        self._use_cache = use_cache
+        self._cache_manager = cache_manager
         self._data: Dict[str, Feature] = {}
 
     @property
@@ -49,18 +44,13 @@ class FeaturesCollection:
     def __getattr__(self, name: str) -> Feature:
         try:
             return self._data[name]
-        except KeyError:
-            raise AttributeError(f"{self.__class__.__name__!r} object has no attribute {name!r}")
+        except KeyError as ex:
+            raise AttributeError(
+                f"{self.__class__.__name__!r} object has no attribute {name!r}"
+            ) from ex
 
-    def update(self, mapping: Mapping[str, Feature]) -> None:
+    def _update(self, mapping: Mapping[str, Feature]) -> None:
         self._data.update(mapping)
-
-    def dump(self, features: Dict[str, Feature]) -> None:
-        for name, feature in features.items():
-            self._store.dump(feature.df, name)
-
-    def dump_all(self) -> None:
-        self.dump(self._data)
 
     def print(self) -> None:
         print("### features")
@@ -69,14 +59,37 @@ class FeaturesCollection:
             print(v)
 
     def calculate(self) -> None:
+        """Calculate all the features based on the configuration."""
         features_len = len(self._features_configs)
-        for n, features_config in enumerate(self._features_configs, start=1):
-            features_type = features_config["type"]
-            L.info("Calculating features %s/%s [type: %s]", n, features_len, features_type)
-            method = getattr(self, f"_calculate_{features_type}")
-            new_features = method(features_config)
-            self.update(new_features)
-            self.dump(new_features)
+        for n, features_config in enumerate(self._features_configs):
+            features = self._cache_manager.load_features(features_config=features_config)
+            if features is not None:
+                L.info("Calculating features %s/%s: cached", n + 1, features_len)
+                initial_lengths = {name: len(df) for name, df in features.items()}
+                features = self._to_features(features)
+                # the len may have changed because of the filter on simulation ids
+                to_be_written = {
+                    name
+                    for name, feature in features.items()
+                    if len(feature.df) != initial_lengths[name]
+                }
+            else:
+                L.info("Calculating features %s/%s: new", n + 1, features_len)
+                method = getattr(self, f"_calculate_{features_config['type']}")
+                features = method(features_config)
+                to_be_written = set(features)
+            self._update(features)
+            if to_be_written:
+                # write only the new or filtered dataframes
+                self._cache_manager.dump_features(
+                    {name: features[name].to_pandas() for name in to_be_written},
+                    features_config=features_config,
+                )
+
+    def _to_features(self, df_dict: Dict[str, pd.DataFrame]) -> Dict[str, Feature]:
+        simulation_ids = self._repo.simulation_ids
+        query = {SIMULATION_ID: simulation_ids} if simulation_ids else {}
+        return {name: Feature.from_pandas(df, query=query) for name, df in df_dict.items()}
 
     def _calculate_single(self, features_config: Dict[str, Any]) -> Dict[str, Feature]:
         df = calculate_features_single(
@@ -86,7 +99,7 @@ class FeaturesCollection:
             features_params=features_config.get("params", {}),
         )
         name = str(features_config["name"])
-        return {name: Feature.from_pandas(df)}
+        return self._to_features({name: df})
 
     def _calculate_multi(self, features_config: Dict[str, Any]) -> Dict[str, Feature]:
         df_dict = calculate_features_multi(
@@ -95,11 +108,7 @@ class FeaturesCollection:
             features_groupby=features_config["groupby"],
             features_params=features_config.get("params", {}),
         )
-        return {name: Feature.from_pandas(df) for name, df in df_dict.items()}
-
-    def _calculate_comparison(self, features_config: Dict[str, Any]) -> Dict[str, Feature]:
-        L.warning("Comparison features not implemented")
-        return {}
+        return self._to_features(df_dict)
 
 
 def _get_spikes_for_all_neurons_and_windows(repo: Repository) -> pd.DataFrame:
@@ -111,7 +120,7 @@ def _get_spikes_for_all_neurons_and_windows(repo: Repository) -> pd.DataFrame:
     )
 
 
-@timed(L.info, "Completed calculate_features_single")
+@timed(L.info, "Executed calculate_features_single")
 def calculate_features_single(
     repo: Repository, features_func: str, features_groupby: List[str], features_params: Dict
 ) -> pd.DataFrame:
@@ -144,7 +153,7 @@ def calculate_features_single(
     return features_df
 
 
-@timed(L.info, "Completed calculate_features_multi")
+@timed(L.info, "Executed calculate_features_multi")
 def calculate_features_multi(
     repo: Repository,
     features_func: str,

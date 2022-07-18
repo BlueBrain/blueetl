@@ -1,12 +1,12 @@
+"""Repository."""
 import json
 import logging
 from functools import cached_property
-from pathlib import Path
-from typing import Any, Dict, List, Type
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-from blueetl import DefaultStore
+from blueetl.cache import CacheManager
 from blueetl.config.simulations import SimulationsConfig
 from blueetl.constants import CIRCUIT_ID, SIMULATION_ID, SIMULATION_PATH
 from blueetl.extract.neuron_classes import NeuronClasses
@@ -15,33 +15,34 @@ from blueetl.extract.simulations import Simulations
 from blueetl.extract.spikes import Spikes
 from blueetl.extract.trial_steps import TrialSteps
 from blueetl.extract.windows import Windows
-from blueetl.store.base import BaseStore
 from blueetl.utils import timed
 
 L = logging.getLogger(__name__)
 
 
 class Repository:
+    """Repository class."""
+
     def __init__(
         self,
         simulations_config: SimulationsConfig,
         extraction_config: Dict[str, Any],
-        store_dir: Path,
-        store_class: Type[BaseStore] = DefaultStore,
-        use_cache: bool = False,
+        cache_manager: CacheManager,
+        simulations_filter: Optional[Dict] = None,
     ) -> None:
+        """Initialize the repository."""
         self._extraction_config = extraction_config
         self._simulations_config = simulations_config
-        self._store = store_class(store_dir)
-        self._use_cache = use_cache
-        self._names = {
+        self._cache_manager = cache_manager
+        self._simulations_filter = simulations_filter
+        self._names = [
             "simulations",
             "neurons",
             "neuron_classes",
             "trial_steps",
             "windows",
             "spikes",
-        }
+        ]
 
     def __getstate__(self):
         """Get the object state when the object is pickled."""
@@ -59,153 +60,180 @@ class Repository:
         self.__dict__.update(state)
 
     @property
-    def names(self):
-        return sorted(self._names)
+    def names(self) -> List[str]:
+        """Return the list of names of the extracted objects."""
+        return self._names
 
     @cached_property
     def simulations(self) -> Simulations:
+        """Return the Simulations extraction."""
         return self._extract_simulations()
 
     @cached_property
     def neurons(self) -> Neurons:
+        """Return the Neurons extraction."""
         return self._extract_neurons()
 
     @cached_property
     def neuron_classes(self) -> NeuronClasses:
+        """Return the NeuronClasses extraction."""
         return self._extract_neuron_classes()
 
     @cached_property
     def trial_steps(self) -> TrialSteps:
+        """Return the TrialSteps extraction."""
         return self._extract_trial_steps()
 
     @cached_property
     def windows(self) -> Windows:
+        """Return the Windows extraction."""
         return self._extract_windows()
 
     @cached_property
     def spikes(self) -> Spikes:
+        """Return the Spikes extraction."""
         return self._extract_spikes()
 
-    @property
-    def _simulations_query(self) -> Dict:
-        return self._extraction_config.get("simulations", {})
-
-    @property
-    def _simulation_ids(self) -> List[int]:
+    @cached_property
+    def simulation_ids(self) -> List[int]:
+        """Return the list of simulation ids, possibly filtered."""
         return self.simulations.df[SIMULATION_ID].to_list()
 
+    def _extraction_wrapper(self, name, extract_cached, extract_new):
+        """Return an object extracted from the cache or as new.
+
+        Args:
+            name: name of the dataframe.
+            extract_cached: function to extract the object from a cached dataframe.
+            extract_new: function to extract the object as new.
+        """
+        with timed(L.info, "Executed extraction of %s", name):
+            is_new = is_modified = False
+            df = self._cache_manager.load_repo(name)
+            if df is not None:
+                initial_len = len(df)
+                instance = extract_cached(df)
+                is_modified = initial_len != len(instance.df)
+            else:
+                instance = extract_new()
+                is_new = True
+            assert instance is not None, "The extraction didn't return a valid instance."
+            if is_new or is_modified:
+                self._cache_manager.dump_repo(df=instance.to_pandas(), name=name)
+            return instance
+
     def _extract_simulations(self) -> Simulations:
-        name = "simulations"
-        df = self._store.load(name) if self._use_cache else None
-        if df is not None:
-            L.info("Loading cached %s", name)
-            instance = Simulations.from_pandas(df, query=self._simulations_query)
-        else:
-            L.info("Extracting %s", name)
-            with timed(L.info, "Completed extraction of %s", name):
-                instance = Simulations.from_config(
-                    config=self._simulations_config,
-                    query=self._simulations_query,
-                )
-            self._store.dump(instance.to_pandas(), name)
-        return instance
+        def _extract_cached(df):
+            return Simulations.from_pandas(df, query=self._simulations_filter)
+
+        def _extract_new():
+            return Simulations.from_config(
+                config=self._simulations_config,
+                query=self._simulations_filter,
+            )
+
+        return self._extraction_wrapper(
+            name="simulations",
+            extract_cached=_extract_cached,
+            extract_new=_extract_new,
+        )
 
     def _extract_neurons(self) -> Neurons:
-        name = "neurons"
-        df = self._store.load(name) if self._use_cache else None
-        if df is not None:
-            L.info("Loading cached %s", name)
+        def _extract_cached(df):
             query = {}
-            if self._simulation_ids:
-                selected_sims = self.simulations.df.etl.q(simulation_id=list(self._simulation_ids))
+            if self.simulation_ids:
+                selected_sims = self.simulations.df.etl.q(simulation_id=self.simulation_ids)
                 query = {CIRCUIT_ID: sorted(set(selected_sims[CIRCUIT_ID]))}
-            instance = Neurons.from_pandas(df, query=query)
-        else:
-            L.info("Extracting %s", name)
-            with timed(L.info, "Completed extraction of %s", name):
-                instance = Neurons.from_simulations(
-                    simulations=self.simulations,
-                    target=self._extraction_config["target"],
-                    neuron_classes=self._extraction_config["neuron_classes"],
-                    limit=self._extraction_config["limit"],
-                )
-            self._store.dump(instance.to_pandas(), name)
-        return instance
+            return Neurons.from_pandas(df, query=query)
+
+        def _extract_new():
+            return Neurons.from_simulations(
+                simulations=self.simulations,
+                target=self._extraction_config["target"],
+                neuron_classes=self._extraction_config["neuron_classes"],
+                limit=self._extraction_config["limit"],
+            )
+
+        return self._extraction_wrapper(
+            name="neurons",
+            extract_cached=_extract_cached,
+            extract_new=_extract_new,
+        )
 
     def _extract_neuron_classes(self) -> NeuronClasses:
-        name = "neuron_classes"
-        df = self._store.load(name) if self._use_cache else None
-        if df is not None:
-            L.info("Loading cached %s", name)
+        def _extract_cached(df):
             query = {}
-            if self._simulation_ids:
-                selected_sims = self.simulations.df.etl.q(simulation_id=list(self._simulation_ids))
+            if self.simulation_ids:
+                selected_sims = self.simulations.df.etl.q(simulation_id=self.simulation_ids)
                 query = {CIRCUIT_ID: sorted(set(selected_sims[CIRCUIT_ID]))}
-            instance = NeuronClasses.from_pandas(df, query=query)
-        else:
-            L.info("Extracting %s", name)
-            with timed(L.info, "Completed extraction of %s", name):
-                instance = NeuronClasses.from_neurons(
-                    neurons=self.neurons,
-                    target=self._extraction_config["target"],
-                    neuron_classes=self._extraction_config["neuron_classes"],
-                    limit=self._extraction_config["limit"],
-                )
-            self._store.dump(instance.to_pandas(), name)
-        return instance
+            return NeuronClasses.from_pandas(df, query=query)
+
+        def _extract_new():
+            return NeuronClasses.from_neurons(
+                neurons=self.neurons,
+                target=self._extraction_config["target"],
+                neuron_classes=self._extraction_config["neuron_classes"],
+                limit=self._extraction_config["limit"],
+            )
+
+        return self._extraction_wrapper(
+            name="neuron_classes",
+            extract_cached=_extract_cached,
+            extract_new=_extract_new,
+        )
 
     def _extract_trial_steps(self) -> TrialSteps:
-        name = "trial_steps"
-        df = self._store.load(name) if self._use_cache else None
-        if df is not None:
-            L.info("Loading cached %s", name)
-            query = {SIMULATION_ID: list(self._simulation_ids)} if self._simulation_ids else {}
-            instance = TrialSteps.from_pandas(df, query=query)
-        else:
-            L.info("Extracting %s", name)
-            with timed(L.info, "Completed extraction of %s", name):
-                instance = TrialSteps.from_simulations(
-                    simulations=self.simulations,
-                    config=self._extraction_config,
-                )
-            self._store.dump(instance.to_pandas(), name)
-        return instance
+        def _extract_cached(df):
+            query = {SIMULATION_ID: self.simulation_ids} if self.simulation_ids else {}
+            return TrialSteps.from_pandas(df, query=query)
+
+        def _extract_new():
+            return TrialSteps.from_simulations(
+                simulations=self.simulations,
+                config=self._extraction_config,
+            )
+
+        return self._extraction_wrapper(
+            name="trial_steps",
+            extract_cached=_extract_cached,
+            extract_new=_extract_new,
+        )
 
     def _extract_windows(self) -> Windows:
-        name = "windows"
-        df = self._store.load(name) if self._use_cache else None
-        if df is not None:
-            L.info("Loading cached %s", name)
-            query = {SIMULATION_ID: list(self._simulation_ids)} if self._simulation_ids else {}
-            instance = Windows.from_pandas(df, query=query)
-        else:
-            L.info("Extracting %s", name)
-            with timed(L.info, "Completed extraction of %s", name):
-                instance = Windows.from_simulations(
-                    simulations=self.simulations,
-                    trial_steps=self.trial_steps,
-                    config=self._extraction_config,
-                )
-            self._store.dump(instance.to_pandas(), name)
-        return instance
+        def _extract_cached(df):
+            query = {SIMULATION_ID: self.simulation_ids} if self.simulation_ids else {}
+            return Windows.from_pandas(df, query=query)
+
+        def _extract_new():
+            return Windows.from_simulations(
+                simulations=self.simulations,
+                trial_steps=self.trial_steps,
+                config=self._extraction_config,
+            )
+
+        return self._extraction_wrapper(
+            name="windows",
+            extract_cached=_extract_cached,
+            extract_new=_extract_new,
+        )
 
     def _extract_spikes(self) -> Spikes:
-        name = "spikes"
-        df = self._store.load(name) if self._use_cache else None
-        if df is not None:
-            L.info("Loading cached %s", name)
-            query = {SIMULATION_ID: list(self._simulation_ids)} if self._simulation_ids else {}
-            instance = Spikes.from_pandas(df, query=query)
-        else:
-            L.info("Extracting %s", name)
-            with timed(L.info, "Completed extraction of %s", name):
-                instance = Spikes.from_simulations(
-                    simulations=self.simulations,
-                    neurons=self.neurons,
-                    windows=self.windows,
-                )
-            self._store.dump(instance.to_pandas(), name)
-        return instance
+        def _extract_cached(df):
+            query = {SIMULATION_ID: self.simulation_ids} if self.simulation_ids else {}
+            return Spikes.from_pandas(df, query=query)
+
+        def _extract_new():
+            return Spikes.from_simulations(
+                simulations=self.simulations,
+                neurons=self.neurons,
+                windows=self.windows,
+            )
+
+        return self._extraction_wrapper(
+            name="spikes",
+            extract_cached=_extract_cached,
+            extract_new=_extract_new,
+        )
 
     def extract(self) -> None:
         """Extract all the dataframes."""
@@ -215,7 +243,7 @@ class Repository:
 
     def is_extracted(self) -> bool:
         """Return True if all the dataframes have been extracted."""
-        # a cached_property is stored as an attribute after it's accessed
+        # note: the cached_property is stored as an attribute after it's accessed
         return all(name in self.__dict__ for name in self.names)
 
     def check_extractions(self) -> None:

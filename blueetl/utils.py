@@ -1,11 +1,15 @@
+"""Common utilities."""
+import hashlib
+import json
 import logging
 import os.path
 import time
 from contextlib import contextmanager
+from functools import lru_cache
 from importlib import import_module
 from os import PathLike
-from pathlib import Path
-from typing import Union
+from pathlib import Path, PosixPath
+from typing import Any, Type, Union
 
 import pandas as pd
 import yaml
@@ -30,16 +34,16 @@ def setup_logging(loglevel, logformat=None, **logparams):
     logging.basicConfig(format=logformat, level=loglevel, **logparams)
 
 
-def load_yaml(filepath):
+def load_yaml(filepath: Union[str, PathLike]) -> Any:
     """Load from YAML file."""
     with open(filepath, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        return yaml.load(f, Loader=_get_internal_yaml_loader())
 
 
-def dump_yaml(filepath, data):
+def dump_yaml(filepath: Union[str, PathLike], data: Any) -> None:
     """Dump to YAML file."""
     with open(filepath, "w", encoding="utf-8") as f:
-        yaml.safe_dump(data, stream=f, sort_keys=False)
+        yaml.dump(data, stream=f, sort_keys=False, Dumper=_get_internal_yaml_dumper())
 
 
 def ensure_list(x):
@@ -64,3 +68,45 @@ def resolve_path(*paths: Union[str, PathLike], symlinks=False) -> Path:
         return Path(*paths).resolve()
     # does not resolve symbolic links
     return Path(os.path.abspath(Path(*paths)))
+
+
+def checksum(filepath, chunk_size=65536) -> str:
+    """Calculate and return the checksum of the given file."""
+    filehash = hashlib.blake2b()
+    with open(filepath, "rb") as f:
+        while chunk := f.read(chunk_size):
+            filehash.update(chunk)
+    return filehash.hexdigest()
+
+
+def checksum_json(d) -> str:
+    """Calculate and return the checksum of the given object converted to json."""
+    return hashlib.blake2b(json.dumps(d, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+@lru_cache(maxsize=None)
+def _get_internal_yaml_dumper() -> Type[yaml.SafeDumper]:
+    """Return the custom internal yaml dumper class."""
+
+    class Dumper(yaml.SafeDumper):
+        pass
+
+    def _path_representer(dumper, data):
+        return dumper.represent_scalar("!path", str(data))
+
+    Dumper.add_representer(PosixPath, _path_representer)
+    return Dumper
+
+
+@lru_cache(maxsize=None)
+def _get_internal_yaml_loader() -> Type[yaml.SafeLoader]:
+    """Return the custom internal yaml loader class."""
+
+    class Loader(yaml.SafeLoader):  # pylint: disable=too-many-ancestors
+        pass
+
+    def _path_constructor(loader, node):
+        return Path(loader.construct_scalar(node))
+
+    Loader.add_constructor("!path", _path_constructor)
+    return Loader

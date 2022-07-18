@@ -27,7 +27,7 @@ def test_analyzer(analysis_config_file, expected, tmp_path):
     expected_path = GPFS_DATA_PATH / expected
 
     with change_directory(tmp_path):
-        a = Analyzer(analysis_config, use_cache=True)
+        a = Analyzer(analysis_config)
 
         a.extract_repo()
 

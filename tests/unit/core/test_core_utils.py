@@ -7,6 +7,47 @@ from pandas.testing import assert_frame_equal, assert_series_equal
 from blueetl.core import utils as test_module
 
 
+@pytest.mark.parametrize(
+    "left, right, expected",
+    [
+        ({}, {}, True),
+        ({}, {"key": 1}, False),
+        ({"key": 1}, {}, True),
+        ({"key": 1}, {"key": 1}, True),
+        ({"key": 1}, {"key": [1, 2]}, True),
+        ({"key": 1}, {"key": {"isin": [1, 2]}}, True),
+        ({"key": 1}, {"key": 2}, False),
+        ({"key": 1}, {"key": [2, 3]}, False),
+        ({"key": 1}, {"key": {"isin": [2, 3]}}, False),
+        ({"key1": 1, "key2": 2}, {"key1": 1}, True),
+        ({"key1": 1}, {"key1": 1, "key2": 2}, False),
+        ({"key": {"isin": [1, 2]}}, {"key": 1}, False),
+        ({"key": {"ne": 3}}, {"key": {"ne": 3}}, True),
+        ({"key": {"ne": 3}}, {"key": {"ne": 4}}, False),
+        ({"key": {"gt": 3}}, {"key": {"gt": 2}}, True),
+        ({"key": {"gt": 3}}, {"key": {"gt": 3}}, True),
+        ({"key": {"gt": 3}}, {"key": {"gt": 4}}, False),
+        ({"key": {"ge": 3}}, {"key": {"ge": 2}}, True),
+        ({"key": {"ge": 3}}, {"key": {"ge": 3}}, True),
+        ({"key": {"ge": 3}}, {"key": {"ge": 4}}, False),
+        ({"key": {"lt": 3}}, {"key": {"lt": 2}}, False),
+        ({"key": {"lt": 3}}, {"key": {"lt": 3}}, True),
+        ({"key": {"lt": 3}}, {"key": {"lt": 4}}, True),
+        ({"key": {"le": 3}}, {"key": {"le": 2}}, False),
+        ({"key": {"le": 3}}, {"key": {"le": 3}}, True),
+        ({"key": {"le": 3}}, {"key": {"le": 4}}, True),
+        ({"key": {"le": 3, "ge": 1}}, {"key": {"le": 4}}, True),
+        ({"key": {"le": 3, "ge": 1}}, {"key": {"le": 4, "ge": 0}}, True),
+        ({"key": 1}, {"key": {"eq": 1}}, True),
+        ({"key": 1}, {"key": {"eq": 1, "isin": [1, 2]}}, True),
+        ({"key": 1}, {"key": {"eq": 1, "isin": [2, 3]}}, False),
+    ],
+)
+def test_is_subfilter(left, right, expected):
+    result = test_module.is_subfilter(left, right)
+    assert result == expected
+
+
 def test_safe_concat_series(series1):
     obj1 = series1.copy() + 1
     obj2 = series1.copy() + 2

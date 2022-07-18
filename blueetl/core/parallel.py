@@ -27,11 +27,13 @@ class Task:
     def __init__(self, func: Callable) -> None:
         self.func = func
 
-    def _setup_logging(self, ctx):
+    @staticmethod
+    def _setup_logging(ctx):
         logformat = f"%(asctime)s %(levelname)s %(name)s [task={ctx.task_id}]: %(message)s"
         setup_logging(loglevel=ctx.loglevel, logformat=logformat, force=True)
 
-    def _setup_seed(self, ctx):
+    @staticmethod
+    def _setup_seed(ctx):
         if ctx.seed is not None:
             np.random.seed(ctx.seed)
 

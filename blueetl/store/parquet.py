@@ -1,5 +1,5 @@
+"""Parquet data store."""
 import logging
-from pathlib import Path
 from typing import Optional
 
 import pandas as pd
@@ -11,11 +11,16 @@ L = logging.getLogger(__name__)
 
 
 class ParquetStore(BaseStore):
-    def _get_path(self, name: str) -> Path:
-        return self.basedir / f"{name}.parquet"
+    """Parquet data store."""
+
+    @property
+    def extension(self) -> str:
+        """Return the file extension to be used with this specific data store."""
+        return "parquet"
 
     def dump(self, df: pd.DataFrame, name: str) -> None:
-        path = self._get_path(name)
+        """Save a dataframe to file, using the given name and the class extension."""
+        path = self.path(name)
         with timed(L.debug, "Writing %s to %s", name, path):
             df.to_parquet(
                 path=path,
@@ -27,7 +32,8 @@ class ParquetStore(BaseStore):
             )
 
     def load(self, name: str) -> Optional[pd.DataFrame]:
-        path = self._get_path(name)
+        """Load a dataframe from file, using the given name and the class extension."""
+        path = self.path(name)
         if not path.exists():
             return None
         with timed(L.debug, "Reading %s from %s", name, path):

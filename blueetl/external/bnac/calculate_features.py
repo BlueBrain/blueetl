@@ -12,6 +12,7 @@ FIRST = "first"
 
 
 def get_initial_spiking_stats(repo, key, df, params):
+    # pylint: disable=unused-argument
     duration = repo.windows.get_duration(key.window)
 
     # df with index (trial, gid) and columns (count, times)
@@ -62,6 +63,7 @@ def get_initial_spiking_stats(repo, key, df, params):
 
 
 def get_histogram_features(repo, key, df, params):
+    # pylint: disable=unused-argument,too-many-locals
     number_of_trials = repo.windows.get_number_of_trials(key.window)
     duration = repo.windows.get_duration(key.window)
     t_start, t_stop = repo.windows.get_bounds(key.window)

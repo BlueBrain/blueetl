@@ -1,9 +1,9 @@
 ---
 simulation_campaign: /gpfs/bbp.cscs.ch/project/proj12/NSE/blueetl/data/sim-campaign-bluepy/11567ba9-57fa-41ec-ac7b-d727ec4e65f3/config.json
 output: analysis_output
+simulations_filter:
+  foo: "2"
 extraction:
-  simulations:
-    foo: "2"
   neuron_classes:
     L1_EXC: { layer: [ 1 ], synapse_class: [ EXC ] }
     L23_EXC: { layer: [ 2, 3 ], synapse_class: [ EXC ] }

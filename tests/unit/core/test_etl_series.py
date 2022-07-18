@@ -343,7 +343,7 @@ def test_remodel(series1):
             ),
         ),
         (
-            {"i0": {"ge": "b", "lt": "z"}, "i1": {"in": ["d", "x"]}},
+            {"i0": {"ge": "b", "lt": "z"}, "i1": {"isin": ["d", "x"]}},
             pd.Series(
                 [3],
                 index=pd.MultiIndex.from_tuples([("b", "d")], names=["i0", "i1"]),

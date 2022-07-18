@@ -343,7 +343,7 @@ def test_pool_with_func_returning_series_with_different_shape(dataframe1):
             ),
         ),
         (
-            {"v0": {"ge": 1, "le": 2}, "v1": {"in": [6, 7]}},
+            {"v0": {"ge": 1, "le": 2}, "v1": {"isin": [6, 7]}},
             pd.DataFrame(
                 [[2, 6]],
                 columns=["v0", "v1"],

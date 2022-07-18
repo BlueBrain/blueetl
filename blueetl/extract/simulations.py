@@ -1,7 +1,5 @@
-import hashlib
-import json
 import logging
-from typing import Dict, Optional, Set
+from typing import Dict, Optional
 
 import pandas as pd
 from bluepy import Circuit, Simulation
@@ -10,6 +8,7 @@ from bluepy.exceptions import BluePyError
 from blueetl.config.simulations import SimulationsConfig
 from blueetl.constants import CIRCUIT, CIRCUIT_ID, SIMULATION, SIMULATION_ID, SIMULATION_PATH
 from blueetl.extract.base import BaseExtractor
+from blueetl.utils import checksum_json
 
 L = logging.getLogger(__name__)
 
@@ -36,8 +35,7 @@ class Simulations(BaseExtractor):
             # "synapse_index",
             "atlas",
         ]
-        s = json.dumps({k: circuit_config.get(k) for k in circuit_config_keys}, sort_keys=True)
-        return hashlib.sha256(s.encode("utf-8")).hexdigest()
+        return checksum_json({k: circuit_config.get(k) for k in circuit_config_keys})
 
     @staticmethod
     def _is_simulation_complete(simulation: Simulation) -> bool:
@@ -68,6 +66,7 @@ class Simulations(BaseExtractor):
         Returns:
             DataFrame of simulations.
         """
+        # pylint: disable=too-many-locals
         circuit_hashes: Dict[str, int] = {}  # map circuit_hash -> circuit_id
         circuits: Dict[int, Circuit] = {}  # map circuit_id -> circuit
         records = []

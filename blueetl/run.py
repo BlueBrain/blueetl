@@ -1,3 +1,4 @@
+"""Run script example."""
 # pylint: disable=wildcard-import,unused-import,unused-wildcard-import
 import logging
 
@@ -14,6 +15,7 @@ analysis_config_file = "./tests/data/tmp/analysis_config_01.yaml"
 
 
 def main():
+    """Run script example, only for demonstration."""
     loglevel = logging.INFO
     logformat = "%(asctime)s %(levelname)s %(name)s: %(message)s"
     logging.basicConfig(format=logformat, level=loglevel)

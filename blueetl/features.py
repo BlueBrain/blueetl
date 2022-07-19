@@ -1,3 +1,4 @@
+"""Features collection."""
 import logging
 from collections import defaultdict
 from functools import partial
@@ -26,12 +27,21 @@ L = logging.getLogger(__name__)
 
 
 class FeaturesCollection:
+    """Features collection class."""
+
     def __init__(
         self,
         features_configs: List[Dict],
         repo: Repository,
         cache_manager: CacheManager,
     ) -> None:
+        """Initialize the FeaturesCollection from the given list of configurations.
+
+        Args:
+            features_configs: list of features configuration dicts.
+            repo: Repository instance.
+            cache_manager: CacheManager instance.
+        """
         self._features_configs = features_configs
         self._repo = repo
         self._cache_manager = cache_manager
@@ -39,9 +49,17 @@ class FeaturesCollection:
 
     @property
     def names(self) -> List[str]:
+        """Return the names of all the calculated features."""
         return sorted(self._data)
 
     def __getattr__(self, name: str) -> Feature:
+        """Return the features by name.
+
+        It mimics the behaviour of Repository, where each Extractor can be accessed by attribute.
+
+        Args:
+            name: name of the features.
+        """
         try:
             return self._data[name]
         except KeyError as ex:
@@ -53,6 +71,10 @@ class FeaturesCollection:
         self._data.update(mapping)
 
     def print(self) -> None:
+        """Print some information about the instance.
+
+        Only for debug and internal use, it may be removed in a future release.
+        """
         print("### features")
         for k, v in self._data.items():
             print("#", k)
@@ -219,7 +241,7 @@ def call_by_simulation(
     jobs: Optional[int] = None,
     backend: Optional[str] = None,
 ) -> List[Any]:
-    """
+    """Execute the given function in parallel, one task for each simulation.
 
     Args:
         repo: repository instance.

@@ -1,3 +1,4 @@
+"""neuron_class features from BlueCV."""
 import logging
 from functools import partial
 
@@ -13,6 +14,7 @@ L = logging.getLogger(__name__)
 
 
 def calculate_features_by_neuron_class(repo, key, df, params):
+    """Calculate features grouped by neuron_class."""
     t_start, t_stop = repo.windows.get_bounds(key.window)
     # create an array containing multiple arrays of spikes, one for each gid
     spiketrains = df.groupby([GID])[TIME].apply(np.array).to_numpy()
@@ -32,7 +34,7 @@ def calculate_features_by_neuron_class(repo, key, df, params):
 
 
 def get_PSD(spiketrains, n_segments=2):
-    """Get power spectrum density of neuronal population"""
+    """Get power spectrum density of neuronal population."""
     _, PSD = spectral.welch_psd(
         np.concatenate(spiketrains),
         n_segments=n_segments,
@@ -41,12 +43,12 @@ def get_PSD(spiketrains, n_segments=2):
 
 
 def get_AC(BST):
-    """Get mean firing rate of neuronal population"""
+    """Get mean firing rate of neuronal population."""
     return np.triu(correlation_coefficient(BST), k=1)
 
 
 def get_CPDF(ST, bin_size=20):
-    """Get complexity"""
+    """Get complexity."""
     CPDF = statistics.complexity_pdf(ST, bin_size=bin_size * ms)
     return np.asarray(CPDF).reshape(-1)
 

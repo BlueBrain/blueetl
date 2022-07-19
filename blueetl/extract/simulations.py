@@ -1,3 +1,4 @@
+"""Simulations extractor."""
 import logging
 from typing import Dict, Optional
 
@@ -14,6 +15,8 @@ L = logging.getLogger(__name__)
 
 
 class Simulations(BaseExtractor):
+    """Simulations extractor class."""
+
     COLUMNS = [SIMULATION_PATH, SIMULATION_ID, CIRCUIT_ID, SIMULATION, CIRCUIT]
     # allow additional columns containing the simulation conditions
     _allow_extra_columns = True
@@ -103,7 +106,7 @@ class Simulations(BaseExtractor):
     @classmethod
     def _filter_simulations_df(cls, df: pd.DataFrame, query: Optional[Dict]) -> pd.DataFrame:
         n_tot = len(df)
-        # filter by _complete and drop the column because only for internal use
+        # filter by the internal ``_complete`` column, and drop it
         df = df.etl.q({"_complete": True}).drop(columns="_complete")
         n1 = len(df)
         df = df.etl.q(query or {})
@@ -115,7 +118,7 @@ class Simulations(BaseExtractor):
 
     @classmethod
     def from_config(cls, config: SimulationsConfig, query: Optional[Dict] = None) -> "Simulations":
-        """Load simulations from the given simulation campaign."""
+        """Extract simulations from the given simulation campaign."""
         df = config.to_pandas()
         df = cls._from_paths(df, ignore_spikes=False)
         df = cls._filter_simulations_df(df, query)
@@ -123,7 +126,7 @@ class Simulations(BaseExtractor):
 
     @classmethod
     def from_pandas(cls, df: pd.DataFrame, query: Optional[Dict] = None) -> "Simulations":
-        """Load simulations from a dataframe containing valid simulation ids and circuit ids."""
+        """Extract simulations from a dataframe containing valid simulation ids and circuit ids."""
         df = cls._from_paths(df, ignore_spikes=True)
         df = cls._filter_simulations_df(df, query)
         return cls(df)

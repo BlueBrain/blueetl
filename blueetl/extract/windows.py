@@ -1,3 +1,4 @@
+"""Windows extractor."""
 import logging
 from typing import Any, Dict
 
@@ -24,6 +25,8 @@ L = logging.getLogger(__name__)
 
 
 class Windows(BaseExtractor):
+    """Windows extractor class."""
+
     COLUMNS = [
         SIMULATION_ID,
         CIRCUIT_ID,
@@ -54,7 +57,16 @@ class Windows(BaseExtractor):
     def from_simulations(
         cls, simulations: Simulations, trial_steps: TrialSteps, config: Dict[str, Any]
     ) -> "Windows":
-        """Load and expand windows for each simulation."""
+        """Return a new Windows instance from the given simulations and configuration.
+
+        Args:
+            simulations: Simulations extractor.
+            trial_steps: TrialSteps extractor.
+            config: configuration dict.
+
+        Returns:
+            Windows: new instance.
+        """
         # pylint: disable=too-many-locals
         results = []
         for _, rec in simulations.df.etl.iter():

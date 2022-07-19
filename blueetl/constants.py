@@ -1,3 +1,4 @@
+"""Common constants."""
 import numpy as np
 
 GID = "gid"
@@ -34,4 +35,3 @@ DTYPES = {
     T_STOP: np.float64,
     DURATION: np.float64,
 }
-# TODO: category or object?

@@ -1,3 +1,4 @@
+"""Analysis functions."""
 import logging
 from copy import deepcopy
 from os import PathLike
@@ -15,7 +16,15 @@ L = logging.getLogger(__name__)
 
 
 class Analyzer:
+    """Analyzer class."""
+
     def __init__(self, analysis_config: Dict, base_path: Union[str, PathLike] = ".") -> None:
+        """Initialize the Analyzer from the given configuration.
+
+        Args:
+            analysis_config: analysis configuration.
+            base_path: base path used to resolve relative paths. If omitted, the cwd is used.
+        """
         analysis_config = deepcopy(analysis_config)
         analysis_config = self._validate_config(analysis_config)
         analysis_config = self._resolve_paths(analysis_config, base_path=Path(base_path))
@@ -39,6 +48,7 @@ class Analyzer:
 
     @staticmethod
     def _validate_config(analysis_config: Dict) -> Dict:
+        """Validate the configuration."""
         # TODO: add a validation schema
         # TODO: remove these temporary checks before the first release
         assert (
@@ -73,7 +83,8 @@ class Analyzer:
         """Return the first key and df when grouping spikes by the given list of columns.
 
         The returned parameters are the same passed to the feature function defined by the user.
-        It should be used only for debug.
+
+        It should be used only for internal use and debug.
 
         Args:
             groupby: list of columns to group by.

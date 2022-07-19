@@ -1,9 +1,9 @@
-# adapted from BlueNetworkActivityComparison/bnac/onset.py
+"""Trial steps functions adapted from BlueNetworkActivityComparison/bnac/onset.py."""
 import numpy as np
 from scipy.ndimage import gaussian_filter
 
 
-def histogram_from_spikes(spikes, params):
+def _histogram_from_spikes(spikes, params):
     onset_test_window_length = params["post_window"][1] - params["pre_window"][0]
     histogram, _ = np.histogram(
         spikes,
@@ -13,7 +13,7 @@ def histogram_from_spikes(spikes, params):
     return histogram
 
 
-def onset_from_histogram(histogram, params):
+def _onset_from_histogram(histogram, params):
     onset_dict = {}
     smoothed_histogram = gaussian_filter(histogram, sigma=params["smoothing_width"])
 
@@ -49,18 +49,12 @@ def onset_from_histogram(histogram, params):
         + params["ms_post_offset"]
     )
     if params["fig_paths"]:
-        plot(smoothed_histogram, params, onset_dict)
+        _plot(smoothed_histogram, params, onset_dict)
     onset_dict["trial_steps_value"] = onset_dict["cortical_onset"]
     return onset_dict
 
 
-def onset_from_spikes(spikes, params):
-    histogram = histogram_from_spikes(spikes, params)
-    onset_dict = onset_from_histogram(histogram, params)
-    return onset_dict
-
-
-def plot(smoothed_histogram, params, onset_dict):
+def _plot(smoothed_histogram, params, onset_dict):
     # pylint: disable=import-outside-toplevel
     import matplotlib
 
@@ -85,3 +79,10 @@ def plot(smoothed_histogram, params, onset_dict):
     for fig_path in params["fig_paths"]:
         plt.savefig(fig_path)
     plt.close()
+
+
+def onset_from_spikes(spikes, params):
+    """Calculate trial steps from spikes."""
+    histogram = _histogram_from_spikes(spikes, params)
+    onset_dict = _onset_from_histogram(histogram, params)
+    return onset_dict

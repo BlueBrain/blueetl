@@ -1,3 +1,4 @@
+"""Utilities for parallelization."""
 import logging
 import os
 from dataclasses import dataclass
@@ -17,6 +18,8 @@ from blueetl.utils import setup_logging
 
 @dataclass
 class TaskContext:
+    """TaskContext class containing information to be passed to the tasks in subprocesses."""
+
     task_id: int
     loglevel: int
     seed: Optional[int] = None
@@ -24,20 +27,36 @@ class TaskContext:
 
 
 class Task:
+    """Task class."""
+
     def __init__(self, func: Callable) -> None:
+        """Initialize the Task object.
+
+        Args:
+            func: function to be executed whe the Task is called in a subprocess.
+        """
         self.func = func
 
     @staticmethod
-    def _setup_logging(ctx):
+    def _setup_logging(ctx: TaskContext) -> None:
+        """Initialize logging in a subprocess."""
         logformat = f"%(asctime)s %(levelname)s %(name)s [task={ctx.task_id}]: %(message)s"
         setup_logging(loglevel=ctx.loglevel, logformat=logformat, force=True)
 
     @staticmethod
-    def _setup_seed(ctx):
+    def _setup_seed(ctx: TaskContext) -> None:
+        """Initialize seed in a subprocess."""
         if ctx.seed is not None:
             np.random.seed(ctx.seed)
 
     def __call__(self, ctx: TaskContext) -> Any:
+        """Call the wrapped function and return the result.
+
+        It's intended to be called in a subprocess.
+
+        Args:
+            ctx: TaskContext instance containing the context information.
+        """
         if ctx.ppid and ctx.ppid != os.getpid():
             # setup logging and seed only when the task is executed in a subprocess
             self._setup_logging(ctx)

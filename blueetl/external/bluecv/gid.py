@@ -1,3 +1,4 @@
+"""gid features from BlueCV."""
 import logging
 from functools import partial
 
@@ -10,6 +11,7 @@ L = logging.getLogger(__name__)
 
 
 def calculate_features_by_gid(repo, key, df, params):
+    """Calculate features grouped by gid."""
     t_start, t_stop = repo.windows.get_bounds(key.window)
     spiketrain = df[TIME].to_numpy()
     functions = {
@@ -44,7 +46,7 @@ def get_CV(spiketrain):
 
 
 def get_LV(spiketrain):
-    """Get measure of local variation for a sequence of time intervals between events of a neuron"""
+    """Get measure of local variation for sequence of time intervals between events of a neuron."""
     return statistics.lv(statistics.isi(spiketrain), with_nan=True)
 
 

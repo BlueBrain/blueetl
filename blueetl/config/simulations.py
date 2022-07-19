@@ -79,29 +79,48 @@ class SimulationsConfig:
 
     @property
     def name(self) -> str:
+        """Return the name of the simulations campaign."""
         return self.data.name or ""
 
     @property
     def attrs(self) -> Dict:
+        """Return the attributes dict associated with the simulations campaign."""
         return self.data.attrs
 
     @property
     def conditions(self) -> List[str]:
+        """Return the list of conditions associated with the simulations campaign.
+
+        The conditions are the names of columns considered as parameters of the simulations.
+        """
         return self._conditions
 
     @property
-    def data(self):
+    def data(self) -> pd.DataFrame:
+        """Return the wrapped dataframe."""
         return self._data
 
     def to_pandas(self):
+        """Return a copy of the wrapped dataframe.
+
+        It can be used to avoid any unintentional modification of the internal dataframe.
+        """
         return self.data.copy()
 
     @classmethod
     def load(cls, path: Union[str, PathLike]) -> "SimulationsConfig":
         """Load the configuration from file.
 
+        Different file formats are supported:
+
+        - xarray (json or yaml): configuration produced by bbp-workflow.
+        - blueetl (json or yaml): configuration produced by this same class.
+
         Args:
             path: path to the configuration file.
+
+        Returns:
+            SimulationsConfig: new instance.
         """
         config = load_yaml(path)
         if config.get("format") == "blueetl":
@@ -125,7 +144,6 @@ class SimulationsConfig:
 
     def to_dict(self):
         """Convert the configuration to dict."""
-
         return {
             "format": "blueetl",
             "version": 1,

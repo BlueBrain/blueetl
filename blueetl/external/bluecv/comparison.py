@@ -1,3 +1,4 @@
+"""Comparison features from BlueCV."""
 import logging
 
 from elephant.spike_train_dissimilarity import van_rossum_distance, victor_purpura_distance

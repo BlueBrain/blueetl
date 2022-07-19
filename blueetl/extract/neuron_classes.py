@@ -1,5 +1,6 @@
+"""NeuronClasses extractor."""
 import logging
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 import pandas as pd
 
@@ -11,6 +12,8 @@ L = logging.getLogger(__name__)
 
 
 class NeuronClasses(BaseExtractor):
+    """NeuronClasses extractor class."""
+
     COLUMNS = [CIRCUIT_ID, NEURON_CLASS, COUNT]
     # allow additional columns containing the attributes of the neuron classes
     _allow_extra_columns = True
@@ -19,11 +22,21 @@ class NeuronClasses(BaseExtractor):
     def from_neurons(
         cls,
         neurons: Neurons,
-        target: str,
-        neuron_classes: Dict[str, Any],
+        target: Optional[str],
+        neuron_classes: Dict[str, Dict],
         limit: Optional[int] = None,
     ) -> "NeuronClasses":
-        """Load neuron classes information for each circuit."""
+        """Load neuron classes information for each circuit.
+
+        Args:
+            neurons: Neurons extractor.
+            target: target string, or None to not filter by target.
+            neuron_classes: configuration dict of neuron classes to be extracted.
+            limit: if specified, limit the number of extracted neurons.
+
+        Returns:
+            NeuronClasses: new instance.
+        """
         results = []
         for index, count in neurons.count_by_neuron_class().etl.iter():
             # index: circuit_id, neuron_class

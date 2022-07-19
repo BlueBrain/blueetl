@@ -1,3 +1,4 @@
+"""Spikes extractor."""
 import logging
 
 import pandas as pd
@@ -13,11 +14,16 @@ from blueetl.constants import (
     WINDOW,
 )
 from blueetl.extract.base import BaseExtractor
+from blueetl.extract.neurons import Neurons
+from blueetl.extract.simulations import Simulations
+from blueetl.extract.windows import Windows
 
 L = logging.getLogger(__name__)
 
 
 class Spikes(BaseExtractor):
+    """Spikes extractor class."""
+
     COLUMNS = [SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS, WINDOW, TRIAL, TIME, GID]
 
     @classmethod
@@ -34,7 +40,7 @@ class Spikes(BaseExtractor):
         return df
 
     @classmethod
-    def _load_spikes(cls, spikes, gids, windows_df: pd.DataFrame):
+    def _load_spikes(cls, spikes, gids, windows_df: pd.DataFrame) -> pd.DataFrame:
         """Filter and aggregate the spikes in bins according to the given windows.
 
         Args:
@@ -44,7 +50,6 @@ class Spikes(BaseExtractor):
 
         Returns:
             pd.DataFrame: dataframe with columns [window, time, gid]
-
         """
         df = spikes.get(gids).reset_index()
         df = df.rename(columns={"t": TIME})
@@ -57,7 +62,19 @@ class Spikes(BaseExtractor):
         return df
 
     @classmethod
-    def from_simulations(cls, simulations, neurons, windows):
+    def from_simulations(
+        cls, simulations: Simulations, neurons: Neurons, windows: Windows
+    ) -> "Spikes":
+        """Return a new Spikes instance from the given simulations, neurons, and windows.
+
+        Args:
+            simulations: Simulations extractor.
+            neurons: Neurons extractor.
+            windows: Windows extractor.
+
+        Returns:
+            Spikes: new instance.
+        """
         merged = pd.merge(simulations.df, neurons.df, sort=False)
         # group the gids together
         columns = [SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS]

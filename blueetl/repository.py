@@ -251,7 +251,7 @@ class Repository:
         if not self.is_extracted():
             raise RuntimeError("Not all the dataframes have been extracted")
 
-    def missing_simulations(self):
+    def missing_simulations(self) -> pd.DataFrame:
         """Return a DataFrame with the simulations ignored because of missing spikes.
 
         Returns:
@@ -273,7 +273,11 @@ class Repository:
             .drop(columns="_merge")
         )
 
-    def print(self):
+    def print(self) -> None:
+        """Print some information about the instance.
+
+        Only for debug and internal use, it may be removed in a future release.
+        """
         print("### extraction_config")
         print(json.dumps(self._extraction_config, indent=2))
         print("### simulations_config")

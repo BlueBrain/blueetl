@@ -1,4 +1,4 @@
-# adapted from BlueNetworkActivityComparison/bnac/data_processor.py
+"""Features adapted from BlueNetworkActivityComparison/bnac/data_processor.py."""
 import logging
 
 import numpy as np
@@ -11,7 +11,7 @@ L = logging.getLogger(__name__)
 FIRST = "first"
 
 
-def get_initial_spiking_stats(repo, key, df, params):
+def _get_initial_spiking_stats(repo, key, df, params):
     # pylint: disable=unused-argument
     duration = repo.windows.get_duration(key.window)
 
@@ -62,7 +62,7 @@ def get_initial_spiking_stats(repo, key, df, params):
     }
 
 
-def get_histogram_features(repo, key, df, params):
+def _get_histogram_features(repo, key, df, params):
     # pylint: disable=unused-argument,too-many-locals
     number_of_trials = repo.windows.get_number_of_trials(key.window)
     duration = repo.windows.get_duration(key.window)
@@ -92,9 +92,10 @@ def get_histogram_features(repo, key, df, params):
 
 
 def calculate_features_multi(repo, key, df, params):
+    """Calculate multiple features at the same time."""
     export_all_neurons = params.get("export_all_neurons", False)
-    spiking_stats = get_initial_spiking_stats(repo, key, df, params)
-    histogram_features = get_histogram_features(repo, key, df, params)
+    spiking_stats = _get_initial_spiking_stats(repo, key, df, params)
+    histogram_features = _get_histogram_features(repo, key, df, params)
 
     # df with (gid) as index, and features as columns
     by_gid = pd.concat(

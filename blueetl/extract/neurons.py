@@ -1,3 +1,4 @@
+"""Neurons extractor."""
 import logging
 from itertools import chain
 from typing import Dict, List, Optional, Tuple
@@ -14,9 +15,12 @@ L = logging.getLogger(__name__)
 
 
 class Neurons(BaseExtractor):
+    """Neurons extractor class."""
+
     COLUMNS = [CIRCUIT_ID, NEURON_CLASS, GID, NEURON_CLASS_INDEX]
 
     def __init__(self, df: pd.DataFrame) -> None:
+        """Initialize the extractor."""
         super().__init__(df)
         # ensure that the neurons are sorted
         self._df: pd.DataFrame = self._df.sort_values(self.COLUMNS, ignore_index=True)
@@ -61,6 +65,17 @@ class Neurons(BaseExtractor):
         neuron_classes: Dict[str, Dict],
         limit: Optional[int] = None,
     ) -> "Neurons":
+        """Return a new Neurons instance from the given simulations and configuration.
+
+        Args:
+            simulations: Simulations extractor.
+            target: target string, or None to not filter by target.
+            neuron_classes: configuration dict of neuron classes to be extracted.
+            limit: if specified, limit the number of extracted neurons.
+
+        Returns:
+            Neurons: new instance.
+        """
         grouped = simulations.df.groupby([CIRCUIT_ID])[CIRCUIT].first()
         records: List[Tuple[int, str, int, int]] = []
         for circuit_id, circuit in grouped.items():

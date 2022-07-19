@@ -1,9 +1,6 @@
 [MESSAGES CONTROL]
 disable=fixme,invalid-name,len-as-condition,no-else-return,
-    # TODO: add missing docstrings, fix too-many-locals
-    missing-module-docstring,
-    missing-class-docstring,
-    missing-function-docstring,
+    # TODO: fix too-many-locals
 
 [FORMAT]
 # Regexp for a line that is allowed to be longer than the limit.

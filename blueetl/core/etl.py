@@ -169,22 +169,28 @@ class ETLBaseAccessor(ABC):
         Filter by columns (for DataFrames) and index names (for both Series and DataFrames).
         If a name is present in both columns and index names, only the column is considered.
 
-        Each value can be a scalar or a list. If it's a list, any matching record will be selected.
+        All the keys are combined in AND, while the values can be scalar, list, or dict.
 
-        Query and params cannot be specified together. If they are both empty or missing,
-        return the original Series or DataFrame.
+        * If value is a scalar, the exact value will be matched.
+        * If value is a list, the values in the list are considered in OR.
+        * If value is a dict, a more advanced filter can be specified using the
+            supported operators: ``eq, ne, le, lt, ge, gt, isin``.
 
-        This method is similar to the `query` method for DataFrames, but it accepts a dict instead
-        of a string, and has some limitations on the possible filters to be applied.
+        Query and named params cannot be specified together.
+        If they are both empty or missing, the original Series or DataFrame is returned.
+
+        This method is similar to the standard `query` method for pandas DataFrames, but it accepts
+        a dict instead of a string, and has some limitations on the possible filters to be applied.
 
         Args:
-            _query: query dictionary, with:
-                    keys: columns or index levels
-                    values: value or list of values
-                All the keys are combined with AND, while each list of values is combined with OR.
-                Examples
-                    {"mtype": "SO_BP", "etype": "cNAC"} -> mtype == SO_BP AND etype == cNAC
-                    {"mtype": ["SO_BP", "SP_AA"]} -> mtype == SO_BP OR mtype == SP_AA
+            _query: query dictionary, where the keys are columns or index levels, and the values
+                can be scalar, list, or dict values.
+            **params: named params can be specified as an alternative to the _query dictionary.
+
+        Examples:
+            * {"mtype": "SO_BP", "etype": "cNAC"} -> mtype == SO_BP AND etype == cNAC
+            * {"mtype": ["SO_BP", "SP_AA"]} -> mtype == SO_BP OR mtype == SP_AA
+            * {"gid": {"ge": 3, "lt": 8} -> gid >= 3 AND gid < 8
         """
         if _query and params:
             raise ValueError("Query and params cannot be specified together")
@@ -380,6 +386,8 @@ class ETLDataFrameAccessor(ETLBaseAccessor):
 
 
 class ETLIndexAccessor:
+    """Index accessor."""
+
     def __init__(self, pandas_obj):
         """Initialize the accessor."""
         self._obj = pandas_obj

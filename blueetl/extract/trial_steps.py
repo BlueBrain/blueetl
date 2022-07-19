@@ -1,16 +1,21 @@
+"""TrialSteps extractor."""
 import logging
+from typing import Dict
 
 import numpy as np
 import pandas as pd
 
 from blueetl.constants import CIRCUIT_ID, SIMULATION_ID, TRIAL_STEPS_LABEL, TRIAL_STEPS_VALUE
 from blueetl.extract.base import BaseExtractor
+from blueetl.extract.simulations import Simulations
 from blueetl.utils import import_by_string, timed
 
 L = logging.getLogger(__name__)
 
 
 class TrialSteps(BaseExtractor):
+    """TrialSteps extractor class."""
+
     COLUMNS = [SIMULATION_ID, CIRCUIT_ID, TRIAL_STEPS_LABEL, TRIAL_STEPS_VALUE]
     # allow additional columns that can be used to store more details
     _allow_extra_columns = True
@@ -38,7 +43,16 @@ class TrialSteps(BaseExtractor):
         return spikes
 
     @classmethod
-    def from_simulations(cls, simulations, config):
+    def from_simulations(cls, simulations: Simulations, config: Dict) -> "TrialSteps":
+        """Return a new TrialSteps instance from the given simulations and configuration.
+
+        Args:
+            simulations: Simulations extractor.
+            config: configuration dict.
+
+        Returns:
+            TrialSteps: new instance.
+        """
         # pylint: disable=too-many-locals
         target = config["target"]
         limit = config["limit"]

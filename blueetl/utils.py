@@ -9,7 +9,7 @@ from functools import lru_cache
 from importlib import import_module
 from os import PathLike
 from pathlib import Path, PosixPath
-from typing import Any, Type, Union
+from typing import Any, Callable, List, Tuple, Type, Union
 
 import pandas as pd
 import yaml
@@ -46,7 +46,7 @@ def dump_yaml(filepath: Union[str, PathLike], data: Any) -> None:
         yaml.dump(data, stream=f, sort_keys=False, Dumper=_get_internal_yaml_dumper())
 
 
-def ensure_list(x):
+def ensure_list(x) -> Union[List, Tuple]:
     """Return x if x is a list or a tuple, [x] otherwise."""
     return x if isinstance(x, (list, tuple)) else [x]
 
@@ -56,7 +56,15 @@ def ensure_dtypes(df: pd.DataFrame) -> pd.DataFrame:
     return df.astype({k: DTYPES[k] for k in df.columns if k in DTYPES})
 
 
-def import_by_string(full_name):
+def import_by_string(full_name: str) -> Callable:
+    """Import and return a function by name.
+
+    Args:
+        full_name: full name of the function, using dot as a separator if in a submodule.
+
+    Returns:
+        The imported function.
+    """
     module_name, _, func_name = full_name.rpartition(".")
     return getattr(import_module(module_name), func_name)
 
@@ -89,7 +97,7 @@ def _get_internal_yaml_dumper() -> Type[yaml.SafeDumper]:
     """Return the custom internal yaml dumper class."""
 
     class Dumper(yaml.SafeDumper):
-        pass
+        """Custom YAML Dumper."""
 
     def _path_representer(dumper, data):
         return dumper.represent_scalar("!path", str(data))
@@ -103,7 +111,7 @@ def _get_internal_yaml_loader() -> Type[yaml.SafeLoader]:
     """Return the custom internal yaml loader class."""
 
     class Loader(yaml.SafeLoader):  # pylint: disable=too-many-ancestors
-        pass
+        """Custom YAML Loader."""
 
     def _path_constructor(loader, node):
         return Path(loader.construct_scalar(node))

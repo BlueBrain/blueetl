@@ -176,8 +176,8 @@ class CacheManager:
 
         # check the extraction config for neurons
         if any(
-            self._analysis_configs.cached["extraction"][k]
-            != self._analysis_configs.actual["extraction"][k]
+            self._analysis_configs.cached["extraction"].get(k)
+            != self._analysis_configs.actual["extraction"].get(k)
             for k in ["neuron_classes", "limit", "target"]
         ):
             self._invalidate_cached_checksums({"neurons", "neuron_classes"})
@@ -185,8 +185,8 @@ class CacheManager:
 
         # check the extraction config for windows and spikes
         if any(
-            self._analysis_configs.cached["extraction"][k]
-            != self._analysis_configs.actual["extraction"][k]
+            self._analysis_configs.cached["extraction"].get(k)
+            != self._analysis_configs.actual["extraction"].get(k)
             for k in ["windows", "trial_steps"]
         ):
             self._invalidate_cached_checksums({"trial_steps", "windows", "spikes"})

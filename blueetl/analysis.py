@@ -45,6 +45,7 @@ class Analyzer:
             repo=self.repo,
             cache_manager=cache_manager,
         )
+        self.analysis_config = analysis_config
 
     @staticmethod
     def _validate_config(analysis_config: Dict) -> Dict:

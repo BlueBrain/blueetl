@@ -1,9 +1,10 @@
 """TrialSteps extractor."""
 import logging
-from typing import Dict
+from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
+from bluepy import Circuit, Simulation
 
 from blueetl.constants import CIRCUIT_ID, SIMULATION_ID, TRIAL_STEPS_LABEL, TRIAL_STEPS_VALUE
 from blueetl.extract.base import BaseExtractor
@@ -24,7 +25,14 @@ class TrialSteps(BaseExtractor):
 
     @classmethod
     def _load_spikes(
-        cls, simulation, circuit, target, limit, initial_offset, t_start, t_end
+        cls,
+        simulation: Simulation,
+        circuit: Circuit,
+        target: Optional[str],
+        limit: Optional[int],
+        initial_offset: int,
+        t_start: int,
+        t_end: int,
     ) -> np.ndarray:
         # circuit is passed explicitly instead of loading it from simulation.circuit
         # to take advantage of any circuit already loaded in memory

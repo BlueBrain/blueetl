@@ -1,6 +1,6 @@
 """Windows extractor."""
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 import numpy as np
 import pandas as pd
@@ -40,7 +40,7 @@ class Windows(BaseExtractor):
     ]
 
     @classmethod
-    def _validate(cls, df):
+    def _validate(cls, df: pd.DataFrame) -> None:
         super()._validate(df)
         # check that all the trials in the same window have the same t_start, t_stop, duration
         if not np.all(df.groupby(WINDOW)[[T_START, T_STOP, DURATION]].nunique() == 1):
@@ -112,19 +112,20 @@ class Windows(BaseExtractor):
         df = pd.DataFrame(results)
         return cls(df)
 
-    def get_bounds(self, window):
+    def get_bounds(self, window: str) -> Tuple[float, float]:
         """Return the interval (t_start, t_stop) for the specified window.
 
         The returned values don't depend on the simulation or the trial,
         because they are relative the offset, that is the only changing value.
         """
         rec = self.df.etl.first(window=window)
-        return rec[[T_START, T_STOP]]
+        t_start, t_stop = rec[[T_START, T_STOP]]
+        return t_start, t_stop
 
-    def get_duration(self, window):
+    def get_duration(self, window: str) -> float:
         """Return the duration of the specified window."""
         return self.df.etl.first(window=window)[DURATION]
 
-    def get_number_of_trials(self, window):
+    def get_number_of_trials(self, window: str) -> int:
         """Return the number of trials for the specified window."""
         return np.max(self.df.etl.q(window=window)[TRIAL]) + 1

@@ -2,7 +2,7 @@
 import logging
 from collections import defaultdict
 from functools import partial
-from typing import Any, Callable, Dict, List, Mapping, NamedTuple, Optional
+from typing import Any, Callable, Dict, Iterator, List, Mapping, NamedTuple, Optional
 
 import pandas as pd
 
@@ -200,7 +200,7 @@ def calculate_features_multi(
 
     """
 
-    def func_wrapper(key: NamedTuple, df: pd.DataFrame):
+    def func_wrapper(key: NamedTuple, df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
         # executed in a subprocess
         features_records = {}
         L.debug("Calculating features for %s", key)
@@ -259,7 +259,7 @@ def call_by_simulation(
         list of results
     """
 
-    def tasks_generator():
+    def tasks_generator() -> Iterator[Task]:
         for circuit_id in repo.simulations.df[CIRCUIT_ID].unique():
             circuit_neurons = repo.neurons.df.etl.q(circuit_id=circuit_id)
             circuit_neuron_classes = repo.neuron_classes.df.etl.q(circuit_id=circuit_id)

@@ -1,14 +1,14 @@
 """Analysis functions."""
 import logging
 from copy import deepcopy
-from os import PathLike
 from pathlib import Path
-from typing import Dict, List, NamedTuple, Tuple, Union
+from typing import Dict, List, NamedTuple, Tuple
 
 import pandas as pd
 
 from blueetl.cache import CacheManager
 from blueetl.config.simulations import SimulationsConfig
+from blueetl.extract.types import StrOrPath
 from blueetl.features import FeaturesCollection
 from blueetl.repository import Repository
 
@@ -18,7 +18,7 @@ L = logging.getLogger(__name__)
 class Analyzer:
     """Analyzer class."""
 
-    def __init__(self, analysis_config: Dict, base_path: Union[str, PathLike] = ".") -> None:
+    def __init__(self, analysis_config: Dict, base_path: StrOrPath = ".") -> None:
         """Initialize the Analyzer from the given configuration.
 
         Args:

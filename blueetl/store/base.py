@@ -1,12 +1,12 @@
 """Base data store."""
 import logging
 from abc import ABC, abstractmethod
-from os import PathLike
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 import pandas as pd
 
+from blueetl.extract.types import StrOrPath
 from blueetl.utils import checksum, resolve_path
 
 L = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ class BaseStore(ABC):
     It's responsible for reading and writing Pandas DataFrames in a specific serialization format.
     """
 
-    def __init__(self, basedir: Union[str, PathLike]) -> None:
+    def __init__(self, basedir: StrOrPath) -> None:
         """Initialize the object.
 
         Args:

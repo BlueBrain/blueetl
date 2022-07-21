@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+from bluepy import Circuit
 
 from blueetl.constants import CIRCUIT, CIRCUIT_ID, GID, NEURON_CLASS, NEURON_CLASS_INDEX
 from blueetl.extract.base import BaseExtractor
@@ -27,7 +28,10 @@ class Neurons(BaseExtractor):
 
     @staticmethod
     def _get_gids(
-        circuit, target: Optional[str], neuron_classes: Dict[str, Dict], limit: Optional[int] = None
+        circuit: Circuit,
+        target: Optional[str],
+        neuron_classes: Dict[str, Dict],
+        limit: Optional[int] = None,
     ) -> Dict[str, np.ndarray]:
         properties = list(set(chain.from_iterable(neuron_classes.values())))
         properties = [p for p in properties if not p.startswith("$")]
@@ -88,6 +92,11 @@ class Neurons(BaseExtractor):
         df = pd.DataFrame.from_records(records, columns=cls.COLUMNS)
         return cls(df)
 
-    def count_by_neuron_class(self, observed=True) -> pd.Series:
-        """Return the number of gids for each circuit and neuron class."""
+    def count_by_neuron_class(self, observed: bool = True) -> pd.Series:
+        """Return the number of gids for each circuit and neuron class.
+
+        Args:
+            observed: If True: only show observed values for categorical groupers.
+                If False: show all values for categorical groupers.
+        """
         return self.df.groupby([CIRCUIT_ID, NEURON_CLASS], observed=observed)[GID].count()

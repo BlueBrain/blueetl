@@ -2,6 +2,7 @@
 import logging
 
 import pandas as pd
+from bluepy import Simulation
 
 from blueetl.constants import (
     CIRCUIT_ID,
@@ -29,7 +30,7 @@ class Spikes(BaseExtractor):
     @classmethod
     def _assign_window(
         cls, df: pd.DataFrame, name: str, trial: int, offset: float, t_start: float, t_stop: float
-    ):
+    ) -> pd.DataFrame:
         # increment t_start and t_stop because they are relative to offset
         t_start += offset
         t_stop += offset
@@ -40,18 +41,18 @@ class Spikes(BaseExtractor):
         return df
 
     @classmethod
-    def _load_spikes(cls, spikes, gids, windows_df: pd.DataFrame) -> pd.DataFrame:
+    def _load_spikes(cls, simulation: Simulation, gids, windows_df: pd.DataFrame) -> pd.DataFrame:
         """Filter and aggregate the spikes in bins according to the given windows.
 
         Args:
-            spikes: SpikeReport of times and gids.
+            simulation: simulation containing the SpikeReport of times and gids.
             gids: array of gids to be selected.
             windows_df: windows dataframe with columns [window, trial, t_start, t_stop]
 
         Returns:
             pd.DataFrame: dataframe with columns [window, time, gid]
         """
-        df = spikes.get(gids).reset_index()
+        df = simulation.spikes.get(gids).reset_index()
         df = df.rename(columns={"t": TIME})
         df = pd.concat(
             cls._assign_window(df, rec.window, rec.trial, rec.offset, rec.t_start, rec.t_stop)
@@ -90,7 +91,7 @@ class Spikes(BaseExtractor):
                 len(rec.gid),
             )
             windows_df = windows.df.etl.q(simulation_id=index.simulation_id)
-            tmp_df = cls._load_spikes(rec.simulation.spikes, rec.gid, windows_df)
+            tmp_df = cls._load_spikes(rec.simulation, rec.gid, windows_df)
             tmp_df[columns] = list(index)
             # TODO: verify if converting NEURON_CLASS to category here using CategoricalDtype
             #  can reduce the memory temporarily needed during the process.

@@ -1,13 +1,13 @@
 """Simulation Campaign configuration."""
 import logging
-from os import PathLike
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 
 from blueetl.constants import SIMULATION_PATH
+from blueetl.extract.types import StrOrPath
 from blueetl.utils import dump_yaml, load_yaml, resolve_path
 
 L = logging.getLogger(__name__)
@@ -45,8 +45,8 @@ class SimulationsConfig:
         self._resolve_paths()
         self._validate()
 
-    def _resolve_paths(self):
-        def _to_absolute(path):
+    def _resolve_paths(self) -> None:
+        def _to_absolute(path) -> str:
             full_path = resolve_path(path_prefix, path)
             if full_path.name != "BlueConfig" and not full_path.is_file():
                 L.debug("Appending BlueConfig to %s", path)
@@ -58,7 +58,7 @@ class SimulationsConfig:
         path_prefix = self.attrs.get("path_prefix", "")
         self.data[SIMULATION_PATH] = self.data[SIMULATION_PATH].apply(_to_absolute)
 
-    def _validate(self):
+    def _validate(self) -> None:
         if SIMULATION_PATH not in self.data.columns:
             raise ValueError(f"Missing required column: {SIMULATION_PATH}")
         diff = set(self.conditions) - set(self.data.columns)
@@ -100,7 +100,7 @@ class SimulationsConfig:
         """Return the wrapped dataframe."""
         return self._data
 
-    def to_pandas(self):
+    def to_pandas(self) -> pd.DataFrame:
         """Return a copy of the wrapped dataframe.
 
         It can be used to avoid any unintentional modification of the internal dataframe.
@@ -108,7 +108,7 @@ class SimulationsConfig:
         return self.data.copy()
 
     @classmethod
-    def load(cls, path: Union[str, PathLike]) -> "SimulationsConfig":
+    def load(cls, path: StrOrPath) -> "SimulationsConfig":
         """Load the configuration from file.
 
         Different file formats are supported:
@@ -132,17 +132,17 @@ class SimulationsConfig:
             return cls.from_xarray(da)
         raise ValueError("Unable to detect the configuration format")
 
-    def dump(self, path):
+    def dump(self, path: StrOrPath) -> None:
         """Save the configuration to file."""
         dump_yaml(path, data=self.to_dict())
 
     @classmethod
-    def from_dict(cls, d):
+    def from_dict(cls, d: Dict) -> "SimulationsConfig":
         """Load the configuration from dict."""
         data = pd.DataFrame.from_dict(d["data"])
         return cls(data=data, name=d["name"], attrs=d["attrs"], conditions=d["conditions"])
 
-    def to_dict(self):
+    def to_dict(self) -> Dict:
         """Convert the configuration to dict."""
         return {
             "format": "blueetl",
@@ -154,12 +154,12 @@ class SimulationsConfig:
         }
 
     @classmethod
-    def from_xarray(cls, da):
+    def from_xarray(cls, da: xr.DataArray) -> "SimulationsConfig":
         """Load the configuration from xarray.DataArray."""
         data = da.rename(SIMULATION_PATH).to_dataframe().reset_index()
-        return cls(data=data, name=da.name, attrs=da.attrs)
+        return cls(data=data, name=str(da.name), attrs=da.attrs)
 
-    def to_xarray(self):
+    def to_xarray(self) -> xr.DataArray:
         """Convert the configuration to xarray.DataArray."""
         s = self.data.set_index(self.conditions)[SIMULATION_PATH]
         s.name = self.name

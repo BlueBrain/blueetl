@@ -61,7 +61,7 @@ setup(
     license="BBP-internal-confidential",
     install_requires=REQUIREMENTS["core"],
     packages=find_packages(),
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     extras_require={
         "docs": REQUIREMENTS["docs"],
         "spa": REQUIREMENTS["spa"],
@@ -73,7 +73,6 @@ setup(
         "Intended Audience :: Science/Research",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Topic :: Scientific/Engineering :: Bio-Informatics",

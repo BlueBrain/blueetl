@@ -2,13 +2,14 @@
 import json
 import logging
 from functools import cached_property
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
 
 from blueetl.cache import CacheManager
 from blueetl.config.simulations import SimulationsConfig
 from blueetl.constants import CIRCUIT_ID, SIMULATION_ID, SIMULATION_PATH
+from blueetl.extract.base import ExtractorT
 from blueetl.extract.neuron_classes import NeuronClasses
 from blueetl.extract.neurons import Neurons
 from blueetl.extract.simulations import Simulations
@@ -44,7 +45,7 @@ class Repository:
             "spikes",
         ]
 
-    def __getstate__(self):
+    def __getstate__(self) -> Dict:
         """Get the object state when the object is pickled."""
         if not self.is_extracted():
             # ensure that the dataframes are extracted and stored to disk,
@@ -54,7 +55,7 @@ class Repository:
         # Copy the object's state from self.__dict__, excluding the unpicklable entries.
         return {k: v for k, v in self.__dict__.items() if k not in self.names}
 
-    def __setstate__(self, state):
+    def __setstate__(self, state: Dict) -> None:
         """Set the object state when the object is unpickled."""
         # Restore instance attributes
         self.__dict__.update(state)
@@ -99,7 +100,12 @@ class Repository:
         """Return the list of simulation ids, possibly filtered."""
         return self.simulations.df[SIMULATION_ID].to_list()
 
-    def _extraction_wrapper(self, name, extract_cached, extract_new):
+    def _extraction_wrapper(
+        self,
+        name: str,
+        extract_cached: Callable[[pd.DataFrame], ExtractorT],
+        extract_new: Callable[[], ExtractorT],
+    ) -> ExtractorT:
         """Return an object extracted from the cache or as new.
 
         Args:
@@ -123,10 +129,10 @@ class Repository:
             return instance
 
     def _extract_simulations(self) -> Simulations:
-        def _extract_cached(df):
+        def _extract_cached(df: pd.DataFrame) -> Simulations:
             return Simulations.from_pandas(df, query=self._simulations_filter)
 
-        def _extract_new():
+        def _extract_new() -> Simulations:
             return Simulations.from_config(
                 config=self._simulations_config,
                 query=self._simulations_filter,
@@ -139,14 +145,14 @@ class Repository:
         )
 
     def _extract_neurons(self) -> Neurons:
-        def _extract_cached(df):
+        def _extract_cached(df: pd.DataFrame) -> Neurons:
             query = {}
             if self.simulation_ids:
                 selected_sims = self.simulations.df.etl.q(simulation_id=self.simulation_ids)
                 query = {CIRCUIT_ID: sorted(set(selected_sims[CIRCUIT_ID]))}
             return Neurons.from_pandas(df, query=query)
 
-        def _extract_new():
+        def _extract_new() -> Neurons:
             return Neurons.from_simulations(
                 simulations=self.simulations,
                 target=self._extraction_config["target"],
@@ -161,14 +167,14 @@ class Repository:
         )
 
     def _extract_neuron_classes(self) -> NeuronClasses:
-        def _extract_cached(df):
+        def _extract_cached(df: pd.DataFrame) -> NeuronClasses:
             query = {}
             if self.simulation_ids:
                 selected_sims = self.simulations.df.etl.q(simulation_id=self.simulation_ids)
                 query = {CIRCUIT_ID: sorted(set(selected_sims[CIRCUIT_ID]))}
             return NeuronClasses.from_pandas(df, query=query)
 
-        def _extract_new():
+        def _extract_new() -> NeuronClasses:
             return NeuronClasses.from_neurons(
                 neurons=self.neurons,
                 target=self._extraction_config["target"],
@@ -183,11 +189,11 @@ class Repository:
         )
 
     def _extract_trial_steps(self) -> TrialSteps:
-        def _extract_cached(df):
+        def _extract_cached(df: pd.DataFrame) -> TrialSteps:
             query = {SIMULATION_ID: self.simulation_ids} if self.simulation_ids else {}
             return TrialSteps.from_pandas(df, query=query)
 
-        def _extract_new():
+        def _extract_new() -> TrialSteps:
             return TrialSteps.from_simulations(
                 simulations=self.simulations,
                 config=self._extraction_config,
@@ -200,11 +206,11 @@ class Repository:
         )
 
     def _extract_windows(self) -> Windows:
-        def _extract_cached(df):
+        def _extract_cached(df: pd.DataFrame) -> Windows:
             query = {SIMULATION_ID: self.simulation_ids} if self.simulation_ids else {}
             return Windows.from_pandas(df, query=query)
 
-        def _extract_new():
+        def _extract_new() -> Windows:
             return Windows.from_simulations(
                 simulations=self.simulations,
                 trial_steps=self.trial_steps,
@@ -218,11 +224,11 @@ class Repository:
         )
 
     def _extract_spikes(self) -> Spikes:
-        def _extract_cached(df):
+        def _extract_cached(df: pd.DataFrame) -> Spikes:
             query = {SIMULATION_ID: self.simulation_ids} if self.simulation_ids else {}
             return Spikes.from_pandas(df, query=query)
 
-        def _extract_new():
+        def _extract_new() -> Spikes:
             return Spikes.from_simulations(
                 simulations=self.simulations,
                 neurons=self.neurons,

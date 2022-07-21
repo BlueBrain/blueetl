@@ -10,7 +10,7 @@ from blueetl.utils import timed
 L = logging.getLogger(__name__)
 
 
-def _category_to_object(df):
+def _category_to_object(df: pd.DataFrame) -> pd.DataFrame:
     # Prevent error: Cannot store a category dtype in a HDF5 dataset that uses format="fixed"
     return df.astype({name: "object" for name in df.columns[df.dtypes == "category"]})
 
@@ -29,7 +29,7 @@ class HDFStore(BaseStore):
         with timed(L.debug, "Writing %s to %s", name, path):
             df = _category_to_object(df)
             df.to_hdf(
-                path,
+                str(path),
                 key=name,
                 mode="w",
                 # complib="blosc",

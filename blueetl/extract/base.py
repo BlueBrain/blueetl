@@ -37,7 +37,7 @@ class BaseExtractor(ABC):
     def _validate_data(cls, df: pd.DataFrame) -> None:
         """Validate the content of the dataframe."""
         if not cls._allow_empty_data and len(df) == 0:
-            raise RuntimeError(f"No data in {cls.__name__}")
+            raise RuntimeError(f"No data extracted to {cls.__name__}")
 
     @classmethod
     def _validate_columns(cls, df: pd.DataFrame) -> None:

@@ -68,17 +68,13 @@ class Analyzer:
         config["simulation_campaign"] = base_path / config["simulation_campaign"]
         return config
 
-    def extract_repo(self, debug: bool = False) -> None:
+    def extract_repo(self) -> None:
         """Extract all the repositories dataframes."""
         self.repo.extract()
-        if debug:
-            self.repo.print()
 
-    def calculate_features(self, debug: bool = False) -> None:
+    def calculate_features(self) -> None:
         """Calculate all the features defined in the configuration."""
         self.features.calculate()
-        if debug:
-            self.features.print()
 
     def try_one(self, groupby: List[str]) -> Tuple[NamedTuple, pd.DataFrame]:
         """Return the first key and df when grouping spikes by the given list of columns.

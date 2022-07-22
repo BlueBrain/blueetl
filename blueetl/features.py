@@ -70,7 +70,7 @@ class FeaturesCollection:
     def _update(self, mapping: Mapping[str, Feature]) -> None:
         self._data.update(mapping)
 
-    def print(self) -> None:
+    def _print(self) -> None:
         """Print some information about the instance.
 
         Only for debug and internal use, it may be removed in a future release.
@@ -246,7 +246,6 @@ def call_by_simulation(
     Args:
         repo: repository instance.
         func: callable called for each simulation, accepting
-            simulation_index: NamedTuple
             simulation_row: NamedTuple
             simulation_spikes: pd.DataFrame
             simulation_windows: pd.DataFrame
@@ -268,14 +267,13 @@ def call_by_simulation(
                 .etl.q(circuit_id=circuit_id)
                 .etl.iter()
             )
-            for simulation_index, simulation_row in it:
+            for _, simulation_row in it:
                 simulation_id = simulation_row.simulation_id
                 simulation_spikes = repo.spikes.df.etl.q(simulation_id=simulation_id)
                 simulation_windows = repo.windows.df.etl.q(simulation_id=simulation_id)
                 yield Task(
                     partial(
                         func,
-                        simulation_index=simulation_index,
                         simulation_row=simulation_row,
                         simulation_spikes=simulation_spikes,
                         simulation_windows=simulation_windows,

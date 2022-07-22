@@ -62,7 +62,7 @@ def test_neuron_classes_from_neurons():
 def test_neuron_classes_from_neurons_without_neurons():
     mock_neurons = MagicMock()
     mock_neurons.count_by_neuron_class.return_value = _count_by_neuron_class([])
-    with pytest.raises(RuntimeError, match="No data in NeuronClasses"):
+    with pytest.raises(RuntimeError, match="No data extracted to NeuronClasses"):
         NeuronClasses.from_neurons(
             mock_neurons,
             target="atarget",

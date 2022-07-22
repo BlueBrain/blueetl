@@ -522,7 +522,7 @@ def test_groupby_run_parallel(dataframe1, params, expected):
         return tuple(key), df.to_dict(orient="records")
 
     obj = dataframe1
-    result = obj.etl.groupby_run_parallel(**params, func=func, jobs=2)
+    result = obj.etl.groupby_run_parallel(**params, func=func)
     assert result == expected
 
 
@@ -545,5 +545,5 @@ def test_groupby_apply_parallel(dataframe1, params, expected):
         return df.sum(axis=1)
 
     obj = dataframe1
-    result = obj.etl.groupby_apply_parallel(**params, func=func, jobs=2)
+    result = obj.etl.groupby_apply_parallel(**params, func=func)
     assert_series_equal(result, expected)

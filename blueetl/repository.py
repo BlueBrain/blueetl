@@ -279,7 +279,7 @@ class Repository:
             .drop(columns="_merge")
         )
 
-    def print(self) -> None:
+    def _print(self) -> None:
         """Print some information about the instance.
 
         Only for debug and internal use, it may be removed in a future release.

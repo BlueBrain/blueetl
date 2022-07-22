@@ -125,7 +125,7 @@ def test_neurons_from_simulations_without_neurons():
     neuron_classes = {
         "EMPTY": {"layer": [999]},
     }
-    with pytest.raises(RuntimeError, match="No data in Neurons"):
+    with pytest.raises(RuntimeError, match="No data extracted to Neurons"):
         Neurons.from_simulations(
             simulations=mock_simulations, target="hex0", neuron_classes=neuron_classes, limit=None
         )

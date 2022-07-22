@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 import importlib.util
+from pathlib import Path
 
 from setuptools import find_packages, setup
 
-# read the contents of the README file
-with open("README.rst", encoding="utf-8") as f:
-    README = f.read()
+README = Path("README.rst").read_text(encoding="utf-8")
 
 spec = importlib.util.spec_from_file_location(
     "blueetl.version",
@@ -25,19 +24,17 @@ REQUIREMENTS = {
     "extra": [
         "tables>=3.6.1",  # needed by pandas to read and write hdf files
         "pyarrow>=7",  # needed by pandas to read and write feather or parquet files
-        "elephant>=0.10.0",
-        "quantities>=0.13.0",
-        "seaborn>=0.11.2",
-        "scipy>=1.8.0",
-        "matplotlib>=3.4.3",
         "xarray>=0.18.0",
         "bluepy>=2.4",
     ],
-    "spa": [
-        "simProjectAnalysis @ git+ssh://git@bbpgitlab.epfl.ch/conn/personal/reimann/bbp-analysis-framework.git@newbluepy#egg=simProjectAnalysis",
-        "progressbar>=2.5",  # needed by simProjectAnalysis
-        "future",  # needed by simProjectAnalysis
-        "interval>=1.0.0",  # to avoid a DependencyWarning in NeuroTools
+    "bnac": [
+        "seaborn>=0.11.2",
+        "scipy>=1.8.0",
+        "matplotlib>=3.4.3",
+    ],
+    "bluecv": [
+        "elephant>=0.10.0",
+        "quantities>=0.13.0",
     ],
     "docs": [
         "sphinx",
@@ -65,8 +62,9 @@ setup(
     python_requires=">=3.8",
     extras_require={
         "docs": REQUIREMENTS["docs"],
-        "spa": REQUIREMENTS["spa"],
-        "all": REQUIREMENTS["extra"],
+        "bnac": REQUIREMENTS["extra"] + REQUIREMENTS["bnac"],
+        "bluecv": REQUIREMENTS["extra"] + REQUIREMENTS["bluecv"],
+        "all": REQUIREMENTS["extra"] + REQUIREMENTS["bnac"] + REQUIREMENTS["bluecv"],
     },
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",

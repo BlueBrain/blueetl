@@ -8,4 +8,4 @@ First release including:
 
 - Core Transformations
 - Simulation Campaign Configuration
-- Spike Analysis (Extraction and Features Collection)
+- Spike Analysis (Repository Extraction and Features Collection)

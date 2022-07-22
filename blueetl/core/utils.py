@@ -206,6 +206,7 @@ def concat_tuples(iterable, *args, **kwargs):
 
     Args:
         iterable: iterable of tuples (value, conditions), where
+
             - value is a single value that will be added to the Series
             - conditions is a dict containing the conditions to be used for the MultiIndex.
               The keys of the conditions must be the same for each tuple of the iterable,

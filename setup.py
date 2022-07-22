@@ -42,6 +42,7 @@ REQUIREMENTS = {
     "docs": [
         "sphinx",
         "sphinx-bluebrain-theme",
+        "myst-nb",
     ],
 }
 

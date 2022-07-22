@@ -13,6 +13,7 @@
 # import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
+import subprocess
 
 from pkg_resources import get_distribution
 
@@ -33,7 +34,13 @@ release = version
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = []
+extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.extlinks",
+    "myst_nb",
+]
 
 # Add any paths that contain templates here, relative to this directory.
 # templates_path = ['_templates']
@@ -64,3 +71,29 @@ html_title = "blueetl"
 
 # If true, links to the reST sources are added to the pages.
 html_show_sourcelink = False
+
+# autodoc settings
+autodoc_default_options = {
+    "members": True,
+    "show-inheritance": True,
+}
+
+autoclass_content = "both"
+
+autodoc_mock_imports = ["xarray"]
+
+# autosummary settings
+autosummary_generate = True
+
+nb_execution_show_tb = True
+nb_execution_timeout = 60
+
+# generate the link to the notebooks on GitLab
+_base_url = "https://bbpgitlab.epfl.ch/nse/blueetl"
+_git_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+extlinks = {
+    "notebooks_source": (
+        f"{_base_url}/-/blob/{_git_commit}/doc/source/notebooks/%s.ipynb",
+        "Notebook: %s",
+    )
+}

@@ -1,21 +1,11 @@
 Changelog
 =========
 
-Version 0.1
------------
+Version 0.1.0
+-------------
 
-New Features
-~~~~~~~~~~~~
-- Example code in Python
+First release including:
 
-
-Bug Fixes
-~~~~~~~~~
-- Describe Bug Fixes here
-- Remove this subsection if there are no Bug Fixes
-
-
-Improvements
-~~~~~~~~~~~~
-- Describe Improvements here
-- Remove this subsection if there are no Improvements
+- Core Transformations
+- Simulation Campaign Configuration
+- Spike Analysis (Extraction and Features Collection)

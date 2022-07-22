@@ -6,4 +6,9 @@
    :maxdepth: 2
 
    Home <self>
+   installation
+   usage
+   components
+   notebooks
+   api
    changelog

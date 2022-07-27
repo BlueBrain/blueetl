@@ -1,6 +1,18 @@
 Changelog
 =========
 
+Version 0.1.1
+-------------
+
+New Features
+~~~~~~~~~~~~
+- Ignore simulations for which BlueConfig no longer exists [NSETM-1967]
+
+Improvements
+~~~~~~~~~~~~
+- Add env variable ``BLUEETL_SUBPROCESS_LOGGING_LEVEL`` to set a logging level in subprocesses.
+
+
 Version 0.1.0
 -------------
 

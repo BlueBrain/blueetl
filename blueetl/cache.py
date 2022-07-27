@@ -245,7 +245,7 @@ class CacheManager:
         Returns:
             The loaded dataframe, or None if it's not cached.
         """
-        L.info("Loading cached %s", name)
+        L.info("Loading cached %s if they exist", name)
         file_checksum = self._cached_checksums["repo"].get(name)
         # the checksums have been checked in _initialize_cache/_delete_cached_repo_files,
         # so they are not calculate again here
@@ -274,7 +274,7 @@ class CacheManager:
         Returns:
             Dict of dataframes, or None if they are not cached.
         """
-        L.info("Loading cached features")
+        L.info("Loading cached features if they exist")
         config_checksum = checksum_json(features_config)
         cached_dataframes = self._cached_checksums["features"].get(config_checksum, {})
         features = {}

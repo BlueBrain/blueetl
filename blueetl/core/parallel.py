@@ -12,6 +12,7 @@ from blueetl.core.constants import (
     BLUEETL_JOBLIB_BACKEND,
     BLUEETL_JOBLIB_JOBS,
     BLUEETL_JOBLIB_VERBOSE,
+    BLUEETL_SUBPROCESS_LOGGING_LEVEL,
 )
 from blueetl.utils import setup_logging
 
@@ -37,11 +38,12 @@ class Task:
         """
         self.func = func
 
-    @staticmethod
-    def _setup_logging(ctx: TaskContext) -> None:
+    def _setup_logging(self, ctx: TaskContext) -> None:
         """Initialize logging in a subprocess."""
-        logformat = f"%(asctime)s %(levelname)s %(name)s [task={ctx.task_id}]: %(message)s"
-        setup_logging(loglevel=ctx.loglevel, logformat=logformat, force=True)
+        loglevel = os.getenv(BLUEETL_SUBPROCESS_LOGGING_LEVEL)
+        if loglevel:
+            logformat = f"%(asctime)s %(levelname)s %(name)s [task={ctx.task_id}]: %(message)s"
+            setup_logging(loglevel=loglevel, logformat=logformat, force=True)
 
     @staticmethod
     def _setup_seed(ctx: TaskContext) -> None:
@@ -58,7 +60,7 @@ class Task:
             ctx: TaskContext instance containing the context information.
         """
         if ctx.ppid and ctx.ppid != os.getpid():
-            # setup logging and seed only when the task is executed in a subprocess
+            # only when the task is executed in a subprocess
             self._setup_logging(ctx)
             self._setup_seed(ctx)
         return self.func()

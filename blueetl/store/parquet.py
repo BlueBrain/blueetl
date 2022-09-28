@@ -4,8 +4,8 @@ from typing import Optional
 
 import pandas as pd
 
-from blueetl.extract.types import StrOrPath
 from blueetl.store.base import BaseStore
+from blueetl.types import StrOrPath
 from blueetl.utils import timed
 
 L = logging.getLogger(__name__)

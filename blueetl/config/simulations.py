@@ -7,7 +7,7 @@ import pandas as pd
 import xarray as xr
 
 from blueetl.constants import SIMULATION_PATH
-from blueetl.extract.types import StrOrPath
+from blueetl.types import StrOrPath
 from blueetl.utils import dump_yaml, load_yaml, resolve_path
 
 L = logging.getLogger(__name__)

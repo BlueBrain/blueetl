@@ -12,7 +12,7 @@ from bluepy.simulation import PathHelpers
 from blueetl.config.simulations import SimulationsConfig
 from blueetl.constants import CIRCUIT, CIRCUIT_ID, SIMULATION, SIMULATION_ID, SIMULATION_PATH
 from blueetl.extract.base import BaseExtractor
-from blueetl.extract.types import StrOrPath
+from blueetl.types import StrOrPath
 from blueetl.utils import checksum_json
 
 L = logging.getLogger(__name__)
@@ -73,6 +73,10 @@ class SimulationStatus(Enum):
     MISSING = "MISSING"
 
 
+class InconsistentSimulations(Exception):
+    """Error raised when the extracted simulations have some inconsistencies."""
+
+
 class Simulations(BaseExtractor):
     """Simulations extractor class."""
 
@@ -94,19 +98,29 @@ class Simulations(BaseExtractor):
         # use the cached circuit_id if available, or fallback to simulation_id
         circuit_id = rec.get(CIRCUIT_ID, simulation_id)
         simulation_path = rec[SIMULATION_PATH]
-        simulation = circuit = circuit_hash = None
+        # use the same Simulation and Circuit objects if available
+        simulation = rec.get(SIMULATION)
+        circuit = rec.get(CIRCUIT)
+        assert (
+            simulation and circuit or not simulation and not circuit
+        ), "Simulation and Circuit must be both initialized, or both not initialized"
+        circuit_hash = None
         status = SimulationStatus.MISSING
         if _is_simulation_existing(simulation_path):
             status = SimulationStatus.INCOMPLETE
-            simulation = Simulation(simulation_path)
+            simulation = simulation or Simulation(simulation_path)
             circuit_hash = _get_circuit_hash(simulation.circuit.config)
             # if circuit_hash is not new, use the previous circuit_id
             circuit_id = circuit_hashes.setdefault(circuit_hash, circuit_id)
-            circuit = circuits.setdefault(circuit_id, simulation.circuit)
+            circuit = circuit or circuits.setdefault(circuit_id, simulation.circuit)
+            # double-check the circuit config hash in case it was cached
+            if circuit_hash != _get_circuit_hash(circuit.config):
+                L.error("Inconsistent circuit hash and id, you may need to delete the cache")
+                raise InconsistentSimulations("Inconsistent hash and id")
             if _is_simulation_complete(simulation):
                 status = SimulationStatus.COMPLETE
         sim_repr = f"{simulation_id=}, {circuit_id=}, {circuit_hash=}, {simulation_path=}"
-        L.info("Processing simulation: %s", sim_repr)
+        L.debug("Processing simulation: %s", sim_repr)
         return {
             SIMULATION_ID: simulation_id,
             CIRCUIT_ID: circuit_id,
@@ -140,9 +154,7 @@ class Simulations(BaseExtractor):
             )
             # rec must be first for lower precedence in case of collisions
             records.append({**rec, **record})
-        if len(set(circuit_hashes.values())) != len(circuit_hashes):
-            L.error("Multiple circuits have the same circuit_id, you may need to delete the cache.")
-            raise RuntimeError("Inconsistent simulations")
+        assert len(set(circuit_hashes.values())) == len(circuit_hashes), "Inconsistent circuit ids"
         return pd.DataFrame(records)
 
     @classmethod
@@ -186,7 +198,7 @@ class Simulations(BaseExtractor):
                 "Some cached simulations are missing or incomplete, "
                 "you may need to delete the cache."
             )
-            raise RuntimeError("Inconsistent cached simulations")
+            raise InconsistentSimulations("Inconsistent cache")
         return df
 
     @classmethod

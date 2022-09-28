@@ -7,10 +7,13 @@ Version 0.1.1
 New Features
 ~~~~~~~~~~~~
 - Ignore simulations for which BlueConfig no longer exists [NSETM-1967]
+- Add optional in-memory filter [NSETM-1965]
 
 Improvements
 ~~~~~~~~~~~~
 - Add env variable ``BLUEETL_SUBPROCESS_LOGGING_LEVEL`` to set a logging level in subprocesses.
+- Improve log of execution times.
+- Improve performances of ``etl.q`` when only a single condition is specified.
 
 Bug Fixes
 ~~~~~~~~~

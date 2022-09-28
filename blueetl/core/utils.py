@@ -26,20 +26,22 @@ def query_frame(df: pd.DataFrame, query: Dict[str, Any]) -> pd.DataFrame:
     for key, value in query.items():
         q[mapping[key]][key] = value
     # filter by columns and index
-    masks = chain(
-        (compare(df[key], value) for key, value in q["columns"].items()),
-        (compare(df.index.get_level_values(key), value) for key, value in q["index"].items()),
+    masks = list(
+        chain(
+            (compare(df[key], value) for key, value in q["columns"].items()),
+            (compare(df.index.get_level_values(key), value) for key, value in q["index"].items()),
+        )
     )
-    return df.loc[np.all(list(masks), axis=0)]
+    return df.loc[masks[0] if len(masks) == 1 else np.all(masks, axis=0)]
 
 
 def query_series(series: pd.Series, query: Dict) -> pd.Series:
     """Given a query dictionary, return the Series filtered by index."""
     if not query:
         return series
-    # filter by columns and index
-    masks = (compare(series.index.get_level_values(key), value) for key, value in query.items())
-    return series.loc[np.all(list(masks), axis=0)]
+    # filter by index
+    masks = list(compare(series.index.get_level_values(key), value) for key, value in query.items())
+    return series.loc[masks[0] if len(masks) == 1 else np.all(masks, axis=0)]
 
 
 def compare(obj: Union[pd.DataFrame, pd.Series, pd.Index], value: Any) -> np.ndarray:

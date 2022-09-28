@@ -1,6 +1,7 @@
 """Cache Manager."""
 import logging
 from collections import namedtuple
+from copy import deepcopy
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Type
 
@@ -17,6 +18,10 @@ L = logging.getLogger(__name__)
 CoupledCache = namedtuple("CoupledCache", ["cached", "actual"])
 
 
+class CacheError(Exception):
+    """Cache error raised when a read-only cache is written."""
+
+
 class CacheManager:
     """Cache Manager."""
 
@@ -26,12 +31,19 @@ class CacheManager:
         simulations_config: SimulationsConfig,
         store_class: Type[BaseStore] = DefaultStore,
     ) -> None:
-        """Initialize the object."""
+        """Initialize the object.
+
+        Args:
+            analysis_config: analysis configuration dict.
+            simulations_config: simulations campaign configuration.
+            store_class: class to be used to load and dump the cached dataframes.
+        """
         repo_dir = Path(analysis_config["output"], "repo")
         features_dir = Path(analysis_config["output"], "features")
         config_dir = Path(analysis_config["output"], "config")
         config_dir.mkdir(exist_ok=True, parents=True)
 
+        self.readonly = False
         self._version = 1
         self._repo_store = store_class(repo_dir)
         self._features_store = store_class(features_dir)
@@ -50,6 +62,15 @@ class CacheManager:
         )
         self._cached_checksums = self._load_cached_checksums()
         self._initialize_cache()
+
+    def to_readonly(self) -> "CacheManager":
+        """Return a read-only copy of the object.
+
+        The returned object will raise an exception if `dump_repo` or `dump_features` is called.
+        """
+        obj = deepcopy(self)
+        obj.readonly = True
+        return obj
 
     def _load_cached_analysis_config(self) -> Optional[Dict]:
         """Load the cached analysis config if it exists."""
@@ -152,27 +173,30 @@ class CacheManager:
                 invalidated.append(name)
         L.info("Invalidated cache: %s", invalidated)
 
-    def _check_config_cache(self) -> None:
+    def _check_config_cache(self) -> bool:
         """Compare the cached and actual configurations.
 
         Only the cache of incompatible dataframes is invalidated.
+
+        Returns:
+            True if the cache is valid and complete, False otherwise.
         """
         if not self._analysis_configs.cached or not self._simulations_configs.cached:
             self._invalidate_cached_checksums()
-            return
+            return False
 
         # check the criteria used to filter the simulations
-        actual_filter = self._analysis_configs.actual["extraction"].get("simulations_filter", {})
-        cached_filter = self._analysis_configs.cached["extraction"].get("simulations_filter", {})
+        actual_filter = self._analysis_configs.actual.get("simulations_filter", {})
+        cached_filter = self._analysis_configs.cached.get("simulations_filter", {})
         if not is_subfilter(actual_filter, cached_filter):
             # the filter is less specific, so the cache cannot be used
             self._invalidate_cached_checksums()
-            return
+            return False
 
         # check the simulations config
         if self._simulations_configs.cached != self._simulations_configs.actual:
             self._invalidate_cached_checksums({"simulations"})
-            return
+            return False
 
         # check the extraction config for neurons
         if any(
@@ -181,7 +205,7 @@ class CacheManager:
             for k in ["neuron_classes", "limit", "target"]
         ):
             self._invalidate_cached_checksums({"neurons", "neuron_classes"})
-            return
+            return False
 
         # check the extraction config for windows and spikes
         if any(
@@ -190,7 +214,7 @@ class CacheManager:
             for k in ["windows", "trial_steps"]
         ):
             self._invalidate_cached_checksums({"trial_steps", "windows", "spikes"})
-            return
+            return False
 
         # check the features config
         valid_checksums = set()
@@ -200,27 +224,58 @@ class CacheManager:
                 valid_checksums.add(config_checksum)
 
         # invalidate the invalid features checksums
+        is_valid = True
         for config_checksum, d in self._cached_checksums["features"].items():
             if config_checksum not in valid_checksums:
+                is_valid = False
                 for _name in d:
                     d[_name] = None
 
-    def _delete_cached_repo_files(self) -> None:
-        """Delete the cached repo files if the checksum is None or different."""
-        for name, file_checksum in self._cached_checksums["repo"].copy().items():
-            if file_checksum != self._repo_store.checksum(name):
-                L.info("Deleting cached repo %s", name)
-                self._repo_store.delete(name)
-                del self._cached_checksums["repo"][name]
+        return is_valid
 
-    def _delete_cached_features_files(self) -> None:
-        """Delete the cached features files if the checksum is None or different."""
+    def _check_cached_repo_files(self) -> Set[str]:
+        """Determine the cached repo files to be deleted b/c the checksum is None or different.
+
+        Returns:
+            set of repository names to be deleted.
+        """
+        to_be_deleted = set()
+        for name, file_checksum in self._cached_checksums["repo"].items():
+            if file_checksum != self._repo_store.checksum(name):
+                to_be_deleted.add(name)
+        return to_be_deleted
+
+    def _delete_cached_repo_files(self, to_be_deleted: Set[str]) -> None:
+        """Delete the given repository files.
+
+        Args:
+            to_be_deleted: set of repository names to be deleted.
+        """
+        for name in to_be_deleted:
+            L.info("Deleting cached repo %s", name)
+            self._repo_store.delete(name)
+            del self._cached_checksums["repo"][name]
+
+    def _check_cached_features_files(self) -> Set[str]:
+        """Determine the cached features files to be delated b/c the checksum is None or different.
+
+        Returns:
+            set of features checksums to be deleted.
+        """
         to_be_deleted = set()
         for config_checksum, checksums_by_name in self._cached_checksums["features"].items():
             for name, file_checksum in checksums_by_name.items():
                 if file_checksum != self._features_store.checksum(name):
                     to_be_deleted.add(config_checksum)
                     break
+        return to_be_deleted
+
+    def _delete_cached_features_files(self, to_be_deleted) -> None:
+        """Delete the files corresponding to the given features checksums.
+
+        Args:
+            to_be_deleted: set of features checksums to be deleted.
+        """
         for config_checksum in to_be_deleted:
             # delete every feature generated with the same configuration
             for name in self._cached_checksums["features"].pop(config_checksum):
@@ -229,10 +284,13 @@ class CacheManager:
 
     def _initialize_cache(self) -> None:
         """Initialize the cache."""
+        assert self.readonly is False, "Read-only cache cannot be initialized."
         L.info("Initialize cache")
         self._check_config_cache()
-        self._delete_cached_repo_files()
-        self._delete_cached_features_files()
+        repo_to_be_deleted = self._check_cached_repo_files()
+        features_to_be_deleted = self._check_cached_features_files()
+        self._delete_cached_repo_files(repo_to_be_deleted)
+        self._delete_cached_features_files(features_to_be_deleted)
         self._dump_analysis_config()
         self._dump_simulations_config()
 
@@ -258,6 +316,8 @@ class CacheManager:
             df: dataframe to be saved.
             name: name of the repo dataframe.
         """
+        if self.readonly:
+            raise CacheError("Trying to write a read-only cache")
         L.info("Writing cached %s", name)
         self._repo_store.dump(df, name)
         self._cached_checksums["repo"][name] = self._repo_store.checksum(name)
@@ -294,6 +354,8 @@ class CacheManager:
             features_dict: dict of features to be written.
             features_config: configuration dict of the features to be written.
         """
+        if self.readonly:
+            raise CacheError("Trying to write a read-only cache")
         L.info("Writing cached features")
         config_checksum = checksum_json(features_config)
         d = self._cached_checksums["features"][config_checksum] = {}

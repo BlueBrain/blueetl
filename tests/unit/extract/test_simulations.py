@@ -341,8 +341,8 @@ def test_simulations_from_pandas_load_incomplete_campaign(
 def test_simulations_from_pandas_load_inconsistent_campaign(
     mock_simulation_class, mock_is_complete, mock_is_existing
 ):
-    # the mocked simulations have different circuit_hash,
-    # the dataframe simulations have the same circuit_id
+    # the circuits of the mocked simulations have different circuit_hash,
+    # while the circuit_ids in the dataframe are the same
     mock_simulation0 = _get_mock_simulation(0)
     mock_simulation1 = _get_mock_simulation(1)
     mock_circuit0 = mock_simulation0.circuit
@@ -366,13 +366,13 @@ def test_simulations_from_pandas_load_inconsistent_campaign(
             },
         ]
     )
-    with pytest.raises(RuntimeError, match="Inconsistent simulations"):
+    with pytest.raises(test_module.InconsistentSimulations, match="Inconsistent hash and id"):
         test_module.Simulations.from_pandas(df)
 
     assert mock_simulation_class.call_count == 2
     assert mock_circuit0 != mock_circuit1
     assert mock_is_existing.call_count == 2
-    assert mock_is_complete.call_count == 2
+    assert mock_is_complete.call_count == 1
 
 
 @patch(f"{test_module.__name__}._is_simulation_existing", side_effect=[False, True])
@@ -404,7 +404,7 @@ def test_simulations_from_pandas_first_nonexistent(
             },
         ]
     )
-    with pytest.raises(RuntimeError, match="Inconsistent cached simulations"):
+    with pytest.raises(test_module.InconsistentSimulations, match="Inconsistent cache"):
         test_module.Simulations.from_pandas(df)
 
     assert mock_simulation_class.call_count == 1

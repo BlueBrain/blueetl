@@ -21,7 +21,7 @@ from blueetl.constants import (
 from blueetl.core.parallel import Task, run_parallel
 from blueetl.extract.feature import Feature
 from blueetl.repository import Repository
-from blueetl.utils import import_by_string, timed
+from blueetl.utils import import_by_string, timed, timed_log
 
 L = logging.getLogger(__name__)
 
@@ -34,6 +34,7 @@ class FeaturesCollection:
         features_configs: List[Dict],
         repo: Repository,
         cache_manager: CacheManager,
+        _dataframes: Dict[str, pd.DataFrame] = None,
     ) -> None:
         """Initialize the FeaturesCollection from the given list of configurations.
 
@@ -41,11 +42,12 @@ class FeaturesCollection:
             features_configs: list of features configuration dicts.
             repo: Repository instance.
             cache_manager: CacheManager instance.
+            _dataframes: DataFrames to be automatically loaded, only for internal use.
         """
         self._features_configs = features_configs
         self._repo = repo
         self._cache_manager = cache_manager
-        self._data: Dict[str, Feature] = {}
+        self._data = self._dataframes_to_features(_dataframes) if _dataframes else {}
 
     @property
     def names(self) -> List[str]:
@@ -82,24 +84,30 @@ class FeaturesCollection:
 
     def calculate(self) -> None:
         """Calculate all the features based on the configuration."""
+        if self._data:
+            # Features already calculated
+            return
+        t_log = timed_log(L.info)
         features_len = len(self._features_configs)
         for n, features_config in enumerate(self._features_configs):
             features = self._cache_manager.load_features(features_config=features_config)
             if features is not None:
-                L.info("Calculating features %s/%s: cached", n + 1, features_len)
+                L.info("Processing cached features %s/%s", n + 1, features_len)
                 initial_lengths = {name: len(df) for name, df in features.items()}
-                features = self._to_features(features)
+                features = self._dataframes_to_features(features)
                 # the len may have changed because of the filter on simulation ids
                 to_be_written = {
                     name
                     for name, feature in features.items()
                     if len(feature.df) != initial_lengths[name]
                 }
+                is_cached = True
             else:
-                L.info("Calculating features %s/%s: new", n + 1, features_len)
+                L.info("Processing new features %s/%s", n + 1, features_len)
                 method = getattr(self, f"_calculate_{features_config['type']}")
                 features = method(features_config)
                 to_be_written = set(features)
+                is_cached = False
             self._update(features)
             if to_be_written:
                 # write only the new or filtered dataframes
@@ -107,10 +115,16 @@ class FeaturesCollection:
                     {name: features[name].to_pandas() for name in to_be_written},
                     features_config=features_config,
                 )
+            t_log(
+                "Calculated features %s/%s: cached=%s, modified=%s",
+                n + 1,
+                features_len,
+                is_cached,
+                bool(to_be_written),
+            )
 
-    def _to_features(self, df_dict: Dict[str, pd.DataFrame]) -> Dict[str, Feature]:
-        simulation_ids = self._repo.simulation_ids
-        query = {SIMULATION_ID: simulation_ids} if simulation_ids else {}
+    def _dataframes_to_features(self, df_dict: Dict[str, pd.DataFrame]) -> Dict[str, Feature]:
+        query = {SIMULATION_ID: self._repo.simulation_ids}
         return {name: Feature.from_pandas(df, query=query) for name, df in df_dict.items()}
 
     def _calculate_single(self, features_config: Dict[str, Any]) -> Dict[str, Feature]:
@@ -121,7 +135,7 @@ class FeaturesCollection:
             features_params=features_config.get("params", {}),
         )
         name = str(features_config["name"])
-        return self._to_features({name: df})
+        return self._dataframes_to_features({name: df})
 
     def _calculate_multi(self, features_config: Dict[str, Any]) -> Dict[str, Feature]:
         df_dict = calculate_features_multi(
@@ -130,7 +144,20 @@ class FeaturesCollection:
             features_groupby=features_config["groupby"],
             features_params=features_config.get("params", {}),
         )
-        return self._to_features(df_dict)
+        return self._dataframes_to_features(df_dict)
+
+    def apply_filter(self, repo: Repository) -> "FeaturesCollection":
+        """Apply a filter based on the extracted simulations and return a new object.
+
+        Filtered dataframes are not written to disk.
+        """
+        dataframes = {name: features.df for name, features in self._data.items()}
+        return FeaturesCollection(
+            features_configs=self._features_configs,
+            repo=repo,
+            cache_manager=self._cache_manager.to_readonly(),
+            _dataframes=dataframes,
+        )
 
 
 def _get_spikes_for_all_neurons_and_windows(repo: Repository) -> pd.DataFrame:

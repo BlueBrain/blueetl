@@ -14,7 +14,7 @@ import pandas as pd
 import yaml
 
 from blueetl.constants import DTYPES
-from blueetl.extract.types import StrOrPath
+from blueetl.types import StrOrPath
 
 
 @contextmanager
@@ -26,6 +26,20 @@ def timed(log: Callable, msg: str, *args) -> Iterator[None]:
     finally:
         elapsed = time.monotonic() - start_time
         log(f"{msg} [{elapsed:.2f} seconds]", *args)
+
+
+def timed_log(log: Callable) -> Callable:
+    """Return a function to log the elapsed time since the initialization or the last call."""
+
+    def _timed_log(msg, *args):
+        nonlocal start_time
+        now = time.monotonic()
+        elapsed = now - start_time
+        start_time = now
+        log(f"{msg} [{elapsed:.2f} seconds]", *args)
+
+    start_time = time.monotonic()
+    return _timed_log
 
 
 def setup_logging(loglevel: Union[int, str], logformat: Optional[str] = None, **logparams) -> None:

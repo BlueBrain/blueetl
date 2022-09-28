@@ -6,7 +6,7 @@ from typing import Optional
 
 import pandas as pd
 
-from blueetl.extract.types import StrOrPath
+from blueetl.types import StrOrPath
 from blueetl.utils import checksum, resolve_path
 
 L = logging.getLogger(__name__)

@@ -24,6 +24,8 @@ REQUIREMENTS = {
     "extra": [
         "tables>=3.6.1",  # needed by pandas to read and write hdf files
         "pyarrow>=7,<9",  # needed by pandas to read and write feather or parquet files
+        "fastparquet>=0.8.3",  # needed by pandas to read and write parquet files
+        "orjson",  # faster json decoder used by fastparquet
         "xarray>=0.18.0",
         "bluepy>=2.4",
     ],

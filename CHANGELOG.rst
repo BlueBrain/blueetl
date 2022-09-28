@@ -12,6 +12,10 @@ Improvements
 ~~~~~~~~~~~~
 - Add env variable ``BLUEETL_SUBPROCESS_LOGGING_LEVEL`` to set a logging level in subprocesses.
 
+Bug Fixes
+~~~~~~~~~
+- Reset the index in the simulations dataframe after applying filters.
+
 
 Version 0.1.0
 -------------

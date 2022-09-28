@@ -168,6 +168,9 @@ class Simulations(BaseExtractor):
         assert len_missing + len_incomplete + len_complete == len_total
         # filter by the custom query if provided
         df = df.etl.q(query or {})
+        # reset the index to ensure that it doesn't contain gaps,
+        # while preserving the simulation_id in a dedicated column
+        df = df.reset_index(drop=True)
         len_final = len(df)
         L.info("Simulations ignored because missing: %s", len_missing)
         L.info("Simulations ignored because incomplete: %s", len_incomplete)

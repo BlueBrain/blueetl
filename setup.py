@@ -17,13 +17,13 @@ VERSION = module.__version__
 REQUIREMENTS = {
     "core": [
         "numpy>=1.19.4",
-        "pandas>=1.2.5",
+        "pandas>=1.2.5,<2",
         "pyyaml>=5.4.1",
         "joblib>=1.1.0",
     ],
     "extra": [
         "tables>=3.6.1",  # needed by pandas to read and write hdf files
-        "pyarrow>=7",  # needed by pandas to read and write feather or parquet files
+        "pyarrow>=7,<9",  # needed by pandas to read and write feather or parquet files
         "xarray>=0.18.0",
         "bluepy>=2.4",
     ],

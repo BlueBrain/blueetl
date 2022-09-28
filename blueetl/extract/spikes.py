@@ -35,9 +35,10 @@ class Spikes(BaseExtractor):
         t_start += offset
         t_stop += offset
         df = df[(df[TIME] >= t_start) & (df[TIME] < t_stop)].copy()
-        df.loc[:, [WINDOW, TRIAL]] = [name, trial]
+        df[WINDOW] = name
+        df[TRIAL] = trial
         # make the spike times relative to the offset
-        df.loc[:, TIME] -= offset
+        df[TIME] -= offset
         return df
 
     @classmethod

@@ -18,6 +18,8 @@ Improvements
 Bug Fixes
 ~~~~~~~~~
 - Reset the index in the simulations dataframe after applying filters.
+- Ensure that RangeIndex is converted to Int64Index in MultiIndexes with Pandas 1.5.0,
+  see https://issues.apache.org/jira/browse/ARROW-17806.
 
 
 Version 0.1.0

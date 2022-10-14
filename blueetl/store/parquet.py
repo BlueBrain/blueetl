@@ -21,7 +21,10 @@ class ParquetStore(BaseStore):
             "engine": "pyarrow",
             # "engine": "fastparquet",
             # "compression": "snappy",
-            # "index": None,
+            # Ensure that RangeIndex is converted to Int64Index in MultiIndexes with Pandas 1.5.0
+            # See https://issues.apache.org/jira/browse/ARROW-17806
+            # and https://github.com/pandas-dev/pandas/issues/46675
+            "index": True,
             # "partition_cols": None,
             # "storage_options": None,
         }

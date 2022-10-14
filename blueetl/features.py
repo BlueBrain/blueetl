@@ -54,6 +54,11 @@ class FeaturesCollection:
         """Return the names of all the calculated features."""
         return sorted(self._data)
 
+    @property
+    def cache_manager(self) -> CacheManager:
+        """Access to the cache manager."""
+        return self._cache_manager
+
     def __getattr__(self, name: str) -> Feature:
         """Return the features by name.
 
@@ -90,7 +95,7 @@ class FeaturesCollection:
         t_log = timed_log(L.info)
         features_len = len(self._features_configs)
         for n, features_config in enumerate(self._features_configs):
-            features = self._cache_manager.load_features(features_config=features_config)
+            features = self.cache_manager.load_features(features_config=features_config)
             if features is not None:
                 L.info("Processing cached features %s/%s", n + 1, features_len)
                 initial_lengths = {name: len(df) for name, df in features.items()}
@@ -111,7 +116,7 @@ class FeaturesCollection:
             self._update(features)
             if to_be_written:
                 # write only the new or filtered dataframes
-                self._cache_manager.dump_features(
+                self.cache_manager.dump_features(
                     {name: features[name].to_pandas() for name in to_be_written},
                     features_config=features_config,
                 )
@@ -155,7 +160,7 @@ class FeaturesCollection:
         return FeaturesCollection(
             features_configs=self._features_configs,
             repo=repo,
-            cache_manager=self._cache_manager.to_readonly(),
+            cache_manager=self.cache_manager.to_readonly(),
             _dataframes=dataframes,
         )
 

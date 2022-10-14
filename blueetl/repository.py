@@ -353,7 +353,7 @@ class Repository:
         return Repository(
             simulations_config=self._simulations_config,
             extraction_config=self._extraction_config,
-            cache_manager=self._cache_manager.to_readonly(),
+            cache_manager=self.cache_manager.to_readonly(),
             simulations_filter=simulations_filter,
             _dataframes=dataframes,
         )

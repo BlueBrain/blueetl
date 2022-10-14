@@ -26,9 +26,7 @@ def test_analyzer(analysis_config_file, expected, tmp_path):
     analysis_config = load_yaml(TEST_DATA_PATH / analysis_config_file)
     expected_path = GPFS_DATA_PATH / expected
 
-    with change_directory(tmp_path):
-        a = Analyzer(analysis_config)
-
+    def _test_repo(a):
         a.extract_repo()
 
         expected_df = _load_df(expected_path / "repo" / "simulations.parquet")
@@ -49,6 +47,7 @@ def test_analyzer(analysis_config_file, expected, tmp_path):
         expected_df = _load_df(expected_path / "repo" / "spikes.parquet")
         assert_frame_equal(a.repo.spikes.df, expected_df)
 
+    def _test_features(a):
         a.calculate_features()
 
         expected_df = _load_df(expected_path / "features" / "by_gid.parquet")
@@ -65,3 +64,13 @@ def test_analyzer(analysis_config_file, expected, tmp_path):
 
         expected_df = _load_df(expected_path / "features" / "histograms.parquet")
         assert_frame_equal(a.features.histograms.df, expected_df)
+
+    # test without cache
+    with change_directory(tmp_path), Analyzer(analysis_config) as analyzer:
+        _test_repo(analyzer)
+        _test_features(analyzer)
+
+    # test with cache
+    with change_directory(tmp_path), Analyzer(analysis_config) as analyzer:
+        _test_repo(analyzer)
+        _test_features(analyzer)

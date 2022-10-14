@@ -60,6 +60,23 @@ class Analyzer:
                 cache_manager=cache_manager,
             )
 
+    def __enter__(self):
+        """Initialize the object when used as a context manager."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Finalize the object when used as a context manager."""
+        self.close()
+
+    def close(self):
+        """Invalidate and unlock the cache.
+
+        After calling this method, the DataFrames already extracted can still be accessed,
+        but it's not possible to extract new data or calculate new features.
+        """
+        self.repo.cache_manager.close()
+        self.features.cache_manager.close()
+
     @property
     def simulations_filter(self) -> Optional[Dict[str, Any]]:
         """Return the simulations_filter from the analysis configuration."""

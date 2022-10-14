@@ -1,7 +1,10 @@
 """Cache Manager."""
+import fcntl
 import logging
+import os
 from collections import namedtuple
 from copy import deepcopy
+from functools import wraps
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Type
 
@@ -18,8 +21,67 @@ L = logging.getLogger(__name__)
 CoupledCache = namedtuple("CoupledCache", ["cached", "actual"])
 
 
+def _raise_if(**attrs):
+    """Raise if the decorated method is called and all the attrs are equal to the given values."""
+
+    def decorator(f):
+        @wraps(f)
+        def wrapper(self, *args, **kwargs):
+            if all(getattr(self, attr) == value for attr, value in attrs.items()):
+                raise CacheError(
+                    f"Method {self.__class__.__name__}.{f.__name__} "
+                    f"cannot be called when the attributes are: {attrs}"
+                )
+            return f(self, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
 class CacheError(Exception):
     """Cache error raised when a read-only cache is written."""
+
+
+class LockManager:
+    """Lock Manager.
+
+    On Linux, the flock call is handled locally, and the underlying filesystem (GPFS) does not get
+    any notification that locks are being set. Therefore, GPFS cannot enforce locks across nodes.
+    """
+
+    def __init__(self, path: os.PathLike) -> None:
+        """Initialize the object.
+
+        Args:
+            path: path to an existing directory to be used for locking.
+        """
+        self._path = path
+        self._fd: Optional[int] = None
+
+    @property
+    def locked(self) -> bool:
+        """Return True if the lock manager is locking the cache, False otherwise."""
+        return self._fd is not None
+
+    def lock(self) -> None:
+        """Lock exclusively the directory."""
+        if self.locked:
+            return
+        self._fd = os.open(self._path, os.O_RDONLY)
+        try:
+            fcntl.flock(self._fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except IOError:
+            os.close(self._fd)
+            self._fd = None
+            raise CacheError(f"Another process is locking {self._path}") from None
+
+    def unlock(self) -> None:
+        """Unlock the directory."""
+        if not self.locked:
+            return
+        os.close(self._fd)  # type: ignore[arg-type]
+        self._fd = None
 
 
 class CacheManager:
@@ -38,10 +100,15 @@ class CacheManager:
             simulations_config: simulations campaign configuration.
             store_class: class to be used to load and dump the cached dataframes.
         """
-        repo_dir = Path(analysis_config["output"], "repo")
-        features_dir = Path(analysis_config["output"], "features")
-        config_dir = Path(analysis_config["output"], "config")
-        config_dir.mkdir(exist_ok=True, parents=True)
+        self._output_dir = Path(analysis_config["output"])
+        repo_dir = self._output_dir / "repo"
+        features_dir = self._output_dir / "features"
+        config_dir = self._output_dir / "config"
+        for new_dir in repo_dir, features_dir, config_dir:
+            new_dir.mkdir(exist_ok=True, parents=True)
+
+        self._lock_manager = LockManager(self._output_dir)
+        self._lock_manager.lock()
 
         self.readonly = False
         self._version = 1
@@ -63,6 +130,19 @@ class CacheManager:
         self._cached_checksums = self._load_cached_checksums()
         self._initialize_cache()
 
+    @property
+    def locked(self) -> bool:
+        """Return True if the cache manager is locking the cache, False otherwise."""
+        return self._lock_manager.locked
+
+    def close(self) -> None:
+        """Close the cache manager and unlock the lock directory.
+
+        After calling this method, the Cache Manager instance shouldn't be used anymore.
+        """
+        self._lock_manager.unlock()
+
+    @_raise_if(locked=False)
     def to_readonly(self) -> "CacheManager":
         """Return a read-only copy of the object.
 
@@ -282,9 +362,10 @@ class CacheManager:
                 L.info("Deleting invalid cached features %s", name)
                 self._features_store.delete(name)
 
+    @_raise_if(readonly=True)
+    @_raise_if(locked=False)
     def _initialize_cache(self) -> None:
         """Initialize the cache."""
-        assert self.readonly is False, "Read-only cache cannot be initialized."
         L.info("Initialize cache")
         self._check_config_cache()
         repo_to_be_deleted = self._check_cached_repo_files()
@@ -294,6 +375,7 @@ class CacheManager:
         self._dump_analysis_config()
         self._dump_simulations_config()
 
+    @_raise_if(locked=False)
     def load_repo(self, name: str) -> Optional[pd.DataFrame]:
         """Load a specific repo dataframe from the cache.
 
@@ -309,6 +391,8 @@ class CacheManager:
         # so they are not calculate again here
         return self._repo_store.load(name) if file_checksum else None
 
+    @_raise_if(readonly=True)
+    @_raise_if(locked=False)
     def dump_repo(self, df: pd.DataFrame, name: str) -> None:
         """Write a specific repo dataframe to the cache.
 
@@ -316,13 +400,12 @@ class CacheManager:
             df: dataframe to be saved.
             name: name of the repo dataframe.
         """
-        if self.readonly:
-            raise CacheError("Trying to write a read-only cache")
         L.info("Writing cached %s", name)
         self._repo_store.dump(df, name)
         self._cached_checksums["repo"][name] = self._repo_store.checksum(name)
         self._dump_cached_checksums()
 
+    @_raise_if(locked=False)
     def load_features(self, features_config: Dict) -> Optional[Dict[str, pd.DataFrame]]:
         """Load features dataframes from the cache.
 
@@ -345,6 +428,8 @@ class CacheManager:
             features[name] = self._features_store.load(name)
         return features or None
 
+    @_raise_if(readonly=True)
+    @_raise_if(locked=False)
     def dump_features(self, features_dict: Dict[str, pd.DataFrame], features_config: Dict) -> None:
         """Write features dataframes to the cache.
 
@@ -354,8 +439,6 @@ class CacheManager:
             features_dict: dict of features to be written.
             features_config: configuration dict of the features to be written.
         """
-        if self.readonly:
-            raise CacheError("Trying to write a read-only cache")
         L.info("Writing cached features")
         config_checksum = checksum_json(features_config)
         d = self._cached_checksums["features"][config_checksum] = {}

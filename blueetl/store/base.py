@@ -25,7 +25,6 @@ class BaseStore(ABC):
             basedir: base directory where the files should be stored.
         """
         self._basedir = resolve_path(basedir)
-        self._basedir.mkdir(parents=True, exist_ok=True)
         L.info("Using class %s with basedir %s", self.__class__.__name__, self.basedir)
 
     @property

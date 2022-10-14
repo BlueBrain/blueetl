@@ -4,8 +4,23 @@ target-version = [
     'py38',
     'py39',
 ]
-include = 'blueetl\/.*\.py$|tests\/.*\.py$|doc\/source\/conf\.py$|setup\.py$'
+include = 'src/blueetl\/.*\.py$|tests\/.*\.py$|doc\/source\/conf\.py$|setup\.py$'
 
 [tool.isort]
 profile = "black"
 line_length = 100
+
+[tool.coverage.paths]
+source = [
+   "src",
+   "*/site-packages",
+]
+
+[tool.coverage.run]
+branch = true
+parallel = false
+
+[tool.coverage.report]
+show_missing = true
+precision = 0
+fail_under = 80

@@ -8,7 +8,7 @@ README = Path("README.rst").read_text(encoding="utf-8")
 
 spec = importlib.util.spec_from_file_location(
     "blueetl.version",
-    "blueetl/version.py",
+    "src/blueetl/version.py",
 )
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
@@ -60,7 +60,8 @@ setup(
     },
     license="BBP-internal-confidential",
     install_requires=REQUIREMENTS["core"],
-    packages=find_packages(),
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
     python_requires=">=3.8",
     extras_require={
         "docs": REQUIREMENTS["docs"],

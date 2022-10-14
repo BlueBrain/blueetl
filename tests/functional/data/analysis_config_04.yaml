@@ -1,8 +1,8 @@
 ---
-# configuration with simulations_filter and a window with trial_steps
+# configuration with simulations_filter_in_memory
 simulation_campaign: /gpfs/bbp.cscs.ch/project/proj12/NSE/blueetl/data/sim-campaign-bluepy/11567ba9-57fa-41ec-ac7b-d727ec4e65f3/config.json
 output: analysis_output
-simulations_filter:
+simulations_filter_in_memory:
   foo: "2"
 extraction:
   neuron_classes:
@@ -21,19 +21,6 @@ extraction:
   windows:
     w1: { bounds: [ 20, 90 ], window_type: spontaneous }
     w2: { bounds: [ 10, 70 ], initial_offset: 10, n_trials: 3, trial_steps_value: 10 }
-    w3: { bounds: [ 0, 25 ], initial_offset: 50, n_trials: 5, trial_steps_label: ts1 }
-  trial_steps:
-    ts1:
-      function: blueetl.external.bnac.calculate_trial_step.onset_from_spikes
-      initial_offset: 50
-      bounds: [ -50, 25 ]
-      pre_window: [ -50, 0 ]
-      post_window: [ 0, 25 ]
-      smoothing_width: 0.1
-      histo_bins_per_ms: 5
-      threshold_std_multiple: 4
-      ms_post_offset: 1
-      fig_paths: [ ]
 analysis:
   features:
     - type: multi

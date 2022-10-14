@@ -42,6 +42,7 @@ class NeuronClasses(BaseExtractor):
             # index: circuit_id, neuron_class
             neuron_class_conf = neuron_classes[index.neuron_class].copy()
             limit = neuron_class_conf.pop("$limit", limit)
+            target = neuron_class_conf.pop("$target", target)
             results.append(
                 {
                     CIRCUIT_ID: index.circuit_id,

@@ -33,15 +33,23 @@ class Neurons(BaseExtractor):
         neuron_classes: Dict[str, Dict],
         limit: Optional[int] = None,
     ) -> Dict[str, np.ndarray]:
-        properties = list(set(chain.from_iterable(neuron_classes.values())))
+        cells_cache = {}
+        properties = set(chain.from_iterable(neuron_classes.values()))
         properties = [p for p in properties if not p.startswith("$")]
-        with timed(L.info, "Cells loaded from circuit"):
-            cells_group = {"$target": target} if target else None
-            cells = circuit.cells.get(group=cells_group, properties=properties)
+
+        def _load_cells(_target):
+            if _target not in cells_cache:
+                with timed(L.info, "Cells loaded from circuit for target %s", _target):
+                    _cells_group = {"$target": _target} if _target else None
+                    _cells = circuit.cells.get(group=_cells_group, properties=properties)
+                    cells_cache[_target] = _cells
+            return cells_cache[_target]
+
         result = {}
         for neuron_class, group in neuron_classes.items():
             group = group.copy()
             neuron_limit = group.pop("$limit", limit)
+            cells = _load_cells(group.pop("$target", target))
             # selection by gid is different because the gid index has no name
             selected_gids = group.pop(GID, None)
             gids = cells.etl.q(group).index.to_numpy()

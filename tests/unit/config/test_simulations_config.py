@@ -4,7 +4,7 @@ import xarray as xr
 
 from blueetl.config.simulations import SimulationsConfig
 from blueetl.utils import load_yaml
-from utils import TEST_DATA_PATH, assert_frame_equal, assert_xr_equal
+from tests.unit.utils import TEST_DATA_PATH, assert_frame_equal, assert_xr_equal
 
 
 @pytest.mark.parametrize(

@@ -95,7 +95,7 @@ def test_trial_steps_from_simulations():
         "limit": None,
         "trial_steps": {
             "ts1": {
-                "function": "test_trial_steps.custom_func",
+                "function": f"{__name__}.custom_func",
                 "initial_offset": 7000,
                 "bounds": [-50, 25],
             },

@@ -12,4 +12,3 @@ venv
 .eggs
 .idea
 .ipynb_checkpoints
-*.parquet

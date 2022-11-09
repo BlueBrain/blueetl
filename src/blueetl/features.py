@@ -34,7 +34,7 @@ class FeaturesCollection:
         features_configs: List[Dict],
         repo: Repository,
         cache_manager: CacheManager,
-        _dataframes: Dict[str, pd.DataFrame] = None,
+        _dataframes: Optional[Dict[str, pd.DataFrame]] = None,
     ) -> None:
         """Initialize the FeaturesCollection from the given list of configurations.
 

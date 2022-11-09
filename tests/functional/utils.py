@@ -1,9 +1,10 @@
+import contextlib
 import os
 from contextlib import contextmanager
 from pathlib import Path
 
 TEST_DATA_PATH = Path(__file__).parent / "data"
-GPFS_DATA_PATH = Path("/gpfs/bbp.cscs.ch/project/proj12/NSE/blueetl/data")
+EXPECTED_PATH = TEST_DATA_PATH / "expected"
 
 
 @contextmanager
@@ -15,3 +16,11 @@ def change_directory(path):
         yield
     finally:
         os.chdir(original_cwd)
+
+
+@contextlib.contextmanager
+def assertion_error_message(msg):
+    try:
+        yield
+    except AssertionError as ex:
+        raise AssertionError(f"{msg}\n{ex}") from ex

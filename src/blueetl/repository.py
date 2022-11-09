@@ -182,7 +182,7 @@ class Repository:
         extraction_config: Dict[str, Any],
         cache_manager: CacheManager,
         simulations_filter: Optional[Dict[str, Any]] = None,
-        _dataframes: Dict[str, pd.DataFrame] = None,
+        _dataframes: Optional[Dict[str, pd.DataFrame]] = None,
     ) -> None:
         """Initialize the repository.
 

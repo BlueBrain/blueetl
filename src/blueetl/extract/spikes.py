@@ -85,17 +85,15 @@ class Spikes(BaseExtractor):
         )
         df_list = []
         for index, rec in grouped.etl.iter():
-            # TODO: verify if loading spikes in parallel can improve the performance
             L.info(
-                "Processing simulation_id=%s, circuit_id=%s, neuron_class=%s: %s gids",
+                "Extracting %s for simulation_id=%s, circuit_id=%s, neuron_class=%s: %s gids",
+                cls.__name__,
                 *index,
                 len(rec.gid),
             )
             windows_df = windows.df.etl.q(simulation_id=index.simulation_id)
             tmp_df = cls._load_spikes(rec.simulation, rec.gid, windows_df)
             tmp_df[columns] = list(index)
-            # TODO: verify if converting NEURON_CLASS to category here using CategoricalDtype
-            #  can reduce the memory temporarily needed during the process.
             df_list.append(tmp_df)
         df = pd.concat(df_list, ignore_index=True, copy=False)
         return cls(df)

@@ -15,6 +15,7 @@ Improvements
 - Improve log of execution times.
 - Improve performances of ``etl.q`` when only a single condition is specified.
 - Lock the cache used by the Analyzer instance [NSETM-1971]
+- Make the function `call_by_simulation` more flexible.
 
 Bug Fixes
 ~~~~~~~~~

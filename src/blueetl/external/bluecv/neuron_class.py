@@ -3,6 +3,7 @@ import logging
 from functools import partial
 
 import numpy as np
+import pandas as pd
 from elephant import spectral, statistics
 from elephant.spike_train_correlation import correlation_coefficient
 from quantities import ms
@@ -29,8 +30,8 @@ def calculate_features_by_neuron_class(repo, key, df, params):
     result = {}
     for feature_name, feature_config in params.items():
         feature_params = feature_config.get("params", {})
-        result[feature_name] = functions[feature_name](**feature_params)
-    return result
+        result[feature_name] = [functions[feature_name](**feature_params)]
+    return {"by_neuron_class": pd.DataFrame(result)}
 
 
 def get_PSD(spiketrains, n_segments=2):

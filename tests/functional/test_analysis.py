@@ -21,6 +21,7 @@ analysis_configs = [
     ("analysis_config_02.yaml", "analysis_02"),
     ("analysis_config_03.yaml", "analysis_03"),
     ("analysis_config_04.yaml", "analysis_04"),
+    ("analysis_config_07.yaml", "analysis_07"),
 ]
 
 
@@ -54,7 +55,7 @@ def _dump_all(a, path):
 def _test_repo(a, path):
     a.extract_repo()
     path = path / "repo"
-    assert len(a.repo.names) > 1
+    assert len(a.repo.names) > 0
     assert sorted(a.repo.names) == sorted(p.stem for p in path.glob("*.parquet"))
     for name in a.repo.names:
         expected_df = _load_df(path / f"{name}.parquet")
@@ -67,7 +68,7 @@ def _test_repo(a, path):
 def _test_features(a, path):
     a.calculate_features()
     path = path / "features"
-    assert len(a.features.names) > 1
+    assert len(a.features.names) > 0
     assert sorted(a.features.names) == sorted(p.stem for p in path.glob("*.parquet"))
     for name in a.features.names:
         expected_df = _load_df(path / f"{name}.parquet")

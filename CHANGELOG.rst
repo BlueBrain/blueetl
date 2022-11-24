@@ -1,6 +1,17 @@
 Changelog
 =========
 
+Version 0.1.2
+-------------
+
+Improvements
+~~~~~~~~~~~~
+- Raise an exception if there are multiple features dataframes with the same name.
+- Enforce the correct dtype in the features dataframes.
+- Add ``dtypes`` parameter to ``ETLBaseAccessor.add_conditions``.
+- Add ``dtypes`` and ``astype`` methods to ``ETLIndexAccessor``.
+
+
 Version 0.1.1
 -------------
 

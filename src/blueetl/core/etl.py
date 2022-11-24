@@ -112,6 +112,7 @@ class ETLBaseAccessor(ABC, Generic[PandasT, PandasGroupByT]):
         values: Any,
         inner: bool = False,
         drop: bool = False,
+        dtypes: Any = None,
     ) -> PandasT:
         """Add one or multiple conditions into the outermost or innermost position.
 
@@ -120,6 +121,9 @@ class ETLBaseAccessor(ABC, Generic[PandasT, PandasGroupByT]):
             values: single value or list of values, one for each condition.
             inner (bool): if True, add the conditions in the innermost position.
             drop (bool): if True, drop the existing conditions.
+            dtypes: if not None, it's used to enforce the dtype of the new levels.
+                It can be a single dtype, or a list of dtypes, one for each condition.
+                Examples: int, float, "category"...
 
         Returns:
             resulting Series or DataFrame.
@@ -129,6 +133,11 @@ class ETLBaseAccessor(ABC, Generic[PandasT, PandasGroupByT]):
         if len(conditions) != len(values):
             raise ValueError("Conditions and values must have the same length")
         result = pd.concat([self._obj], axis="index", keys=[tuple(values)], names=conditions)
+        if dtypes:
+            dtypes = ensure_list(dtypes)
+            if len(conditions) != len(dtypes):
+                raise ValueError("Conditions and dtypes must have the same length")
+            result.index = result.index.etl.astype(dict(zip(conditions, dtypes)))
         if drop:
             # levels to be dropped, for example: [-3, -2, -1]
             levels = list(range(-self._obj.index.nlevels, 0))
@@ -444,6 +453,36 @@ class ETLIndexAccessor:
         names = self._mangle_names()
         for i in self._obj:
             yield dict(zip(names, ensure_list(i)))
+
+    @property
+    def dtypes(self) -> pd.Series:
+        """Return the dtypes of the index."""
+        if isinstance(self._obj, pd.MultiIndex):
+            return self._obj.dtypes
+        return pd.Series([self._obj.dtype], index=pd.Index([self._obj.name]))
+
+    def astype(self, dtype) -> pd.Index:
+        """Create a new Index with the given dtypes.
+
+        Args:
+            dtype: numpy dtype or pandas type, or dict of dtypes when applied to a MultiIndex.
+                Any (u)int16 or (u)int32 dtype is considered as (u)int64,
+                since Pandas doesn't have a corresponding Index type for them.
+
+        Returns:
+            a copy of index using the specified dtypes.
+        """
+        if not isinstance(self._obj, pd.MultiIndex):
+            return self._obj.astype(dtype)
+        if not isinstance(dtype, dict):
+            raise TypeError("A dict of dtypes must be specified when working with a MultiIndex")
+        if diff := set(dtype).difference(self._obj.names):
+            raise NameError(f"Some names don't exist in the index levels: {sorted(diff)}")
+        dtype_by_num = {i: dtype[name] for i, name in enumerate(self._obj.names) if name in dtype}
+        return self._obj.set_levels(
+            [self._obj.levels[i].astype(dt) for i, dt in dtype_by_num.items()],
+            level=list(dtype_by_num),
+        )
 
 
 def register_accessors() -> None:

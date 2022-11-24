@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from functools import lru_cache
 from importlib import import_module
 from pathlib import Path, PosixPath
-from typing import Any, Callable, Iterator, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Type, Union
 
 import pandas as pd
 import yaml
@@ -65,9 +65,38 @@ def ensure_list(x: Any) -> Union[List, Tuple]:
     return x if isinstance(x, (list, tuple)) else [x]
 
 
-def ensure_dtypes(df: pd.DataFrame) -> pd.DataFrame:
-    """Return a DataFrame with the columns cast to the predefined types."""
-    return df.astype({k: DTYPES[k] for k in df.columns if k in DTYPES})
+def ensure_dtypes(
+    df: pd.DataFrame, desired_dtypes: Optional[Dict[str, Any]] = None
+) -> pd.DataFrame:
+    """Return a DataFrame with the columns and index cast to the desired types.
+
+    Args:
+        df: original Pandas DataFrame.
+        desired_dtypes: dict of names and desired dtypes. If None, the predefined dtypes are used.
+            If the dict contains names not present in the columns or in the index, they are ignored.
+            In the index, any (u)int16 or (u)int32 dtype are considered as (u)int64,
+            since Pandas doesn't have a corresponding Index type for them.
+
+    Returns:
+        A new DataFrame with the desired dtypes, or the same DataFrame if the columns are unchanged.
+    """
+    if desired_dtypes is None:
+        desired_dtypes = DTYPES
+    # convert the columns data types
+    if dtypes := {
+        k: desired_dtypes[k]
+        for k in df.columns
+        if k in desired_dtypes and desired_dtypes[k] != df.dtypes.at[k]
+    }:
+        df = df.astype(dtypes)
+    # convert the index data types
+    if dtypes := {
+        k: desired_dtypes[k]
+        for k in df.index.names
+        if k in desired_dtypes and desired_dtypes[k] != df.index.etl.dtypes.at[k]
+    }:
+        df.index = df.index.etl.astype(dtypes)
+    return df
 
 
 def import_by_string(full_name: str) -> Callable:

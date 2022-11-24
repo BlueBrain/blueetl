@@ -19,7 +19,7 @@ from blueetl.constants import (
 from blueetl.core.parallel import Task, run_parallel
 from blueetl.extract.feature import Feature
 from blueetl.repository import Repository
-from blueetl.utils import import_by_string, timed, timed_log
+from blueetl.utils import ensure_dtypes, import_by_string, timed, timed_log
 
 L = logging.getLogger(__name__)
 
@@ -73,6 +73,10 @@ class FeaturesCollection:
             ) from ex
 
     def _update(self, mapping: Mapping[str, Feature]) -> None:
+        if overlapping := set(mapping).intersection(self._data):
+            raise RuntimeError(
+                f"Some features DataFrames have been defined more than once: {sorted(overlapping)}"
+            )
         self._data.update(mapping)
 
     def _print(self) -> None:
@@ -199,7 +203,7 @@ def calculate_features_single(
         assert isinstance(result, dict), "The returned object must be a dict"
         record.update(result)
         records.append(record)
-    features_df = pd.DataFrame(records)
+    features_df = ensure_dtypes(pd.DataFrame(records))
     if key:
         features_df = features_df.set_index(list(key._fields))
     return features_df
@@ -261,7 +265,8 @@ def calculate_features_multi(
             all_features_records[feature_group].append(tmp_df)
     # build the final dict of dataframes
     return {
-        feature_group: pd.concat(df_list) for feature_group, df_list in all_features_records.items()
+        feature_group: ensure_dtypes(pd.concat(df_list))
+        for feature_group, df_list in all_features_records.items()
     }
 
 

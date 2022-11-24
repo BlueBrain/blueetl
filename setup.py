@@ -17,7 +17,7 @@ VERSION = module.__version__
 REQUIREMENTS = {
     "core": [
         "numpy>=1.19.4",
-        "pandas>=1.2.5,<2",
+        "pandas>=1.3.0,<2",
         "pyyaml>=5.4.1",
         "joblib>=1.1.0",
     ],

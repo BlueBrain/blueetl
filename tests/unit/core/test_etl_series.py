@@ -3,7 +3,7 @@ from typing import Iterator
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal, assert_equal
 from pandas.testing import assert_index_equal, assert_series_equal
 
 from blueetl.core.etl import ETLSeriesAccessor
@@ -125,6 +125,30 @@ def test_add_conditions(series1, conditions, values):
             name="values",
         ),
     )
+
+
+@pytest.mark.parametrize(
+    "conditions, values, dtypes",
+    [
+        pytest.param("i2", 123, float, id="str"),
+        pytest.param(["i2"], [123], [float], id="list"),
+    ],
+)
+def test_add_conditions_with_dtypes(series1, conditions, values, dtypes):
+    obj = series1
+    result = obj.etl.add_conditions(conditions, values, dtypes=dtypes)
+    assert_series_equal(
+        result,
+        pd.Series(
+            [0, 1, 2, 3],
+            index=pd.MultiIndex.from_tuples(
+                [(123.0, "a", "c"), (123.0, "a", "d"), (123.0, "b", "c"), (123.0, "b", "d")],
+                names=["i2", "i0", "i1"],
+            ),
+            name="values",
+        ),
+    )
+    assert_equal(result.index.dtypes.to_numpy(), [float, object, object])
 
 
 @pytest.mark.parametrize(

@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from numpy.testing import assert_equal
+from pandas.api.types import is_integer_dtype
 
 from blueetl import utils as test_module
 from blueetl.constants import DTYPES
@@ -27,11 +28,19 @@ def test_ensure_list(x, expected):
     assert result == expected
 
 
-def test_ensure_dtypes():
+@pytest.mark.parametrize("dtypes", [None, DTYPES])
+def test_ensure_dtypes(dtypes):
     df = pd.DataFrame([{k: i for i, k in enumerate(DTYPES)}])
     df["other"] = 99
-    result = test_module.ensure_dtypes(df)
-    assert_equal(result.dtypes.to_numpy(), [*list(DTYPES.values()), np.dtype("int64")])
+    df.index = pd.MultiIndex.from_frame(df)
+
+    result = test_module.ensure_dtypes(df, desired_dtypes=dtypes)
+
+    expected = [*list(DTYPES.values()), np.int64]
+    assert_equal(result.dtypes.to_numpy(), expected)
+    # convert any int to int64 in the expected list
+    expected = [np.int64 if is_integer_dtype(item) else item for item in expected]
+    assert_equal(result.index.dtypes.to_numpy(), expected)
 
 
 def test_import_by_string():

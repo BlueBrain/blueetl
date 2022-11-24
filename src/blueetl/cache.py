@@ -426,6 +426,7 @@ class CacheManager:
         for name, file_checksum in cached_dataframes.items():
             assert file_checksum is not None
             features[name] = self._features_store.load(name)
+            assert features[name] is not None
         return features or None
 
     @_raise_if(readonly=True)

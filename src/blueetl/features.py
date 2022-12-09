@@ -1,6 +1,7 @@
 """Features collection."""
 import logging
 from collections import defaultdict
+from copy import deepcopy
 from functools import partial
 from typing import Any, Callable, Dict, Iterator, List, Mapping, NamedTuple, Optional
 
@@ -199,7 +200,8 @@ def calculate_features_single(
     main_df = _get_spikes_for_all_neurons_and_windows(repo)
     for key, group_df in main_df.etl.groupby_iter(features_groupby):
         record = key._asdict()
-        result = func(repo=repo, key=key, df=group_df, params=features_params)
+        # The params dict is deepcopied because it could be modified in the user function
+        result = func(repo=repo, key=key, df=group_df, params=deepcopy(features_params))
         assert isinstance(result, dict), "The returned object must be a dict"
         record.update(result)
         records.append(record)
@@ -241,7 +243,9 @@ def calculate_features_multi(
         record = key._asdict()
         conditions = list(record.keys())
         values = tuple(record.values())
-        features_dict = func(repo=repo, key=key, df=df, params=features_params)
+        # The params dict is deepcopied because it could be modified in the user function.
+        # It could happen even with multiprocessing, because joblib may process tasks in batch.
+        features_dict = func(repo=repo, key=key, df=df, params=deepcopy(features_params))
         assert isinstance(features_dict, dict), "The returned object must be a dict"
         for feature_group, result_df in features_dict.items():
             assert isinstance(result_df, pd.DataFrame), "Each contained object must be a DataFrame"

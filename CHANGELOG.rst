@@ -11,6 +11,10 @@ Improvements
 - Add ``dtypes`` parameter to ``ETLBaseAccessor.add_conditions``.
 - Add ``dtypes`` and ``astype`` methods to ``ETLIndexAccessor``.
 
+Bug Fixes
+~~~~~~~~~
+- Deepcopy the params dict passed to the user func.
+
 
 Version 0.1.1
 -------------

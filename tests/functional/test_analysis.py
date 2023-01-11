@@ -22,6 +22,7 @@ analysis_configs = [
     ("analysis_config_03.yaml", "analysis_03"),
     ("analysis_config_04.yaml", "analysis_04"),
     ("analysis_config_07.yaml", "analysis_07"),
+    ("analysis_config_09.yaml", "analysis_09"),
 ]
 
 

@@ -10,6 +10,7 @@ Improvements
 - Enforce the correct dtype in the features dataframes.
 - Add ``dtypes`` parameter to ``ETLBaseAccessor.add_conditions``.
 - Add ``dtypes`` and ``astype`` methods to ``ETLIndexAccessor``.
+- Support filtering by windows or neuron classes for each features configuration [NSETM-2085]
 
 Bug Fixes
 ~~~~~~~~~

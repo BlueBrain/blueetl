@@ -42,7 +42,6 @@ REQUIREMENTS = {
         "sphinx",
         "sphinx-bluebrain-theme",
         "myst-nb",
-        "ipython!=8.7.0",  # TODO: remove after fixing https://github.com/ipython/ipython/issues/13845
     ],
 }
 

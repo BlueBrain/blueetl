@@ -141,6 +141,8 @@ class FeaturesCollection:
             features_func=features_config["function"],
             features_groupby=features_config["groupby"],
             features_params=features_config.get("params", {}),
+            features_windows=features_config.get("windows", []),
+            features_neuron_classes=features_config.get("neuron_classes", []),
         )
         name = str(features_config["name"])
         return self._dataframes_to_features({name: df})
@@ -151,6 +153,8 @@ class FeaturesCollection:
             features_func=features_config["function"],
             features_groupby=features_config["groupby"],
             features_params=features_config.get("params", {}),
+            features_windows=features_config.get("windows", []),
+            features_neuron_classes=features_config.get("neuron_classes", []),
         )
         return self._dataframes_to_features(df_dict)
 
@@ -168,18 +172,30 @@ class FeaturesCollection:
         )
 
 
-def _get_spikes_for_all_neurons_and_windows(repo: Repository) -> pd.DataFrame:
+def _get_spikes_for_all_neurons_and_windows(
+    repo: Repository, windows: List[str], neuron_classes: List[str]
+) -> pd.DataFrame:
     """Extend the spikes df to include all the possible neurons and windows, with spikes or not."""
-    return (
-        repo.neurons.df[[CIRCUIT_ID, NEURON_CLASS, GID, NEURON_CLASS_INDEX]]
-        .merge(repo.windows.df[[SIMULATION_ID, CIRCUIT_ID, WINDOW, TRIAL]], how="left")
-        .merge(repo.spikes.df, how="left")
-    )
+    neurons_df = repo.neurons.df[[CIRCUIT_ID, NEURON_CLASS, GID, NEURON_CLASS_INDEX]]
+    windows_df = repo.windows.df[[SIMULATION_ID, CIRCUIT_ID, WINDOW, TRIAL]]
+    spikes_df = repo.spikes.df
+    if neuron_classes:
+        neurons_df = neurons_df.etl.q(neuron_class=neuron_classes)
+        spikes_df = spikes_df.etl.q(neuron_class=neuron_classes)
+    if windows:
+        windows_df = windows_df.etl.q(window=windows)
+        spikes_df = spikes_df.etl.q(window=windows)
+    return neurons_df.merge(windows_df, how="left").merge(spikes_df, how="left")
 
 
 @timed(L.info, "Executed calculate_features_single")
 def calculate_features_single(
-    repo: Repository, features_func: str, features_groupby: List[str], features_params: Dict
+    repo: Repository,
+    features_func: str,
+    features_groupby: List[str],
+    features_params: Dict,
+    features_windows: List[str],
+    features_neuron_classes: List[str],
 ) -> pd.DataFrame:
     """Calculate features for the given repository as a single DataFrame.
 
@@ -189,6 +205,8 @@ def calculate_features_single(
             The function should return a dict, where each key will be a column in the DataFrame.
         features_groupby: columns for aggregation.
         features_params: generic dict of params that will be passed to the function.
+        features_windows: list of windows to consider, or empty to consider them all.
+        features_neuron_classes: list of neuron classes to consider, or empty to consider them all.
 
     Returns:
         DataFrame
@@ -197,7 +215,9 @@ def calculate_features_single(
     func = import_by_string(features_func)
     records = []
     key = None
-    main_df = _get_spikes_for_all_neurons_and_windows(repo)
+    main_df = _get_spikes_for_all_neurons_and_windows(
+        repo, windows=features_windows, neuron_classes=features_neuron_classes
+    )
     for key, group_df in main_df.etl.groupby_iter(features_groupby):
         record = key._asdict()
         # The params dict is deepcopied because it could be modified in the user function
@@ -217,6 +237,8 @@ def calculate_features_multi(
     features_func: str,
     features_groupby: List[str],
     features_params: Dict,
+    features_windows: List[str],
+    features_neuron_classes: List[str],
     jobs: Optional[int] = None,
     backend: Optional[str] = None,
 ) -> Dict[str, pd.DataFrame]:
@@ -228,6 +250,8 @@ def calculate_features_multi(
             The function should accept (repo, key, df, params) and return a dict of DataFrames.
         features_groupby: columns for aggregation.
         features_params: generic dict of params that will be passed to the function.
+        features_windows: list of windows to consider, or empty to consider them all.
+        features_neuron_classes: list of neuron classes to consider, or empty to consider them all.
         jobs: number of jobs (see run_parallel)
         backend: parallel backend (see run_parallel)
 
@@ -235,6 +259,7 @@ def calculate_features_multi(
         dict of DataFrames
 
     """
+    # pylint: disable=too-many-locals
 
     def func_wrapper(key: NamedTuple, df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
         # executed in a subprocess
@@ -257,7 +282,9 @@ def calculate_features_multi(
         return features_records
 
     func = import_by_string(features_func)
-    main_df = _get_spikes_for_all_neurons_and_windows(repo)
+    main_df = _get_spikes_for_all_neurons_and_windows(
+        repo, windows=features_windows, neuron_classes=features_neuron_classes
+    )
     # list of dicts: feature_group -> dataframe
     results = main_df.etl.groupby_run_parallel(
         features_groupby, func=func_wrapper, jobs=jobs, backend=backend

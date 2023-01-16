@@ -185,7 +185,7 @@ class CacheManager:
                     "neuron_classes": None,
                     "trial_steps": None,
                     "windows": None,
-                    "spikes": None,
+                    "report": None,
                 },
                 "features": {},
             }
@@ -239,7 +239,7 @@ class CacheManager:
             "neuron_classes",
             "trial_steps",
             "windows",
-            "spikes",
+            "report",
             "features",
         ]
         assert not names or names.issubset(ordered_names), "Invalid names specified."
@@ -278,27 +278,24 @@ class CacheManager:
             self._invalidate_cached_checksums({"simulations"})
             return False
 
-        # check the extraction config for neurons
-        if any(
-            self._analysis_configs.cached["extraction"].get(k)
-            != self._analysis_configs.actual["extraction"].get(k)
-            for k in ["neuron_classes", "limit", "target"]
-        ):
-            self._invalidate_cached_checksums({"neurons", "neuron_classes"})
-            return False
-
-        # check the extraction config for windows and spikes
-        if any(
-            self._analysis_configs.cached["extraction"].get(k)
-            != self._analysis_configs.actual["extraction"].get(k)
-            for k in ["windows", "trial_steps"]
-        ):
-            self._invalidate_cached_checksums({"trial_steps", "windows", "spikes"})
-            return False
+        # check the extraction config for changed keys, and invalidate the affected names
+        keys_and_affected_names = [
+            ({"neuron_classes", "limit", "target"}, {"neurons", "neuron_classes"}),
+            ({"windows", "trial_steps"}, {"trial_steps", "windows", "report"}),
+            ({"report"}, {"report"}),
+        ]
+        for keys, names in keys_and_affected_names:
+            if any(
+                self._analysis_configs.cached["extraction"].get(k)
+                != self._analysis_configs.actual["extraction"].get(k)
+                for k in keys
+            ):
+                self._invalidate_cached_checksums(names)
+                return False
 
         # check the features config
         valid_checksums = set()
-        for features_config in self._analysis_configs.actual["analysis"]["features"]:
+        for features_config in self._analysis_configs.actual["features"]:
             config_checksum = checksum_json(features_config)
             if config_checksum in self._cached_checksums["features"]:
                 valid_checksums.add(config_checksum)

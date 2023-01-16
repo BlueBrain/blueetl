@@ -1,6 +1,18 @@
 Changelog
 =========
 
+Version 0.2.0
+-------------
+
+New Features
+~~~~~~~~~~~~
+- Add MultiAnalyzer class to support multiple reports [NSETM-2015]
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+- The previous analysis configuration format has been replaced by the version 2 to support multiple reports.
+
+
 Version 0.1.2
 -------------
 

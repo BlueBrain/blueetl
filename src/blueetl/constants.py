@@ -15,6 +15,7 @@ TRIAL = "trial"
 OFFSET = "offset"
 T_START = "t_start"
 T_STOP = "t_stop"
+T_STEP = "t_step"
 DURATION = "duration"
 WINDOW_TYPE = "window_type"
 COUNT = "count"
@@ -22,6 +23,8 @@ TRIAL_STEPS_LABEL = "trial_steps_label"
 TRIAL_STEPS_VALUE = "trial_steps_value"
 TIMES = "times"
 BIN = "bin"
+VALUE = "value"
+SECTION = "section"
 
 DTYPES = {
     GID: np.int64,
@@ -33,5 +36,6 @@ DTYPES = {
     TRIAL: np.int16,
     T_START: np.float64,
     T_STOP: np.float64,
+    T_STEP: np.float64,
     DURATION: np.float64,
 }

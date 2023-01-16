@@ -4,45 +4,31 @@ import logging
 import pandas as pd
 from bluepy import Simulation
 
-from blueetl.constants import (
-    CIRCUIT_ID,
-    GID,
-    NEURON_CLASS,
-    SIMULATION,
-    SIMULATION_ID,
-    TIME,
-    TRIAL,
-    WINDOW,
-)
-from blueetl.extract.base import BaseExtractor
-from blueetl.extract.neurons import Neurons
-from blueetl.extract.simulations import Simulations
-from blueetl.extract.windows import Windows
+from blueetl.constants import CIRCUIT_ID, GID, NEURON_CLASS, SIMULATION_ID, TIME, TRIAL, WINDOW
+from blueetl.extract.report import ReportExtractor
 
 L = logging.getLogger(__name__)
 
 
-class Spikes(BaseExtractor):
+class Spikes(ReportExtractor):
     """Spikes extractor class."""
 
     COLUMNS = [SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS, WINDOW, TRIAL, TIME, GID]
 
     @classmethod
-    def _assign_window(
-        cls, df: pd.DataFrame, name: str, trial: int, offset: float, t_start: float, t_stop: float
-    ) -> pd.DataFrame:
-        # increment t_start and t_stop because they are relative to offset
-        t_start += offset
-        t_stop += offset
-        df = df[(df[TIME] >= t_start) & (df[TIME] < t_stop)].copy()
-        df[WINDOW] = name
-        df[TRIAL] = trial
+    def _assign_window(cls, df: pd.DataFrame, rec) -> pd.DataFrame:
+        win = cls.calculate_window_slice(rec)
+        df = df[(df[TIME] >= win.t_start) & (df[TIME] < win.t_stop)].copy()
+        df[WINDOW] = win.name
+        df[TRIAL] = win.trial
         # make the spike times relative to the offset
-        df[TIME] -= offset
+        df[TIME] -= win.offset
         return df
 
     @classmethod
-    def _load_spikes(cls, simulation: Simulation, gids, windows_df: pd.DataFrame) -> pd.DataFrame:
+    def _load_values(
+        cls, simulation: Simulation, gids, windows_df: pd.DataFrame, name: str
+    ) -> pd.DataFrame:
         """Filter and aggregate the spikes in bins according to the given windows.
 
         Args:
@@ -55,45 +41,7 @@ class Spikes(BaseExtractor):
         """
         df = simulation.spikes.get(gids).reset_index()
         df = df.rename(columns={"t": TIME})
-        df = pd.concat(
-            cls._assign_window(df, rec.window, rec.trial, rec.offset, rec.t_start, rec.t_stop)
-            for rec in windows_df.itertuples()
-        )
+        df = pd.concat(cls._assign_window(df, rec) for rec in windows_df.itertuples())
         df = df.reset_index(drop=True)
         L.info("Selected spikes: %s", len(df))
         return df
-
-    @classmethod
-    def from_simulations(
-        cls, simulations: Simulations, neurons: Neurons, windows: Windows
-    ) -> "Spikes":
-        """Return a new Spikes instance from the given simulations, neurons, and windows.
-
-        Args:
-            simulations: Simulations extractor.
-            neurons: Neurons extractor.
-            windows: Windows extractor.
-
-        Returns:
-            Spikes: new instance.
-        """
-        merged = pd.merge(simulations.df, neurons.df, sort=False)
-        # group the gids together
-        columns = [SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS]
-        grouped = merged.groupby(columns, sort=False, observed=True).agg(
-            {GID: tuple, SIMULATION: "first"}
-        )
-        df_list = []
-        for index, rec in grouped.etl.iter():
-            L.info(
-                "Extracting %s for simulation_id=%s, circuit_id=%s, neuron_class=%s: %s gids",
-                cls.__name__,
-                *index,
-                len(rec.gid),
-            )
-            windows_df = windows.df.etl.q(simulation_id=index.simulation_id)
-            tmp_df = cls._load_spikes(rec.simulation, rec.gid, windows_df)
-            tmp_df[columns] = list(index)
-            df_list.append(tmp_df)
-        df = pd.concat(df_list, ignore_index=True, copy=False)
-        return cls(df)

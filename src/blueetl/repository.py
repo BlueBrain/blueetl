@@ -1,5 +1,4 @@
 """Repository."""
-import json
 import logging
 from abc import ABC, abstractmethod
 from functools import cached_property
@@ -11,9 +10,12 @@ from blueetl.cache import CacheManager
 from blueetl.config.simulations import SimulationsConfig
 from blueetl.constants import CIRCUIT_ID, SIMULATION_ID, SIMULATION_PATH
 from blueetl.extract.base import ExtractorT
+from blueetl.extract.compartment_report import CompartmentReport
 from blueetl.extract.neuron_classes import NeuronClasses
 from blueetl.extract.neurons import Neurons
+from blueetl.extract.report import ReportExtractor
 from blueetl.extract.simulations import Simulations
+from blueetl.extract.soma_report import SomaReport
 from blueetl.extract.spikes import Spikes
 from blueetl.extract.trial_steps import TrialSteps
 from blueetl.extract.windows import Windows
@@ -163,6 +165,7 @@ class SpikesExtractor(BaseExtractor[Spikes]):
             simulations=self._repo.simulations,
             neurons=self._repo.neurons,
             windows=self._repo.windows,
+            name=self._repo.extraction_config["report"].get("name", "spikes"),
         )
 
     def extract_cached(self, df: pd.DataFrame) -> Spikes:
@@ -171,6 +174,46 @@ class SpikesExtractor(BaseExtractor[Spikes]):
         if self._repo.simulations_filter:
             query = {SIMULATION_ID: self._repo.simulation_ids}
         return Spikes.from_pandas(df, query=query)
+
+
+class SomaReportExtractor(BaseExtractor[SomaReport]):
+    """SomaReportExtractor class."""
+
+    def extract_new(self) -> SomaReport:
+        """Instantiate an object from the configuration."""
+        return SomaReport.from_simulations(
+            simulations=self._repo.simulations,
+            neurons=self._repo.neurons,
+            windows=self._repo.windows,
+            name=self._repo.extraction_config["report"]["name"],
+        )
+
+    def extract_cached(self, df: pd.DataFrame) -> SomaReport:
+        """Instantiate an object from a cached DataFrame."""
+        query = {}
+        if self._repo.simulations_filter:
+            query = {SIMULATION_ID: self._repo.simulation_ids}
+        return SomaReport.from_pandas(df, query=query)
+
+
+class CompartmentReportExtractor(BaseExtractor[CompartmentReport]):
+    """CompartmentReportExtractor class."""
+
+    def extract_new(self) -> CompartmentReport:
+        """Instantiate an object from the configuration."""
+        return CompartmentReport.from_simulations(
+            simulations=self._repo.simulations,
+            neurons=self._repo.neurons,
+            windows=self._repo.windows,
+            name=self._repo.extraction_config["report"]["name"],
+        )
+
+    def extract_cached(self, df: pd.DataFrame) -> CompartmentReport:
+        """Instantiate an object from a cached DataFrame."""
+        query = {}
+        if self._repo.simulations_filter:
+            query = {SIMULATION_ID: self._repo.simulation_ids}
+        return CompartmentReport.from_pandas(df, query=query)
 
 
 class Repository:
@@ -197,13 +240,19 @@ class Repository:
         self._simulations_config = simulations_config
         self._cache_manager = cache_manager
         self._simulations_filter = simulations_filter
+        report_type = extraction_config["report"]["type"]
+        available_reports: Dict[str, Type[BaseExtractor]] = {
+            "spikes": SpikesExtractor,
+            "soma": SomaReportExtractor,
+            "compartment": CompartmentReportExtractor,
+        }
         self._mapping: Dict[str, Type[BaseExtractor]] = {
             "simulations": SimulationsExtractor,
             "neurons": NeuronsExtractor,
             "neuron_classes": NeuronClassesExtractor,
             "trial_steps": TrialStepsExtractor,
             "windows": WindowsExtractor,
-            "spikes": SpikesExtractor,
+            "report": available_reports[report_type],
         }
         self._names = list(self._mapping)
         if _dataframes:
@@ -274,10 +323,16 @@ class Repository:
         """Return the Windows extraction."""
         return self._mapping["windows"](self).extract(name="windows")
 
-    @cached_property
-    def spikes(self) -> Spikes:
+    @property
+    def spikes(self) -> ReportExtractor:
         """Return the Spikes extraction."""
-        return self._mapping["spikes"](self).extract(name="spikes")
+        assert isinstance(self.report, Spikes)
+        return self.report
+
+    @cached_property
+    def report(self) -> ReportExtractor:
+        """Return the Report extraction."""
+        return self._mapping["report"](self).extract(name="report")
 
     @property
     def simulation_ids(self) -> List[int]:
@@ -322,20 +377,12 @@ class Repository:
             .drop(columns="_merge")
         )
 
-    def _print(self) -> None:
-        """Print some information about the instance.
-
-        Only for debug and internal use, it may be removed in a future release.
-        """
-        print("### extraction_config")
-        print(json.dumps(self._extraction_config, indent=2))
-        print("### simulations_config")
-        print(json.dumps(self._simulations_config.to_dict(), indent=2))
+    def show(self) -> None:
+        """Print some information about the instance, mainly for debug and inspection."""
         for name in self.names:
-            print(f"### {name}.df")
-            df = getattr(getattr(self, name), "df")
-            print(df)
-            print(df.dtypes)
+            print("~" * 80)
+            print("Extraction:", name)
+            print(getattr(self, name).df)
 
     def _assign_from_dataframes(self, dicts: Dict[str, pd.DataFrame]) -> None:
         """Assign the repository properties from the given dict of DataFrames."""

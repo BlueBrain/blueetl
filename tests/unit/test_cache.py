@@ -6,12 +6,11 @@ from blueetl.config.simulations import SimulationsConfig
 
 
 def _get_analysis_config(path):
+    """Return an empty config dict."""
     return {
         "output": str(path),
         "extraction": {},
-        "analysis": {
-            "features": [],
-        },
+        "features": [],
     }
 
 

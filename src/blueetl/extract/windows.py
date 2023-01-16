@@ -11,6 +11,7 @@ from blueetl.constants import (
     OFFSET,
     SIMULATION_ID,
     T_START,
+    T_STEP,
     T_STOP,
     TRIAL,
     TRIAL_STEPS_VALUE,
@@ -35,6 +36,7 @@ class Windows(BaseExtractor):
         OFFSET,
         T_START,
         T_STOP,
+        T_STEP,
         DURATION,
         WINDOW_TYPE,
     ]
@@ -79,6 +81,7 @@ class Windows(BaseExtractor):
                 )
                 initial_offset = win.get("initial_offset", 0)
                 t_start, t_stop = win["bounds"]
+                t_step = win.get("t_step", 0)
                 duration = t_stop - t_start
                 window_type = win.get("window_type", "")
                 number_of_trials = win.get("n_trials", 1)
@@ -105,6 +108,7 @@ class Windows(BaseExtractor):
                             OFFSET: initial_offset + trial_steps_value * index,
                             T_START: t_start,
                             T_STOP: t_stop,
+                            T_STEP: t_step,
                             DURATION: duration,
                             WINDOW_TYPE: window_type,
                         }

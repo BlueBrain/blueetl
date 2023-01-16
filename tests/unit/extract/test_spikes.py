@@ -14,6 +14,7 @@ from blueetl.constants import (
     SIMULATION,
     SIMULATION_ID,
     T_START,
+    T_STEP,
     T_STOP,
     TRIAL,
     WINDOW,
@@ -70,6 +71,7 @@ def test_spikes_from_simulations():
                     OFFSET: 20,
                     T_START: 0,
                     T_STOP: 100,
+                    T_STEP: 0,
                     DURATION: 100,
                     WINDOW_TYPE: "spontaneous",
                 },
@@ -80,7 +82,7 @@ def test_spikes_from_simulations():
     type(mock_windows).df = mock_windows_df
 
     result = test_module.Spikes.from_simulations(
-        simulations=mock_simulations, neurons=mock_neurons, windows=mock_windows
+        simulations=mock_simulations, neurons=mock_neurons, windows=mock_windows, name="spikes"
     )
 
     expected_df = pd.DataFrame(

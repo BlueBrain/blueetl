@@ -1,13 +1,15 @@
 """Windows extractor."""
 import logging
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 
 from blueetl.constants import (
+    CHECKSUM_SEP,
     CIRCUIT_ID,
     DURATION,
+    LEVEL_SEP,
     OFFSET,
     SIMULATION_ID,
     T_START,
@@ -21,6 +23,7 @@ from blueetl.constants import (
 from blueetl.extract.base import BaseExtractor
 from blueetl.extract.simulations import Simulations
 from blueetl.extract.trial_steps import TrialSteps
+from blueetl.resolver import Resolver
 
 L = logging.getLogger(__name__)
 
@@ -56,15 +59,83 @@ class Windows(BaseExtractor):
             raise ValueError("Inconsistent trial index in some window(s)")
 
     @classmethod
+    def _load_records_from_resolver(
+        cls,
+        name: str,
+        win: str,
+        simulation_id: int,
+        circuit_id: int,
+        resolver: Optional[Resolver],
+    ) -> List[Dict[str, Any]]:
+        assert resolver is not None
+        # example of valid win: spikes.repo.windows.w1#checksum
+        win, _, _checksum = win.rpartition(CHECKSUM_SEP)
+        ref, _, window = win.rpartition(LEVEL_SEP)
+        windows = resolver.get(ref)
+        df = windows.df.etl.q(simulation_id=simulation_id, circuit_id=circuit_id, window=window)
+        if len(df) == 0:
+            raise RuntimeError(f"The window referenced by {win} is empty or undefined")
+        return df.assign(**{WINDOW: name}).to_dict(orient="records")
+
+    @classmethod
+    def _load_records_from_config(
+        cls,
+        name: str,
+        win: Dict[str, Any],
+        simulation_id: int,
+        circuit_id: int,
+        trial_steps: TrialSteps,
+    ) -> List[Dict[str, Any]]:
+        initial_offset = win.get("initial_offset", 0)
+        t_start, t_stop = win["bounds"]
+        t_step = win.get("t_step", 0)
+        duration = t_stop - t_start
+        window_type = win.get("window_type", "")
+        number_of_trials = win.get("n_trials", 1)
+        trial_steps_value = win.get("trial_steps_value", 0)
+        trial_steps_label = win.get("trial_steps_label", "")
+        if trial_steps_label:
+            trial_steps_value = trial_steps.df.etl.one(
+                simulation_id=simulation_id,
+                circuit_id=circuit_id,
+                trial_steps_label=trial_steps_label,
+            )[TRIAL_STEPS_VALUE]
+            L.info("Using the calculated trial_steps_value=%s", trial_steps_value)
+        elif trial_steps_value:
+            L.info("Using the configured trial_steps_value=%s", trial_steps_value)
+        if number_of_trials > 1 and not trial_steps_value:
+            raise ValueError("trial_steps_value cannot be 0 when n_trials > 1")
+        return [
+            {
+                SIMULATION_ID: simulation_id,
+                CIRCUIT_ID: circuit_id,
+                WINDOW: name,
+                TRIAL: index,
+                OFFSET: initial_offset + trial_steps_value * index,
+                T_START: t_start,
+                T_STOP: t_stop,
+                T_STEP: t_step,
+                DURATION: duration,
+                WINDOW_TYPE: window_type,
+            }
+            for index in range(number_of_trials)
+        ]
+
+    @classmethod
     def from_simulations(
-        cls, simulations: Simulations, trial_steps: TrialSteps, config: Dict[str, Any]
+        cls,
+        simulations: Simulations,
+        trial_steps: TrialSteps,
+        config: Dict[str, Any],
+        resolver: Optional[Resolver],
     ) -> "Windows":
         """Return a new Windows instance from the given simulations and configuration.
 
         Args:
             simulations: Simulations extractor.
             trial_steps: TrialSteps extractor.
-            config: configuration dict.
+            config: configuration dict containing the "windows" key.
+            resolver: resolver instance.
 
         Returns:
             Windows: new instance.
@@ -79,40 +150,24 @@ class Windows(BaseExtractor):
                     rec.circuit_id,
                     name,
                 )
-                initial_offset = win.get("initial_offset", 0)
-                t_start, t_stop = win["bounds"]
-                t_step = win.get("t_step", 0)
-                duration = t_stop - t_start
-                window_type = win.get("window_type", "")
-                number_of_trials = win.get("n_trials", 1)
-                trial_steps_value = win.get("trial_steps_value", 0)
-                trial_steps_label = win.get("trial_steps_label", "")
-                if trial_steps_label:
-                    trial_steps_value = trial_steps.df.etl.one(
+                if isinstance(win, str):
+                    partial_results = cls._load_records_from_resolver(
+                        name=name,
+                        win=win,
                         simulation_id=rec.simulation_id,
                         circuit_id=rec.circuit_id,
-                        trial_steps_label=trial_steps_label,
-                    )[TRIAL_STEPS_VALUE]
-                    L.info("Using the calculated trial_steps_value=%s", trial_steps_value)
-                elif trial_steps_value:
-                    L.info("Using the configured trial_steps_value=%s", trial_steps_value)
-                if number_of_trials > 1 and not trial_steps_value:
-                    raise ValueError("trial_steps_value cannot be 0 when n_trials > 1")
-                for index in range(number_of_trials):
-                    results.append(
-                        {
-                            SIMULATION_ID: rec.simulation_id,
-                            CIRCUIT_ID: rec.circuit_id,
-                            WINDOW: name,
-                            TRIAL: index,
-                            OFFSET: initial_offset + trial_steps_value * index,
-                            T_START: t_start,
-                            T_STOP: t_stop,
-                            T_STEP: t_step,
-                            DURATION: duration,
-                            WINDOW_TYPE: window_type,
-                        }
+                        resolver=resolver,
                     )
+                else:
+                    partial_results = cls._load_records_from_config(
+                        name=name,
+                        win=win,
+                        simulation_id=rec.simulation_id,
+                        circuit_id=rec.circuit_id,
+                        trial_steps=trial_steps,
+                    )
+                results.extend(partial_results)
+
         df = pd.DataFrame(results)
         return cls(df)
 

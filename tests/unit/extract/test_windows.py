@@ -20,6 +20,7 @@ from blueetl.constants import (
     WINDOW_TYPE,
 )
 from blueetl.extract import windows as test_module
+from blueetl.resolver import ObjectResolver
 from blueetl.utils import ensure_dtypes
 
 
@@ -44,6 +45,24 @@ def test_windows_from_simulations():
     trial_steps = Mock()
     type(trial_steps).df = mock_trial_steps_df
 
+    root = Mock()
+    root.soma.repo.windows.df = pd.DataFrame(
+        {
+            SIMULATION_ID: 0,
+            CIRCUIT_ID: 0,
+            WINDOW: "w9",
+            TRIAL: 0,
+            OFFSET: 1000,
+            T_START: 0,
+            T_STOP: 900,
+            T_STEP: 0,
+            DURATION: 900,
+            WINDOW_TYPE: "custom_type_9",
+        },
+        index=[0],
+    )
+    resolver = ObjectResolver(root)
+
     config = {
         "windows": {
             "w1": {"bounds": [5000, 6000]},
@@ -61,9 +80,15 @@ def test_windows_from_simulations():
                 "n_trials": 2,
                 "trial_steps_label": "ts1",
             },
+            "w4": "soma.repo.windows.w9#checksum",
         }
     }
-    result = test_module.Windows.from_simulations(mock_simulations, trial_steps, config)
+    result = test_module.Windows.from_simulations(
+        simulations=mock_simulations,
+        trial_steps=trial_steps,
+        config=config,
+        resolver=resolver,
+    )
 
     expected_df = pd.DataFrame(
         [
@@ -126,6 +151,18 @@ def test_windows_from_simulations():
                 T_STEP: 0,
                 DURATION: 200,
                 WINDOW_TYPE: "custom_type_2",
+            },
+            {
+                SIMULATION_ID: 0,
+                CIRCUIT_ID: 0,
+                WINDOW: "w4",
+                TRIAL: 0,
+                OFFSET: 1000,
+                T_START: 0,
+                T_STOP: 900,
+                T_STEP: 0,
+                DURATION: 900,
+                WINDOW_TYPE: "custom_type_9",
             },
         ]
     )

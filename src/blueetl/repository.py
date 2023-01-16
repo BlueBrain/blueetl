@@ -19,6 +19,7 @@ from blueetl.extract.soma_report import SomaReport
 from blueetl.extract.spikes import Spikes
 from blueetl.extract.trial_steps import TrialSteps
 from blueetl.extract.windows import Windows
+from blueetl.resolver import Resolver
 from blueetl.utils import timed_log
 
 L = logging.getLogger(__name__)
@@ -146,6 +147,7 @@ class WindowsExtractor(BaseExtractor[Windows]):
             simulations=self._repo.simulations,
             trial_steps=self._repo.trial_steps,
             config=self._repo.extraction_config,
+            resolver=self._repo.resolver,
         )
 
     def extract_cached(self, df: pd.DataFrame) -> Windows:
@@ -225,6 +227,7 @@ class Repository:
         extraction_config: Dict[str, Any],
         cache_manager: CacheManager,
         simulations_filter: Optional[Dict[str, Any]] = None,
+        resolver: Optional[Resolver] = None,
         _dataframes: Optional[Dict[str, pd.DataFrame]] = None,
     ) -> None:
         """Initialize the repository.
@@ -234,12 +237,14 @@ class Repository:
             extraction_config: extraction configuration.
             cache_manager: cache manager responsible to load and dump dataframes.
             simulations_filter: optional simulations filter.
+            resolver: resolver instance.
             _dataframes: DataFrames to be automatically loaded, only for internal use.
         """
         self._extraction_config = extraction_config
         self._simulations_config = simulations_config
         self._cache_manager = cache_manager
         self._simulations_filter = simulations_filter
+        self._resolver = resolver
         report_type = extraction_config["report"]["type"]
         available_reports: Dict[str, Type[BaseExtractor]] = {
             "spikes": SpikesExtractor,
@@ -265,6 +270,7 @@ class Repository:
             # because we want to be able to use the cached data in the subprocesses.
             L.info("Extracting dataframes before serialization")
             self.extract()
+        assert self._resolver is None
         # Copy the object's state, excluding the unpicklable entries.
         names_set = set(self.names)
         return {k: v for k, v in self.__dict__.items() if k not in names_set}
@@ -297,6 +303,11 @@ class Repository:
     def names(self) -> List[str]:
         """Return the list of names of the extracted objects."""
         return self._names
+
+    @property
+    def resolver(self) -> Optional[Resolver]:
+        """Return the resolver."""
+        return self._resolver
 
     @cached_property
     def simulations(self) -> Simulations:
@@ -344,6 +355,8 @@ class Repository:
         for name in self.names:
             getattr(self, name)
         self.check_extractions()
+        # delete the resolver because not needed anymore
+        self._resolver = None
 
     def is_extracted(self) -> bool:
         """Return True if all the dataframes have been extracted."""

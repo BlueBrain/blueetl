@@ -9,9 +9,12 @@ import pandas as pd
 
 from blueetl.cache import CacheManager
 from blueetl.config.simulations import SimulationsConfig
+from blueetl.constants import CHECKSUM_SEP
 from blueetl.features import FeaturesCollection
 from blueetl.repository import Repository
+from blueetl.resolver import DictResolver, ObjectResolver, Resolver
 from blueetl.types import StrOrPath
+from blueetl.utils import checksum_json
 
 L = logging.getLogger(__name__)
 
@@ -41,6 +44,43 @@ class MultiAnalyzerConfig:
         config["output"] = base_path / config["output"]
         config["simulation_campaign"] = base_path / config["simulation_campaign"]
 
+    @staticmethod
+    def _resolve_windows(config: Dict) -> None:
+        """Calculate the hash of there referenced windows in each partial configuration.
+
+        This is needed to invalidate the cache of the windows referring to the original windows.
+        """
+
+        def _calculate_checksum(ref):
+            # example: spikes.repo.windows.w3
+            window = resolver.get(ref)
+            assert isinstance(window, dict), "The referenced window must be a dict"
+            trial_step = {}
+            if trial_steps_label := window.get("trial_steps_label"):
+                L.debug("Checksum including trial_steps_label %s", trial_steps_label)
+                # retrieve the dynamic trial_step config to be included in the checksum
+                trial_steps = resolver.get(ref, level=-2)["trial_steps"]
+                trial_step = trial_steps[trial_steps_label]
+                assert isinstance(trial_step, dict)
+            return checksum_json([window, trial_step])
+
+        resolver = DictResolver(config["analysis"], replace={"repo": "extraction"})
+        for analysis_name, partial_config in config["analysis"].items():
+            windows = partial_config["extraction"]["windows"]
+            partial_config["extraction"]["windows"] = new_windows = {}
+            for window_name, cfg in windows.items():
+                if isinstance(cfg, str):
+                    checksum = _calculate_checksum(cfg)
+                    new_windows[window_name] = f"{cfg}{CHECKSUM_SEP}{checksum}"
+                    L.debug(
+                        "Config checksum for analysis %s and window %s: %s",
+                        analysis_name,
+                        window_name,
+                        checksum,
+                    )
+                else:
+                    new_windows[window_name] = cfg
+
     @classmethod
     def global_config(cls, config: Dict, base_path: StrOrPath) -> Dict:
         """Validate and return a copy of the global config dict.
@@ -55,6 +95,7 @@ class MultiAnalyzerConfig:
         config = deepcopy(config)
         cls._validate_config(config)
         cls._resolve_paths(config, base_path=Path(base_path))
+        cls._resolve_windows(config)
         return config
 
     @classmethod
@@ -83,6 +124,7 @@ class Analyzer:
         self,
         analysis_config: Dict,
         simulations_config: Optional[SimulationsConfig] = None,
+        resolver: Optional[Resolver] = None,
         _repo: Optional[Repository] = None,
         _features: Optional[FeaturesCollection] = None,
     ) -> None:
@@ -91,6 +133,7 @@ class Analyzer:
         Args:
             analysis_config: analysis configuration.
             simulations_config: simulation campaign configuration.
+            resolver: resolver instance.
             _repo: if specified, use it instead of creating a new object. Only for internal use.
             _features: if specified, use it instead of creating a new object. Only for internal use.
         """
@@ -110,6 +153,7 @@ class Analyzer:
                 extraction_config=analysis_config["extraction"],
                 cache_manager=cache_manager,
                 simulations_filter=self.analysis_config["simulations_filter"],
+                resolver=resolver,
             )
             self.features = FeaturesCollection(
                 features_configs=analysis_config["features"],
@@ -208,11 +252,13 @@ class MultiAnalyzer:
         if _analyzers:
             self._analyzers: Dict[str, Analyzer] = _analyzers
         else:
+            resolver = ObjectResolver(self)
             simulations_config = SimulationsConfig.load(self.analysis_config["simulation_campaign"])
             self._analyzers = {
                 name: Analyzer(
                     analysis_config=MultiAnalyzerConfig.partial_config(self.analysis_config, name),
                     simulations_config=simulations_config,
+                    resolver=resolver,
                 )
                 for name in self.analysis_config["analysis"]
             }

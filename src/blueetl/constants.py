@@ -39,3 +39,5 @@ DTYPES = {
     T_STEP: np.float64,
     DURATION: np.float64,
 }
+CHECKSUM_SEP = "#"
+LEVEL_SEP = "."

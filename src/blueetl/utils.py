@@ -1,5 +1,6 @@
 """Common utilities."""
 import hashlib
+import itertools
 import json
 import logging
 import os.path
@@ -161,3 +162,37 @@ def _get_internal_yaml_loader() -> Type[yaml.SafeLoader]:
 
     Loader.add_constructor("!path", _path_constructor)
     return Loader
+
+
+def dict_product(d: Dict) -> Iterator[Tuple]:
+    """Iterate over the product of the values of the given dict.
+
+    Yield tuples of tuples, where each item is composed by:
+
+    - key
+    - value
+    - index of the key in the original list
+
+    Example:
+        Passing the dictionary:
+
+        .. code-block:: python
+
+            d = {"a": ["a1", "a2"], "b": ["b1", "b2"]}
+
+        Yields tuples from:
+
+        .. code-block:: python
+
+            [
+                (("a", "a1", 0), ("b", "b1", 0)),
+                (("a", "a1", 0), ("b", "b2", 1)),
+                (("a", "a2", 1), ("b", "b1", 0)),
+                (("a", "a2", 1), ("b", "b2", 1)),
+            ]
+
+    """
+    if d:
+        yield from itertools.product(
+            *[[(key, v, i) for i, v in enumerate(values)] for key, values in d.items()]
+        )

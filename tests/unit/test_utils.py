@@ -113,3 +113,48 @@ path: !path '/custom/path'
 
     loaded_data = test_module.load_yaml(filepath)
     assert loaded_data == data
+
+
+@pytest.mark.parametrize(
+    "d, expected",
+    [
+        (
+            {},
+            [],
+        ),
+        (
+            {"key1": []},
+            [],
+        ),
+        (
+            {"key1": [100, 200]},
+            [
+                (("key1", 100, 0),),
+                (("key1", 200, 1),),
+            ],
+        ),
+        (
+            {"key1": [100, 200], "key2": []},
+            [],
+        ),
+        (
+            {"key1": [100, 200], "key2": [300]},
+            [
+                (("key1", 100, 0), ("key2", 300, 0)),
+                (("key1", 200, 1), ("key2", 300, 0)),
+            ],
+        ),
+        (
+            {"key1": [100, 200], "key2": [300, 400]},
+            [
+                (("key1", 100, 0), ("key2", 300, 0)),
+                (("key1", 100, 0), ("key2", 400, 1)),
+                (("key1", 200, 1), ("key2", 300, 0)),
+                (("key1", 200, 1), ("key2", 400, 1)),
+            ],
+        ),
+    ],
+)
+def test_dict_product(d, expected):
+    result = test_module.dict_product(d)
+    assert list(result) == expected

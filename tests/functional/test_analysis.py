@@ -25,6 +25,7 @@ analysis_configs = [
     ("analysis_config_06.yaml", "analysis_06"),
     ("analysis_config_07.yaml", "analysis_07"),
     ("analysis_config_08.yaml", "analysis_08"),
+    ("analysis_config_09.yaml", "analysis_09"),
     ("analysis_config_10.yaml", "analysis_10"),
 ]
 
@@ -111,7 +112,7 @@ def _test_features_multi(ma, path):
 
 def _test_filter_in_memory(ma, path):
     ma2 = ma.apply_filter()
-    if not ma.analysis_config["simulations_filter_in_memory"]:
+    if not ma.global_config["simulations_filter_in_memory"]:
         assert ma2 is ma
     else:
         assert ma2 is not ma
@@ -126,7 +127,7 @@ def _test_filter_in_memory(ma, path):
 def _update_expected_files(ma, path):
     # used only when test cases are added or modified
     _dump_all_multi(ma, path)
-    if ma.analysis_config["simulations_filter_in_memory"]:
+    if ma.global_config["simulations_filter_in_memory"]:
         ma2 = ma.apply_filter()
         _dump_all_multi(ma2, path / "_filtered")
 

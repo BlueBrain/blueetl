@@ -17,3 +17,22 @@ def assert_xr_equal(actual, expected):
     # check explicitly name and attrs because not considered by xr.testing.assert_equal
     assert actual.name == expected.name
     assert actual.attrs == expected.attrs
+
+
+def iterallvalues(obj):
+    if isinstance(obj, dict):
+        for v in obj.values():
+            yield from iterallvalues(v)
+    elif isinstance(obj, (list, tuple)):
+        for v in obj:
+            yield from iterallvalues(v)
+    yield obj
+
+
+def assert_not_duplicates(obj):
+    # verify that obj doesn't contain duplicate instances
+    ids = set()
+    for v in iterallvalues(obj):
+        if isinstance(v, (dict, list, tuple)):
+            assert id(v) not in ids, f"Duplicate {type(v).__name__}: {v}"
+            ids.add(id(v))

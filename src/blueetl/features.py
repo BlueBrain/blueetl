@@ -46,7 +46,7 @@ class FeaturesCollection:
         self._features_configs = features_configs
         self._repo = repo
         self._cache_manager = cache_manager
-        self._data = self._dataframes_to_features(_dataframes) if _dataframes else {}
+        self._data = self._dataframes_to_features(_dataframes, config=None) if _dataframes else {}
 
     @property
     def names(self) -> List[str]:
@@ -101,7 +101,7 @@ class FeaturesCollection:
             if features is not None:
                 L.info("Processing cached features %s/%s", n + 1, features_len)
                 initial_lengths = {name: len(df) for name, df in features.items()}
-                features = self._dataframes_to_features(features)
+                features = self._dataframes_to_features(features, config=features_config)
                 # the len may have changed because of the filter on simulation ids
                 to_be_written = {
                     name
@@ -130,9 +130,17 @@ class FeaturesCollection:
                 bool(to_be_written),
             )
 
-    def _dataframes_to_features(self, df_dict: Dict[str, pd.DataFrame]) -> Dict[str, Feature]:
+    def _dataframes_to_features(
+        self, df_dict: Dict[str, pd.DataFrame], config: Optional[Dict]
+    ) -> Dict[str, Feature]:
         query = {SIMULATION_ID: self._repo.simulation_ids}
-        return {name: Feature.from_pandas(df, query=query) for name, df in df_dict.items()}
+        result = {}
+        for name, df in df_dict.items():
+            result[name] = Feature.from_pandas(df, query=query)
+            if config is not None:
+                # make a copy of the config accessible from the features dataframe attrs
+                result[name].df.attrs["config"] = deepcopy(config)
+        return result
 
     def _calculate_single(self, features_config: Dict[str, Any]) -> Dict[str, Feature]:
         df = calculate_features_single(
@@ -144,7 +152,7 @@ class FeaturesCollection:
             features_neuron_classes=features_config.get("neuron_classes", []),
         )
         name = str(features_config["name"])
-        return self._dataframes_to_features({name: df})
+        return self._dataframes_to_features({name: df}, config=features_config)
 
     def _calculate_multi(self, features_config: Dict[str, Any]) -> Dict[str, Feature]:
         df_dict = calculate_features_multi(
@@ -154,8 +162,9 @@ class FeaturesCollection:
             features_params=features_config.get("params", {}),
             features_windows=features_config.get("windows", []),
             features_neuron_classes=features_config.get("neuron_classes", []),
+            features_suffix=features_config.get("suffix", ""),
         )
-        return self._dataframes_to_features(df_dict)
+        return self._dataframes_to_features(df_dict, config=features_config)
 
     def apply_filter(self, repo: Repository) -> "FeaturesCollection":
         """Apply a filter based on the extracted simulations and return a new object.
@@ -238,6 +247,7 @@ def calculate_features_multi(
     features_params: Dict,
     features_windows: List[str],
     features_neuron_classes: List[str],
+    features_suffix: str,
     jobs: Optional[int] = None,
     backend: Optional[str] = None,
 ) -> Dict[str, pd.DataFrame]:
@@ -251,6 +261,7 @@ def calculate_features_multi(
         features_params: generic dict of params that will be passed to the function.
         features_windows: list of windows to consider, or empty to consider them all.
         features_neuron_classes: list of neuron classes to consider, or empty to consider them all.
+        features_suffix: suffix to be added to the features DataFrames.
         jobs: number of jobs (see run_parallel)
         backend: parallel backend (see run_parallel)
 
@@ -258,7 +269,7 @@ def calculate_features_multi(
         dict of DataFrames
 
     """
-    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-arguments,too-many-locals
 
     def func_wrapper(key: NamedTuple, df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
         # executed in a subprocess
@@ -277,7 +288,7 @@ def calculate_features_multi(
             # for example when the returned DataFrame has a RangeIndex to be dropped
             drop = result_df.index.names == [None]
             result_df = result_df.etl.add_conditions(conditions, values, drop=drop)
-            features_records[feature_group] = result_df
+            features_records[feature_group + features_suffix] = result_df
         return features_records
 
     func = import_by_string(features_func)

@@ -2,6 +2,7 @@
 import gc
 import logging
 from copy import deepcopy
+from itertools import chain
 from pathlib import Path
 from typing import Any, Dict, List, NamedTuple, Optional, Tuple
 
@@ -14,7 +15,7 @@ from blueetl.features import FeaturesCollection
 from blueetl.repository import Repository
 from blueetl.resolver import DictResolver, ObjectResolver, Resolver
 from blueetl.types import StrOrPath
-from blueetl.utils import checksum_json
+from blueetl.utils import checksum_json, dict_product
 
 L = logging.getLogger(__name__)
 
@@ -31,21 +32,21 @@ class MultiAnalyzerConfig:
             raise ValueError(f"Only version {VERSION} of the analysis configuration is supported.")
 
     @classmethod
-    def _validate_config(cls, config: Dict) -> None:
+    def _validate_config(cls, global_config: Dict) -> None:
         """Validate the configuration."""
-        cls._check_config_version(int(config.get("version", 1)))
+        cls._check_config_version(int(global_config.get("version", 1)))
         # TODO: add validation schema
-        config.setdefault("simulations_filter", {})
-        config.setdefault("simulations_filter_in_memory", {})
+        global_config.setdefault("simulations_filter", {})
+        global_config.setdefault("simulations_filter_in_memory", {})
 
     @staticmethod
-    def _resolve_paths(config: Dict, base_path: Path) -> None:
+    def _resolve_paths(global_config: Dict, base_path: Path) -> None:
         """Resolve any relative path."""
-        config["output"] = base_path / config["output"]
-        config["simulation_campaign"] = base_path / config["simulation_campaign"]
+        global_config["output"] = base_path / global_config["output"]
+        global_config["simulation_campaign"] = base_path / global_config["simulation_campaign"]
 
     @staticmethod
-    def _resolve_windows(config: Dict) -> None:
+    def _resolve_windows(global_config: Dict) -> None:
         """Calculate the hash of there referenced windows in each partial configuration.
 
         This is needed to invalidate the cache of the windows referring to the original windows.
@@ -64,10 +65,10 @@ class MultiAnalyzerConfig:
                 assert isinstance(trial_step, dict)
             return checksum_json([window, trial_step])
 
-        resolver = DictResolver(config["analysis"], replace={"repo": "extraction"})
-        for analysis_name, partial_config in config["analysis"].items():
-            windows = partial_config["extraction"]["windows"]
-            partial_config["extraction"]["windows"] = new_windows = {}
+        resolver = DictResolver(global_config["analysis"], replace={"repo": "extraction"})
+        for analysis_name, analysis_config in global_config["analysis"].items():
+            windows = analysis_config["extraction"]["windows"]
+            analysis_config["extraction"]["windows"] = new_windows = {}
             for window_name, cfg in windows.items():
                 if isinstance(cfg, str):
                     checksum = _calculate_checksum(cfg)
@@ -80,6 +81,54 @@ class MultiAnalyzerConfig:
                     )
                 else:
                     new_windows[window_name] = cfg
+
+    @staticmethod
+    def _resolve_features(analysis_config: Dict) -> None:
+        def expand_product(params, params_product):
+            for items in dict_product(params_product):
+                new_params = deepcopy(params)
+                for key, v, i in items:
+                    new_params[key] = v
+                    new_params["__suffix__"] = new_params.get("__suffix__", "") + f"_{i}"
+                yield new_params
+
+        def expand_zip(params, params_zip):
+            if len(set(len(values) for values in params_zip.values())) != 1:
+                raise ValueError("All the zip params must have the same length")
+            for i, zip_values in enumerate(zip(*params_zip.values())):
+                new_params = deepcopy(params)
+                new_params["__suffix__"] = new_params.get("__suffix__", "") + f"__{i}"
+                new_params.update(zip(params_zip.keys(), zip_values))
+                yield new_params
+
+        new_features_list = []
+        for features_config in analysis_config["features"]:
+            params_list = [features_config.pop("params", {})]
+            if params_product := features_config.pop("params_product", {}):
+                params_list = list(
+                    chain.from_iterable(expand_product(p, params_product) for p in params_list)
+                )
+            if params_zip := features_config.pop("params_zip", {}):
+                params_list = list(
+                    chain.from_iterable(expand_zip(p, params_zip) for p in params_list)
+                )
+            for p in params_list:
+                new_features_config = deepcopy(features_config)
+                if p:
+                    # suffix becomes part of the config dict
+                    new_features_config["suffix"] = p.pop("__suffix__", "")
+                    new_features_config["params"] = p
+                new_features_list.append(new_features_config)
+        analysis_config["features"] = new_features_list
+
+    @classmethod
+    def _resolve_analysis_configs(cls, global_config: Dict) -> None:
+        for name, config in global_config["analysis"].items():
+            config["output"] = global_config["output"] / name
+            config["simulations_filter"] = global_config["simulations_filter"]
+            config["simulations_filter_in_memory"] = global_config["simulations_filter_in_memory"]
+            config.setdefault("features", [])
+            cls._resolve_features(config)
 
     @classmethod
     def global_config(cls, config: Dict, base_path: StrOrPath) -> Dict:
@@ -96,24 +145,7 @@ class MultiAnalyzerConfig:
         cls._validate_config(config)
         cls._resolve_paths(config, base_path=Path(base_path))
         cls._resolve_windows(config)
-        return config
-
-    @classmethod
-    def partial_config(cls, global_config: Dict, name: str) -> Dict:
-        """Build and return a partial config dict.
-
-        Args:
-            global_config: global config dict.
-            name: name of the analysis.
-
-        Returns:
-            The requested partial config dict.
-        """
-        config = deepcopy(global_config["analysis"][name])
-        config["output"] = global_config["output"] / name
-        config["simulations_filter"] = global_config["simulations_filter"]
-        config["simulations_filter_in_memory"] = global_config["simulations_filter_in_memory"]
-        config.setdefault("features", [])
+        cls._resolve_analysis_configs(config)
         return config
 
 
@@ -236,31 +268,31 @@ class MultiAnalyzer:
 
     def __init__(
         self,
-        analysis_config: Dict,
+        global_config: Dict,
         base_path: StrOrPath = ".",
         _analyzers: Optional[Dict[str, Analyzer]] = None,
     ) -> None:
         """Initialize the MultiAnalyzer from the given configuration.
 
         Args:
-            analysis_config: analysis configuration.
+            global_config: analysis configuration.
             base_path: base path used to resolve relative paths. If omitted, the cwd is used.
             _analyzers: if specified, use it instead of creating a new dict of analyzers.
                 Only for internal use.
         """
-        self.analysis_config = MultiAnalyzerConfig.global_config(analysis_config, base_path)
+        self.global_config = MultiAnalyzerConfig.global_config(global_config, base_path)
         if _analyzers:
             self._analyzers: Dict[str, Analyzer] = _analyzers
         else:
             resolver = ObjectResolver(self)
-            simulations_config = SimulationsConfig.load(self.analysis_config["simulation_campaign"])
+            simulations_config = SimulationsConfig.load(self.global_config["simulation_campaign"])
             self._analyzers = {
                 name: Analyzer(
-                    analysis_config=MultiAnalyzerConfig.partial_config(self.analysis_config, name),
+                    analysis_config=analysis_config,
                     simulations_config=simulations_config,
                     resolver=resolver,
                 )
-                for name in self.analysis_config["analysis"]
+                for name, analysis_config in self.global_config["analysis"].items()
             }
 
     @property
@@ -322,13 +354,13 @@ class MultiAnalyzer:
         self.extract_repo()
         self.calculate_features()
         if not simulations_filter:
-            simulations_filter = self.analysis_config["simulations_filter_in_memory"]
+            simulations_filter = self.global_config["simulations_filter_in_memory"]
         if not simulations_filter:
             return self
         analyzers = {
             name: a.apply_filter(simulations_filter) for name, a in self._analyzers.items()
         }
-        return MultiAnalyzer(analysis_config=self.analysis_config, _analyzers=analyzers)
+        return MultiAnalyzer(global_config=self.global_config, _analyzers=analyzers)
 
     def show(self):
         """Print all the DataFrames."""

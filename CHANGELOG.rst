@@ -7,6 +7,8 @@ Version 0.2.0
 New Features
 ~~~~~~~~~~~~
 - Add MultiAnalyzer class to support multiple reports [NSETM-2015]
+- Allow to resolve windows by reference [NSETM-2015]
+- Support combination of parameters in features configuration [NSETM-2091]
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

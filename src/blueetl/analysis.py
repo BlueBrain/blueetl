@@ -1,152 +1,21 @@
 """Analysis functions."""
 import gc
 import logging
-from copy import deepcopy
-from itertools import chain
 from pathlib import Path
-from typing import Any, Dict, List, NamedTuple, Optional, Tuple
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
 
 import pandas as pd
 
 from blueetl.cache import CacheManager
+from blueetl.config.analysis import init_multi_analysis_configuration
+from blueetl.config.analysis_model import MultiAnalysisConfig, SingleAnalysisConfig
 from blueetl.config.simulations import SimulationsConfig
-from blueetl.constants import CHECKSUM_SEP
 from blueetl.features import FeaturesCollection
 from blueetl.repository import Repository
-from blueetl.resolver import DictResolver, ObjectResolver, Resolver
+from blueetl.resolver import AttrResolver, Resolver
 from blueetl.types import StrOrPath
-from blueetl.utils import checksum_json, dict_product
 
 L = logging.getLogger(__name__)
-
-VERSION = 2
-
-
-class MultiAnalyzerConfig:
-    """MultiAnalyzerConfig class."""
-
-    @classmethod
-    def _check_config_version(cls, version: int) -> None:
-        """Check that the version of the configuration is supported."""
-        if version != VERSION:
-            raise ValueError(f"Only version {VERSION} of the analysis configuration is supported.")
-
-    @classmethod
-    def _validate_config(cls, global_config: Dict) -> None:
-        """Validate the configuration."""
-        cls._check_config_version(int(global_config.get("version", 1)))
-        # TODO: add validation schema
-        global_config.setdefault("simulations_filter", {})
-        global_config.setdefault("simulations_filter_in_memory", {})
-
-    @staticmethod
-    def _resolve_paths(global_config: Dict, base_path: Path) -> None:
-        """Resolve any relative path."""
-        global_config["output"] = base_path / global_config["output"]
-        global_config["simulation_campaign"] = base_path / global_config["simulation_campaign"]
-
-    @staticmethod
-    def _resolve_windows(global_config: Dict) -> None:
-        """Calculate the hash of there referenced windows in each partial configuration.
-
-        This is needed to invalidate the cache of the windows referring to the original windows.
-        """
-
-        def _calculate_checksum(ref):
-            # example: spikes.repo.windows.w3
-            window = resolver.get(ref)
-            assert isinstance(window, dict), "The referenced window must be a dict"
-            trial_step = {}
-            if trial_steps_label := window.get("trial_steps_label"):
-                L.debug("Checksum including trial_steps_label %s", trial_steps_label)
-                # retrieve the dynamic trial_step config to be included in the checksum
-                trial_steps = resolver.get(ref, level=-2)["trial_steps"]
-                trial_step = trial_steps[trial_steps_label]
-                assert isinstance(trial_step, dict)
-            return checksum_json([window, trial_step])
-
-        resolver = DictResolver(global_config["analysis"], replace={"repo": "extraction"})
-        for analysis_name, analysis_config in global_config["analysis"].items():
-            windows = analysis_config["extraction"]["windows"]
-            analysis_config["extraction"]["windows"] = new_windows = {}
-            for window_name, cfg in windows.items():
-                if isinstance(cfg, str):
-                    checksum = _calculate_checksum(cfg)
-                    new_windows[window_name] = f"{cfg}{CHECKSUM_SEP}{checksum}"
-                    L.debug(
-                        "Config checksum for analysis %s and window %s: %s",
-                        analysis_name,
-                        window_name,
-                        checksum,
-                    )
-                else:
-                    new_windows[window_name] = cfg
-
-    @staticmethod
-    def _resolve_features(analysis_config: Dict) -> None:
-        def expand_product(params, params_product):
-            for items in dict_product(params_product):
-                new_params = deepcopy(params)
-                for key, v, i in items:
-                    new_params[key] = v
-                    new_params["__suffix__"] = new_params.get("__suffix__", "") + f"_{i}"
-                yield new_params
-
-        def expand_zip(params, params_zip):
-            if len(set(len(values) for values in params_zip.values())) != 1:
-                raise ValueError("All the zip params must have the same length")
-            for i, zip_values in enumerate(zip(*params_zip.values())):
-                new_params = deepcopy(params)
-                new_params["__suffix__"] = new_params.get("__suffix__", "") + f"__{i}"
-                new_params.update(zip(params_zip.keys(), zip_values))
-                yield new_params
-
-        new_features_list = []
-        for features_config in analysis_config["features"]:
-            params_list = [features_config.pop("params", {})]
-            if params_product := features_config.pop("params_product", {}):
-                params_list = list(
-                    chain.from_iterable(expand_product(p, params_product) for p in params_list)
-                )
-            if params_zip := features_config.pop("params_zip", {}):
-                params_list = list(
-                    chain.from_iterable(expand_zip(p, params_zip) for p in params_list)
-                )
-            for p in params_list:
-                new_features_config = deepcopy(features_config)
-                if p:
-                    # suffix becomes part of the config dict
-                    new_features_config["suffix"] = p.pop("__suffix__", "")
-                    new_features_config["params"] = p
-                new_features_list.append(new_features_config)
-        analysis_config["features"] = new_features_list
-
-    @classmethod
-    def _resolve_analysis_configs(cls, global_config: Dict) -> None:
-        for name, config in global_config["analysis"].items():
-            config["output"] = global_config["output"] / name
-            config["simulations_filter"] = global_config["simulations_filter"]
-            config["simulations_filter_in_memory"] = global_config["simulations_filter_in_memory"]
-            config.setdefault("features", [])
-            cls._resolve_features(config)
-
-    @classmethod
-    def global_config(cls, config: Dict, base_path: StrOrPath) -> Dict:
-        """Validate and return a copy of the global config dict.
-
-        Args:
-            config: non-validated global config dict.
-            base_path: base path used to resolve relative paths.
-
-        Returns:
-            The validated global config dict.
-        """
-        config = deepcopy(config)
-        cls._validate_config(config)
-        cls._resolve_paths(config, base_path=Path(base_path))
-        cls._resolve_windows(config)
-        cls._resolve_analysis_configs(config)
-        return config
 
 
 class Analyzer:
@@ -154,7 +23,7 @@ class Analyzer:
 
     def __init__(
         self,
-        analysis_config: Dict,
+        analysis_config: SingleAnalysisConfig,
         simulations_config: Optional[SimulationsConfig] = None,
         resolver: Optional[Resolver] = None,
         _repo: Optional[Repository] = None,
@@ -169,26 +38,26 @@ class Analyzer:
             _repo: if specified, use it instead of creating a new object. Only for internal use.
             _features: if specified, use it instead of creating a new object. Only for internal use.
         """
-        self.analysis_config = analysis_config
+        self._analysis_config = analysis_config
         if _repo or _features:
             assert _repo and _features, "Both _repo and _features must be specified."
-            self.repo = _repo
-            self.features = _features
+            self._repo = _repo
+            self._features = _features
         else:
             assert simulations_config is not None
             cache_manager = CacheManager(
                 analysis_config=analysis_config,
                 simulations_config=simulations_config,
             )
-            self.repo = Repository(
+            self._repo = Repository(
                 simulations_config=simulations_config,
-                extraction_config=analysis_config["extraction"],
+                extraction_config=analysis_config.extraction,
                 cache_manager=cache_manager,
-                simulations_filter=self.analysis_config["simulations_filter"],
+                simulations_filter=self.analysis_config.simulations_filter,
                 resolver=resolver,
             )
-            self.features = FeaturesCollection(
-                features_configs=analysis_config["features"],
+            self._features = FeaturesCollection(
+                features_configs=analysis_config.features,
                 repo=self.repo,
                 cache_manager=cache_manager,
             )
@@ -210,6 +79,26 @@ class Analyzer:
         self.repo.cache_manager.close()
         self.features.cache_manager.close()
 
+    @property
+    def analysis_config(self) -> SingleAnalysisConfig:
+        """Return the wrapped analysis configuration."""
+        return self._analysis_config
+
+    @property
+    def repo(self) -> Repository:
+        """Return the wrapped repository."""
+        return self._repo
+
+    @property
+    def extraction(self) -> Repository:
+        """Return the wrapped repository as an alias."""
+        return self._repo
+
+    @property
+    def features(self) -> FeaturesCollection:
+        """Return the wrapped features."""
+        return self._features
+
     def extract_repo(self) -> None:
         """Extract all the repositories dataframes."""
         self.repo.extract()
@@ -217,7 +106,6 @@ class Analyzer:
     def calculate_features(self) -> None:
         """Calculate all the features defined in the configuration."""
         self.features.calculate()
-        # FIXME: verify if there are reference cycles that can be removed.
         gc.collect()
 
     def apply_filter(self, simulations_filter: Optional[Dict[str, Any]] = None) -> "Analyzer":
@@ -234,7 +122,7 @@ class Analyzer:
         self.extract_repo()
         self.calculate_features()
         if not simulations_filter:
-            simulations_filter = self.analysis_config["simulations_filter_in_memory"]
+            simulations_filter = self.analysis_config.simulations_filter_in_memory
         if not simulations_filter:
             return self
         repo = self.repo.apply_filter(simulations_filter)
@@ -268,7 +156,7 @@ class MultiAnalyzer:
 
     def __init__(
         self,
-        global_config: Dict,
+        global_config: Union[Dict, MultiAnalysisConfig],
         base_path: StrOrPath = ".",
         _analyzers: Optional[Dict[str, Analyzer]] = None,
     ) -> None:
@@ -280,25 +168,45 @@ class MultiAnalyzer:
             _analyzers: if specified, use it instead of creating a new dict of analyzers.
                 Only for internal use.
         """
-        self.global_config = MultiAnalyzerConfig.global_config(global_config, base_path)
-        if _analyzers:
-            self._analyzers: Dict[str, Analyzer] = _analyzers
+        if isinstance(global_config, dict):
+            self._global_config = init_multi_analysis_configuration(global_config, Path(base_path))
         else:
-            resolver = ObjectResolver(self)
-            simulations_config = SimulationsConfig.load(self.global_config["simulation_campaign"])
+            self._global_config = global_config
+        self._analyzers: Optional[Dict[str, Analyzer]] = _analyzers
+
+    @property
+    def global_config(self) -> MultiAnalysisConfig:
+        """Return the global config instance."""
+        return self._global_config
+
+    @property
+    def analyzers(self) -> Dict[str, Analyzer]:
+        """Load and return the dict of analyzers."""
+        if self._analyzers is None:
+            resolver = AttrResolver(self)
+            simulations_config = SimulationsConfig.load(self.global_config.simulation_campaign)
             self._analyzers = {
                 name: Analyzer(
                     analysis_config=analysis_config,
                     simulations_config=simulations_config,
                     resolver=resolver,
                 )
-                for name, analysis_config in self.global_config["analysis"].items()
+                for name, analysis_config in self.global_config.analysis.items()
             }
+        return self._analyzers
 
     @property
     def names(self) -> List[str]:
         """Return the names of all the analyzers."""
-        return list(self._analyzers)
+        return list(self.analyzers)
+
+    def __getstate__(self) -> Dict:
+        """Get the object state when the object is pickled."""
+        return {"_global_config": self.global_config, "_analyzers": None}
+
+    def __setstate__(self, state: Dict) -> None:
+        """Set the object state when the object is unpickled."""
+        self.__dict__.update(state)
 
     def __getattr__(self, name: str) -> Analyzer:
         """Return an analyzer instance by name.
@@ -307,7 +215,7 @@ class MultiAnalyzer:
             name: name of the analyzer.
         """
         try:
-            return self._analyzers[name]
+            return self.analyzers[name]
         except KeyError as ex:
             raise AttributeError(
                 f"{self.__class__.__name__!r} object has no attribute {name!r}"
@@ -327,17 +235,17 @@ class MultiAnalyzer:
         After calling this method, the DataFrames already extracted can still be accessed,
         but it's not possible to extract new data or calculate new features.
         """
-        for a in self._analyzers.values():
+        for a in self.analyzers.values():
             a.close()
 
     def extract_repo(self) -> None:
         """Extract all the repositories dataframes for all the analysis."""
-        for a in self._analyzers.values():
+        for a in self.analyzers.values():
             a.extract_repo()
 
     def calculate_features(self) -> None:
         """Calculate all the features defined in the configuration for all the analysis."""
-        for a in self._analyzers.values():
+        for a in self.analyzers.values():
             a.calculate_features()
 
     def apply_filter(self, simulations_filter: Optional[Dict[str, Any]] = None) -> "MultiAnalyzer":
@@ -354,13 +262,11 @@ class MultiAnalyzer:
         self.extract_repo()
         self.calculate_features()
         if not simulations_filter:
-            simulations_filter = self.global_config["simulations_filter_in_memory"]
+            simulations_filter = self.global_config.simulations_filter_in_memory
         if not simulations_filter:
             return self
-        analyzers = {
-            name: a.apply_filter(simulations_filter) for name, a in self._analyzers.items()
-        }
-        return MultiAnalyzer(global_config=self.global_config, _analyzers=analyzers)
+        analyzers = {name: a.apply_filter(simulations_filter) for name, a in self.analyzers.items()}
+        return MultiAnalyzer(global_config=self.global_config.copy(deep=True), _analyzers=analyzers)
 
     def show(self):
         """Print all the DataFrames."""

@@ -3,6 +3,7 @@ from unittest.mock import Mock, PropertyMock
 import pandas as pd
 from pandas.testing import assert_frame_equal
 
+from blueetl.config.analysis_model import WindowConfig
 from blueetl.constants import (
     CIRCUIT,
     CIRCUIT_ID,
@@ -20,7 +21,7 @@ from blueetl.constants import (
     WINDOW_TYPE,
 )
 from blueetl.extract import windows as test_module
-from blueetl.resolver import ObjectResolver
+from blueetl.resolver import AttrResolver
 from blueetl.utils import ensure_dtypes
 
 
@@ -61,32 +62,35 @@ def test_windows_from_simulations():
         },
         index=[0],
     )
-    resolver = ObjectResolver(root)
+    root.soma.extraction = root.soma.repo
+    resolver = AttrResolver(root)
 
-    config = {
-        "windows": {
-            "w1": {"bounds": [5000, 6000]},
-            "w2": {
+    windows_config = {
+        "w1": WindowConfig(bounds=[5000, 6000]),
+        "w2": WindowConfig(
+            **{
                 "bounds": [0, 100],
                 "initial_offset": 1000,
                 "window_type": "custom_type_1",
                 "n_trials": 2,
                 "trial_steps_value": 100,
-            },
-            "w3": {
+            }
+        ),
+        "w3": WindowConfig(
+            **{
                 "bounds": [0, 200],
                 "initial_offset": 2000,
                 "window_type": "custom_type_2",
                 "n_trials": 2,
                 "trial_steps_label": "ts1",
-            },
-            "w4": "soma.repo.windows.w9#checksum",
-        }
+            }
+        ),
+        "w4": "soma.extraction.windows.w9#checksum",
     }
     result = test_module.Windows.from_simulations(
         simulations=mock_simulations,
         trial_steps=trial_steps,
-        config=config,
+        windows_config=windows_config,
         resolver=resolver,
     )
 

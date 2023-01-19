@@ -79,7 +79,7 @@ def _test_repo(a, path):
         expected_df = _load_df(path / f"{name}.parquet")
         df = _get_subattr(a, ["repo", name, "df"])
         df = df[[col for col in df.columns if col not in [SIMULATION, CIRCUIT]]]
-        with assertion_error_message(f"In repo {name}:"):
+        with assertion_error_message(f"Difference in repo {name!r}"):
             assert_frame_equal(df, expected_df)
 
 
@@ -90,7 +90,7 @@ def _test_features(a, path):
     for name in a.features.names:
         expected_df = _load_df(path / f"{name}.parquet")
         actual_df = _get_subattr(a, ["features", name, "df"])
-        with assertion_error_message(f"In features {name}:"):
+        with assertion_error_message(f"Difference in features {name!r}"):
             assert_frame_equal(actual_df, expected_df)
 
 
@@ -112,7 +112,7 @@ def _test_features_multi(ma, path):
 
 def _test_filter_in_memory(ma, path):
     ma2 = ma.apply_filter()
-    if not ma.global_config["simulations_filter_in_memory"]:
+    if not ma.global_config.simulations_filter_in_memory:
         assert ma2 is ma
     else:
         assert ma2 is not ma
@@ -127,7 +127,7 @@ def _test_filter_in_memory(ma, path):
 def _update_expected_files(ma, path):
     # used only when test cases are added or modified
     _dump_all_multi(ma, path)
-    if ma.global_config["simulations_filter_in_memory"]:
+    if ma.global_config.simulations_filter_in_memory:
         ma2 = ma.apply_filter()
         _dump_all_multi(ma2, path / "_filtered")
 

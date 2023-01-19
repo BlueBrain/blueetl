@@ -1,6 +1,6 @@
 """Resolver."""
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any
 
 from blueetl.constants import LEVEL_SEP
 
@@ -12,60 +12,60 @@ class ResolverError(Exception):
 class Resolver(ABC):
     """Resolver class."""
 
-    def __init__(self, root: Any, replace: Optional[Dict[str, str]] = None) -> None:
+    def __init__(self, root: Any) -> None:
         """Initialize the Resolver.
 
         Args:
             root: referenced root object.
-            replace: optional dict used to replace the names in the ref string.
         """
         self._root = root
-        self._replacement_dict = replace or {}
 
-    def get(self, ref: str, level: Optional[int] = None) -> Any:
+    def get(self, ref: str) -> Any:
         """Return the object referred by the ref string.
 
         Args:
             ref: string with attributes separated by dot.
-            level: if specified, limit the resolution up to the given level.
-
-        Examples:
-            - get("a.b.c.d") is resolved as: root -> a -> b -> c -> d
-            - get("a.b.c.d", level=0) is resolved as: root
-            - get("a.b.c.d", level=1) is resolved as: root -> a
-            - get("a.b.c.d", level=-1) is resolved as: root -> a -> b -> c
-
-        Returns:
-            the loaded attribute.
         """
         obj = self._root
         names = ref.split(LEVEL_SEP)
-        names = names if level is None else names[:level]
         for name in names:
             try:
-                obj = self._get(obj, self._replace(name))
+                obj = self._get(obj, name)
             except Exception:
                 msg = f"Impossible to resolve {LEVEL_SEP.join(names)} at level {name}"
                 raise ResolverError(msg) from None
         return obj
 
-    def _replace(self, name: str) -> str:
-        return self._replacement_dict.get(name, name)
-
     @abstractmethod
     def _get(self, obj: Any, name: str) -> Any:
-        """Return the object corresponding to the given name from the object obj."""
+        """Return the item or attr corresponding to the given name."""
 
 
-class ObjectResolver(Resolver):
-    """ObjectResolver class."""
+class AttrResolver(Resolver):
+    """AttrResolver class.
+
+    Examples:
+        >>> from unittest.mock import Mock
+        >>> obj = Mock()  # any object with nested attributes
+        >>> obj.a.b.c = 123
+        >>> resolver = AttrResolver(obj)
+        >>> resolver.get("a.b.c")
+        123
+    """
 
     def _get(self, obj: Any, name: str) -> Any:
         return getattr(obj, name)
 
 
-class DictResolver(Resolver):
-    """DictResolver class."""
+class ItemResolver(Resolver):
+    """ItemResolver class.
+
+    Examples:
+        >>> obj = {"a": {"b": {"c": 123}}}
+        >>> resolver = ItemResolver(obj)
+        >>> resolver.get("a.b.c")
+        123
+    """
 
     def _get(self, obj: Any, name: str) -> Any:
         return obj[name]

@@ -1,17 +1,20 @@
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
 from blueetl import cache as test_module
+from blueetl.config.analysis_model import SingleAnalysisConfig
 from blueetl.config.simulations import SimulationsConfig
 
 
 def _get_analysis_config(path):
     """Return an empty config dict."""
-    return {
-        "output": str(path),
-        "extraction": {},
-        "features": [],
-    }
+    return SingleAnalysisConfig(
+        output=Path(path),
+        extraction={"report": {"type": "spikes"}},
+        features=[],
+    )
 
 
 def _get_simulations_config():

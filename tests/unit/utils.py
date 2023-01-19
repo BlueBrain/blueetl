@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
+import pydantic
 import xarray as xr
 
 TEST_DATA_PATH = Path(__file__).parent.parent / "data"
@@ -25,6 +26,9 @@ def iterallvalues(obj):
             yield from iterallvalues(v)
     elif isinstance(obj, (list, tuple)):
         for v in obj:
+            yield from iterallvalues(v)
+    elif isinstance(obj, pydantic.BaseModel):
+        for k, v in obj:
             yield from iterallvalues(v)
     yield obj
 

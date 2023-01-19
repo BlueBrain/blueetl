@@ -7,6 +7,7 @@ from typing import Any, Dict, Generic, List, Optional, Type
 import pandas as pd
 
 from blueetl.cache import CacheManager
+from blueetl.config.analysis_model import ExtractionConfig
 from blueetl.config.simulations import SimulationsConfig
 from blueetl.constants import CIRCUIT_ID, SIMULATION_ID, SIMULATION_PATH
 from blueetl.extract.base import ExtractorT
@@ -85,9 +86,9 @@ class NeuronsExtractor(BaseExtractor[Neurons]):
         """Instantiate an object from the configuration."""
         return Neurons.from_simulations(
             simulations=self._repo.simulations,
-            target=self._repo.extraction_config["target"],
-            neuron_classes=self._repo.extraction_config["neuron_classes"],
-            limit=self._repo.extraction_config["limit"],
+            target=self._repo.extraction_config.target,
+            neuron_classes=self._repo.extraction_config.neuron_classes,
+            limit=self._repo.extraction_config.limit,
         )
 
     def extract_cached(self, df: pd.DataFrame) -> Neurons:
@@ -106,9 +107,9 @@ class NeuronClassesExtractor(BaseExtractor[NeuronClasses]):
         """Instantiate an object from the configuration."""
         return NeuronClasses.from_neurons(
             neurons=self._repo.neurons,
-            target=self._repo.extraction_config["target"],
-            neuron_classes=self._repo.extraction_config["neuron_classes"],
-            limit=self._repo.extraction_config["limit"],
+            target=self._repo.extraction_config.target,
+            neuron_classes=self._repo.extraction_config.neuron_classes,
+            limit=self._repo.extraction_config.limit,
         )
 
     def extract_cached(self, df: pd.DataFrame) -> NeuronClasses:
@@ -127,7 +128,9 @@ class TrialStepsExtractor(BaseExtractor[TrialSteps]):
         """Instantiate an object from the configuration."""
         return TrialSteps.from_simulations(
             simulations=self._repo.simulations,
-            config=self._repo.extraction_config,
+            trial_steps_config=self._repo.extraction_config.trial_steps,
+            target=self._repo.extraction_config.target,
+            limit=self._repo.extraction_config.limit,
         )
 
     def extract_cached(self, df: pd.DataFrame) -> TrialSteps:
@@ -143,10 +146,11 @@ class WindowsExtractor(BaseExtractor[Windows]):
 
     def extract_new(self) -> Windows:
         """Instantiate an object from the configuration."""
+        assert self._repo.resolver is not None
         return Windows.from_simulations(
             simulations=self._repo.simulations,
             trial_steps=self._repo.trial_steps,
-            config=self._repo.extraction_config,
+            windows_config=self._repo.extraction_config.windows,
             resolver=self._repo.resolver,
         )
 
@@ -167,7 +171,7 @@ class SpikesExtractor(BaseExtractor[Spikes]):
             simulations=self._repo.simulations,
             neurons=self._repo.neurons,
             windows=self._repo.windows,
-            name=self._repo.extraction_config["report"].get("name", "spikes"),
+            name=self._repo.extraction_config.report.name,
         )
 
     def extract_cached(self, df: pd.DataFrame) -> Spikes:
@@ -187,7 +191,7 @@ class SomaReportExtractor(BaseExtractor[SomaReport]):
             simulations=self._repo.simulations,
             neurons=self._repo.neurons,
             windows=self._repo.windows,
-            name=self._repo.extraction_config["report"]["name"],
+            name=self._repo.extraction_config.report.name,
         )
 
     def extract_cached(self, df: pd.DataFrame) -> SomaReport:
@@ -207,7 +211,7 @@ class CompartmentReportExtractor(BaseExtractor[CompartmentReport]):
             simulations=self._repo.simulations,
             neurons=self._repo.neurons,
             windows=self._repo.windows,
-            name=self._repo.extraction_config["report"]["name"],
+            name=self._repo.extraction_config.report.name,
         )
 
     def extract_cached(self, df: pd.DataFrame) -> CompartmentReport:
@@ -224,7 +228,7 @@ class Repository:
     def __init__(
         self,
         simulations_config: SimulationsConfig,
-        extraction_config: Dict[str, Any],
+        extraction_config: ExtractionConfig,
         cache_manager: CacheManager,
         simulations_filter: Optional[Dict[str, Any]] = None,
         resolver: Optional[Resolver] = None,
@@ -245,7 +249,7 @@ class Repository:
         self._cache_manager = cache_manager
         self._simulations_filter = simulations_filter
         self._resolver = resolver
-        report_type = extraction_config["report"]["type"]
+        report_type = extraction_config.report.type
         available_reports: Dict[str, Type[BaseExtractor]] = {
             "spikes": SpikesExtractor,
             "soma": SomaReportExtractor,
@@ -270,7 +274,6 @@ class Repository:
             # because we want to be able to use the cached data in the subprocesses.
             L.info("Extracting dataframes before serialization")
             self.extract()
-        assert self._resolver is None
         # Copy the object's state, excluding the unpicklable entries.
         names_set = set(self.names)
         return {k: v for k, v in self.__dict__.items() if k not in names_set}
@@ -280,7 +283,7 @@ class Repository:
         self.__dict__.update(state)
 
     @property
-    def extraction_config(self) -> Dict[str, Any]:
+    def extraction_config(self) -> ExtractionConfig:
         """Access to the extraction configuration."""
         return self._extraction_config
 
@@ -355,8 +358,6 @@ class Repository:
         for name in self.names:
             getattr(self, name)
         self.check_extractions()
-        # delete the resolver because not needed anymore
-        self._resolver = None
 
     def is_extracted(self) -> bool:
         """Return True if all the dataframes have been extracted."""

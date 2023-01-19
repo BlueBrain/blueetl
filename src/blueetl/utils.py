@@ -6,13 +6,14 @@ import logging
 import os.path
 import time
 from contextlib import contextmanager
-from functools import lru_cache
+from functools import cache
 from importlib import import_module
-from pathlib import Path, PosixPath
+from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Type, Union
 
 import pandas as pd
 import yaml
+from pydantic import BaseModel
 
 from blueetl.constants import DTYPES
 from blueetl.types import StrOrPath
@@ -52,12 +53,15 @@ def setup_logging(loglevel: Union[int, str], logformat: Optional[str] = None, **
 def load_yaml(filepath: StrOrPath) -> Any:
     """Load from YAML file."""
     with open(filepath, "r", encoding="utf-8") as f:
-        return yaml.load(f, Loader=_get_internal_yaml_loader())
+        # Any conversion when loading back the values can be done later,
+        # so that the loaded object can be validated using jsonschema.
+        return yaml.load(f, Loader=yaml.SafeLoader)
 
 
 def dump_yaml(filepath: StrOrPath, data: Any) -> None:
     """Dump to YAML file."""
     with open(filepath, "w", encoding="utf-8") as f:
+        # The custom dumper dumps unsupported types (for example Path) as simple strings.
         yaml.dump(data, stream=f, sort_keys=False, Dumper=_get_internal_yaml_dumper())
 
 
@@ -131,37 +135,34 @@ def checksum(filepath: StrOrPath, chunk_size: int = 65536) -> str:
     return filehash.hexdigest()
 
 
+def checksum_str(s: str) -> str:
+    """Calculate and return the checksum of the given string."""
+    return hashlib.blake2b(s.encode("utf-8")).hexdigest()
+
+
 def checksum_json(obj: Any) -> str:
     """Calculate and return the checksum of the given object converted to json."""
-    return hashlib.blake2b(json.dumps(obj, sort_keys=True).encode("utf-8")).hexdigest()
+    return checksum_str(json.dumps(obj, sort_keys=True))
 
 
-@lru_cache(maxsize=None)
+@cache
 def _get_internal_yaml_dumper() -> Type[yaml.SafeDumper]:
     """Return the custom internal yaml dumper class."""
+    _representers = {
+        Path: str,
+        BaseModel: lambda data: data.dict(),
+    }
 
     class Dumper(yaml.SafeDumper):
         """Custom YAML Dumper."""
 
-    def _path_representer(dumper, data):
-        return dumper.represent_scalar("!path", str(data))
+        def represent_data(self, data):
+            for cls in type(data).__mro__:
+                if func := _representers.get(cls):
+                    return self.represent_data(func(data))
+            return super().represent_data(data)
 
-    Dumper.add_representer(PosixPath, _path_representer)
     return Dumper
-
-
-@lru_cache(maxsize=None)
-def _get_internal_yaml_loader() -> Type[yaml.SafeLoader]:
-    """Return the custom internal yaml loader class."""
-
-    class Loader(yaml.SafeLoader):  # pylint: disable=too-many-ancestors
-        """Custom YAML Loader."""
-
-    def _path_constructor(loader, node):
-        return Path(loader.construct_scalar(node))
-
-    Loader.add_constructor("!path", _path_constructor)
-    return Loader
 
 
 def dict_product(d: Dict) -> Iterator[Tuple]:

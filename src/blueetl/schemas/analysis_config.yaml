@@ -1,0 +1,239 @@
+$schema: https://json-schema.org/draft/2019-09/schema
+title: MultiAnalysisConfig
+description: MultiAnalysisConfig Model.
+type: object
+properties:
+  version:
+    title: Version
+    type: integer
+  simulation_campaign:
+    title: Simulation Campaign
+    type: string
+    format: path
+  output:
+    title: Output
+    type: string
+    format: path
+  simulations_filter:
+    title: Simulations Filter
+    default: {}
+    type: object
+  simulations_filter_in_memory:
+    title: Simulations Filter In Memory
+    default: {}
+    type: object
+  analysis:
+    title: Analysis
+    type: object
+    additionalProperties:
+      $ref: '#/definitions/SingleAnalysisConfig'
+required:
+- version
+- simulation_campaign
+- output
+- analysis
+additionalProperties: false
+definitions:
+  ReportConfig:
+    title: ReportConfig
+    description: ReportConfig Model.
+    type: object
+    properties:
+      type:
+        title: Type
+        enum:
+        - spikes
+        - soma
+        - compartment
+      name:
+        title: Name
+        default: ''
+        type: string
+    required:
+    - type
+    additionalProperties: false
+  WindowConfig:
+    title: WindowConfig
+    description: WindowConfig Model.
+    type: object
+    properties:
+      initial_offset:
+        title: Initial Offset
+        default: 0.0
+        type: number
+      bounds:
+        title: Bounds
+        type: array
+        minItems: 2
+        maxItems: 2
+        items:
+        - type: number
+        - type: number
+      t_step:
+        title: T Step
+        default: 0.0
+        type: number
+      n_trials:
+        title: N Trials
+        default: 1
+        type: integer
+      trial_steps_value:
+        title: Trial Steps Value
+        default: 0.0
+        type: number
+      trial_steps_label:
+        title: Trial Steps Label
+        default: ''
+        type: string
+      window_type:
+        title: Window Type
+        default: ''
+        type: string
+    required:
+    - bounds
+    additionalProperties: false
+  TrialStepsConfig:
+    title: TrialStepsConfig
+    description: TrialStepsConfig Model.
+    type: object
+    properties:
+      function:
+        title: Function
+        type: string
+      initial_offset:
+        title: Initial Offset
+        default: 0.0
+        type: number
+      bounds:
+        title: Bounds
+        type: array
+        minItems: 2
+        maxItems: 2
+        items:
+        - type: number
+        - type: number
+    required:
+    - function
+    - bounds
+  ExtractionConfig:
+    title: ExtractionConfig
+    description: ExtractionConfig Model.
+    type: object
+    properties:
+      report:
+        $ref: '#/definitions/ReportConfig'
+      neuron_classes:
+        title: Neuron Classes
+        default: {}
+        type: object
+        additionalProperties:
+          type: object
+      limit:
+        title: Limit
+        type:
+        - integer
+        - "null"
+      target:
+        title: Target
+        type:
+        - string
+        - "null"
+      windows:
+        title: Windows
+        default: {}
+        type: object
+        additionalProperties:
+          anyOf:
+          - type: string
+          - $ref: '#/definitions/WindowConfig'
+      trial_steps:
+        title: Trial Steps
+        default: {}
+        type: object
+        additionalProperties:
+          $ref: '#/definitions/TrialStepsConfig'
+    required:
+    - report
+    additionalProperties: false
+  FeaturesConfig:
+    title: FeaturesConfig
+    description: FeaturesConfig Model.
+    type: object
+    properties:
+      type:
+        title: Type
+        enum:
+        - single
+        - multi
+      name:
+        title: Name
+        type: string
+      groupby:
+        title: Groupby
+        type: array
+        items:
+          type: string
+      function:
+        title: Function
+        type: string
+      neuron_classes:
+        title: Neuron Classes
+        default: []
+        type: array
+        items:
+          type: string
+      windows:
+        title: Windows
+        default: []
+        type: array
+        items:
+          type: string
+      params:
+        title: Params
+        default: {}
+        type: object
+      params_product:
+        title: Params Product
+        default: {}
+        type: object
+      params_zip:
+        title: Params Zip
+        default: {}
+        type: object
+      suffix:
+        title: Suffix
+        default: ''
+        type: string
+    required:
+    - type
+    - groupby
+    - function
+    additionalProperties: false
+  SingleAnalysisConfig:
+    title: SingleAnalysisConfig
+    description: SingleAnalysisConfig Model.
+    type: object
+    properties:
+      output:
+        title: Output
+        type: string
+        format: path
+      simulations_filter:
+        title: Simulations Filter
+        default: {}
+        type: object
+      simulations_filter_in_memory:
+        title: Simulations Filter In Memory
+        default: {}
+        type: object
+      extraction:
+        $ref: '#/definitions/ExtractionConfig'
+      features:
+        title: Features
+        default: []
+        type: array
+        items:
+          $ref: '#/definitions/FeaturesConfig'
+    required:
+    - extraction
+    additionalProperties: false

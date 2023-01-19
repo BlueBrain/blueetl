@@ -84,14 +84,14 @@ def test_resolve_path(tmp_path):
     assert result == non_existent_absolute
 
 
-def test_dump_load_yaml_roundtrip(tmp_path):
+def test_dump_yaml(tmp_path):
     data = {
         "dict": {"str": "mystr", "int": 123},
         "list_of_int": [1, 2, 3],
         "list_of_str": ["1", "2", "3"],
         "path": Path("/custom/path"),
     }
-    expected_content = """
+    expected = """
 dict:
   str: mystr
   int: 123
@@ -103,16 +103,41 @@ list_of_str:
 - '1'
 - '2'
 - '3'
-path: !path '/custom/path'
+path: /custom/path
     """
     filepath = tmp_path / "test.yaml"
 
     test_module.dump_yaml(filepath, data)
     dumped_content = filepath.read_text(encoding="utf-8")
-    assert dumped_content.strip() == expected_content.strip()
+    assert dumped_content.strip() == expected.strip()
+
+
+def test_load_yaml(tmp_path):
+    data = """
+dict:
+  str: mystr
+  int: 123
+list_of_int:
+- 1
+- 2
+- 3
+list_of_str:
+- '1'
+- '2'
+- '3'
+path: /custom/path
+    """
+    expected = {
+        "dict": {"str": "mystr", "int": 123},
+        "list_of_int": [1, 2, 3],
+        "list_of_str": ["1", "2", "3"],
+        "path": "/custom/path",
+    }
+    filepath = tmp_path / "test.yaml"
+    filepath.write_text(data, encoding="utf-8")
 
     loaded_data = test_module.load_yaml(filepath)
-    assert loaded_data == data
+    assert loaded_data == expected
 
 
 @pytest.mark.parametrize(

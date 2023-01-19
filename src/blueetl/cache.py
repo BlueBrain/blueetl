@@ -2,23 +2,32 @@
 import fcntl
 import logging
 import os
-from collections import namedtuple
 from copy import deepcopy
+from dataclasses import dataclass
 from functools import wraps
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Type
+from typing import Dict, Generic, List, Optional, Set, Type, TypeVar
 
 import pandas as pd
 
 from blueetl import DefaultStore
+from blueetl.config.analysis_model import FeaturesConfig, SingleAnalysisConfig
 from blueetl.config.simulations import SimulationsConfig
 from blueetl.core.utils import is_subfilter
 from blueetl.store.base import BaseStore
-from blueetl.utils import checksum_json, dump_yaml, load_yaml
+from blueetl.utils import dump_yaml, load_yaml
 
 L = logging.getLogger(__name__)
 
-CoupledCache = namedtuple("CoupledCache", ["cached", "actual"])
+ConfigT = TypeVar("ConfigT", SingleAnalysisConfig, SimulationsConfig)
+
+
+@dataclass
+class CoupledCache(Generic[ConfigT]):
+    """Container of cached and actual configurations."""
+
+    cached: Optional[ConfigT]
+    actual: ConfigT
 
 
 def _raise_if(**attrs):
@@ -89,7 +98,7 @@ class CacheManager:
 
     def __init__(
         self,
-        analysis_config: Dict,
+        analysis_config: SingleAnalysisConfig,
         simulations_config: SimulationsConfig,
         store_class: Type[BaseStore] = DefaultStore,
     ) -> None:
@@ -100,7 +109,8 @@ class CacheManager:
             simulations_config: simulations campaign configuration.
             store_class: class to be used to load and dump the cached dataframes.
         """
-        self._output_dir = Path(analysis_config["output"])
+        assert analysis_config.output is not None
+        self._output_dir = Path(analysis_config.output)
         repo_dir = self._output_dir / "repo"
         features_dir = self._output_dir / "features"
         config_dir = self._output_dir / "config"
@@ -119,11 +129,11 @@ class CacheManager:
         self._cached_simulations_config_path = config_dir / "simulations_config.cached.yaml"
         self._cached_checksums_path = config_dir / "checksums.cached.yaml"
 
-        self._analysis_configs = CoupledCache(
+        self._analysis_configs = CoupledCache[SingleAnalysisConfig](
             cached=self._load_cached_analysis_config(),
             actual=analysis_config,
         )
-        self._simulations_configs = CoupledCache(
+        self._simulations_configs = CoupledCache[SimulationsConfig](
             cached=self._load_cached_simulations_config(),
             actual=simulations_config,
         )
@@ -152,10 +162,10 @@ class CacheManager:
         obj.readonly = True
         return obj
 
-    def _load_cached_analysis_config(self) -> Optional[Dict]:
+    def _load_cached_analysis_config(self) -> Optional[SingleAnalysisConfig]:
         """Load the cached analysis config if it exists."""
         path = self._cached_analysis_config_path
-        return load_yaml(path) if path.exists() else None
+        return SingleAnalysisConfig.load(path) if path.exists() else None
 
     def _load_cached_simulations_config(self) -> Optional[SimulationsConfig]:
         """Load the cached simulations config if it exists."""
@@ -194,12 +204,12 @@ class CacheManager:
     def _dump_analysis_config(self) -> None:
         """Write the cached analysis config to file."""
         path = self._cached_analysis_config_path
-        dump_yaml(path, self._analysis_configs.actual)
+        self._analysis_configs.actual.dump(path)
 
     def _dump_simulations_config(self) -> None:
         """Write the cached simulations config to file."""
         path = self._cached_simulations_config_path
-        dump_yaml(path, self._simulations_configs.actual.to_dict())
+        self._simulations_configs.actual.dump(path)
 
     def _dump_cached_checksums(self) -> None:
         """Write the cached checksums to file."""
@@ -266,8 +276,8 @@ class CacheManager:
             return False
 
         # check the criteria used to filter the simulations
-        actual_filter = self._analysis_configs.actual.get("simulations_filter", {})
-        cached_filter = self._analysis_configs.cached.get("simulations_filter", {})
+        actual_filter = self._analysis_configs.actual.simulations_filter
+        cached_filter = self._analysis_configs.cached.simulations_filter
         if not is_subfilter(actual_filter, cached_filter):
             # the filter is less specific, so the cache cannot be used
             self._invalidate_cached_checksums()
@@ -286,8 +296,8 @@ class CacheManager:
         ]
         for keys, names in keys_and_affected_names:
             if any(
-                self._analysis_configs.cached["extraction"].get(k)
-                != self._analysis_configs.actual["extraction"].get(k)
+                getattr(self._analysis_configs.cached.extraction, k)
+                != getattr(self._analysis_configs.actual.extraction, k)
                 for k in keys
             ):
                 self._invalidate_cached_checksums(names)
@@ -295,8 +305,8 @@ class CacheManager:
 
         # check the features config
         valid_checksums = set()
-        for features_config in self._analysis_configs.actual["features"]:
-            config_checksum = checksum_json(features_config)
+        for features_config in self._analysis_configs.actual.features:
+            config_checksum = features_config.checksum()
             if config_checksum in self._cached_checksums["features"]:
                 valid_checksums.add(config_checksum)
 
@@ -403,7 +413,7 @@ class CacheManager:
         self._dump_cached_checksums()
 
     @_raise_if(locked=False)
-    def load_features(self, features_config: Dict) -> Optional[Dict[str, pd.DataFrame]]:
+    def load_features(self, features_config: FeaturesConfig) -> Optional[Dict[str, pd.DataFrame]]:
         """Load features dataframes from the cache.
 
         The cache key is determined by the hash of features_config.
@@ -415,7 +425,7 @@ class CacheManager:
             Dict of dataframes, or None if they are not cached.
         """
         L.info("Loading cached features if they exist")
-        config_checksum = checksum_json(features_config)
+        config_checksum = features_config.checksum()
         cached_dataframes = self._cached_checksums["features"].get(config_checksum, {})
         features = {}
         # the checksums have been checked in _initialize_cache/_delete_cached_features_files,
@@ -428,7 +438,9 @@ class CacheManager:
 
     @_raise_if(readonly=True)
     @_raise_if(locked=False)
-    def dump_features(self, features_dict: Dict[str, pd.DataFrame], features_config: Dict) -> None:
+    def dump_features(
+        self, features_dict: Dict[str, pd.DataFrame], features_config: FeaturesConfig
+    ) -> None:
         """Write features dataframes to the cache.
 
         The cache key is determined by the hash of features_config.
@@ -438,7 +450,7 @@ class CacheManager:
             features_config: configuration dict of the features to be written.
         """
         L.info("Writing cached features")
-        config_checksum = checksum_json(features_config)
+        config_checksum = features_config.checksum()
         d = self._cached_checksums["features"][config_checksum] = {}
         for name, feature in features_dict.items():
             self._features_store.dump(feature, name)

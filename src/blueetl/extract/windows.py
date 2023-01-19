@@ -1,10 +1,11 @@
 """Windows extractor."""
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
 import numpy as np
 import pandas as pd
 
+from blueetl.config.analysis_model import WindowConfig
 from blueetl.constants import (
     CHECKSUM_SEP,
     CIRCUIT_ID,
@@ -65,10 +66,9 @@ class Windows(BaseExtractor):
         win: str,
         simulation_id: int,
         circuit_id: int,
-        resolver: Optional[Resolver],
+        resolver: Resolver,
     ) -> List[Dict[str, Any]]:
-        assert resolver is not None
-        # example of valid win: spikes.repo.windows.w1#checksum
+        # example of valid win: spikes.extraction.windows.w1#checksum
         win, _, _checksum = win.rpartition(CHECKSUM_SEP)
         ref, _, window = win.rpartition(LEVEL_SEP)
         windows = resolver.get(ref)
@@ -81,19 +81,19 @@ class Windows(BaseExtractor):
     def _load_records_from_config(
         cls,
         name: str,
-        win: Dict[str, Any],
+        win: WindowConfig,
         simulation_id: int,
         circuit_id: int,
         trial_steps: TrialSteps,
     ) -> List[Dict[str, Any]]:
-        initial_offset = win.get("initial_offset", 0)
-        t_start, t_stop = win["bounds"]
-        t_step = win.get("t_step", 0)
+        initial_offset = win.initial_offset
+        t_start, t_stop = win.bounds
+        t_step = win.t_step
         duration = t_stop - t_start
-        window_type = win.get("window_type", "")
-        number_of_trials = win.get("n_trials", 1)
-        trial_steps_value = win.get("trial_steps_value", 0)
-        trial_steps_label = win.get("trial_steps_label", "")
+        window_type = win.window_type
+        number_of_trials = win.n_trials
+        trial_steps_value = win.trial_steps_value
+        trial_steps_label = win.trial_steps_label
         if trial_steps_label:
             trial_steps_value = trial_steps.df.etl.one(
                 simulation_id=simulation_id,
@@ -126,15 +126,15 @@ class Windows(BaseExtractor):
         cls,
         simulations: Simulations,
         trial_steps: TrialSteps,
-        config: Dict[str, Any],
-        resolver: Optional[Resolver],
+        windows_config: Dict[str, Union[str, WindowConfig]],
+        resolver: Resolver,
     ) -> "Windows":
         """Return a new Windows instance from the given simulations and configuration.
 
         Args:
             simulations: Simulations extractor.
             trial_steps: TrialSteps extractor.
-            config: configuration dict containing the "windows" key.
+            windows_config: configuration dict.
             resolver: resolver instance.
 
         Returns:
@@ -143,7 +143,7 @@ class Windows(BaseExtractor):
         # pylint: disable=too-many-locals
         results = []
         for _, rec in simulations.df.etl.iter():
-            for name, win in config["windows"].items():
+            for name, win in windows_config.items():
                 L.info(
                     "Processing simulation_id=%s, circuit_id=%s, window=%s",
                     rec.simulation_id,

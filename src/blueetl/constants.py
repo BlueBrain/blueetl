@@ -34,6 +34,7 @@ DTYPES = {
     NEURON_CLASS: "category",
     WINDOW: "category",
     TRIAL: np.int16,
+    OFFSET: np.float64,
     T_START: np.float64,
     T_STOP: np.float64,
     T_STEP: np.float64,
@@ -41,3 +42,5 @@ DTYPES = {
 }
 CHECKSUM_SEP = "#"
 LEVEL_SEP = "."
+PACKAGE = "blueetl"
+CONFIG_VERSION = 2

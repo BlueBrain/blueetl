@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from bluepy import Circuit, Simulation
 
+from blueetl.config.analysis_model import TrialStepsConfig
 from blueetl.constants import CIRCUIT_ID, SIMULATION_ID, TRIAL_STEPS_LABEL, TRIAL_STEPS_VALUE
 from blueetl.extract.base import BaseExtractor
 from blueetl.extract.simulations import Simulations
@@ -30,9 +31,9 @@ class TrialSteps(BaseExtractor):
         circuit: Circuit,
         target: Optional[str],
         limit: Optional[int],
-        initial_offset: int,
-        t_start: int,
-        t_end: int,
+        initial_offset: float,
+        t_start: float,
+        t_end: float,
     ) -> np.ndarray:
         # circuit is passed explicitly instead of loading it from simulation.circuit
         # to take advantage of any circuit already loaded in memory
@@ -51,24 +52,30 @@ class TrialSteps(BaseExtractor):
         return spikes
 
     @classmethod
-    def from_simulations(cls, simulations: Simulations, config: Dict) -> "TrialSteps":
+    def from_simulations(
+        cls,
+        simulations: Simulations,
+        trial_steps_config: Dict[str, TrialStepsConfig],
+        target: Optional[str],
+        limit: Optional[int],
+    ) -> "TrialSteps":
         """Return a new TrialSteps instance from the given simulations and configuration.
 
         Args:
             simulations: Simulations extractor.
-            config: configuration dict.
+            trial_steps_config: configuration dict.
+            target: optional target.
+            limit: optional limit of neurons to consider.
 
         Returns:
             TrialSteps: new instance.
         """
         # pylint: disable=too-many-locals
-        target = config["target"]
-        limit = config["limit"]
         results = []
-        for trial_steps_label, trial_steps_params in config.get("trial_steps", {}).items():
-            func = import_by_string(trial_steps_params["function"])
-            t_start, t_end = trial_steps_params["bounds"]
-            initial_offset = trial_steps_params["initial_offset"]
+        for trial_steps_label, trial_steps_params in trial_steps_config.items():
+            func = import_by_string(trial_steps_params.function)
+            t_start, t_end = trial_steps_params.bounds
+            initial_offset = trial_steps_params.initial_offset
             for _, rec in simulations.df.etl.iter():
                 L.info(
                     "Processing trial_steps_label=%s, simulation_id=%s, circuit_id=%s",
@@ -91,7 +98,7 @@ class TrialSteps(BaseExtractor):
                 except KeyError:
                     L.error(
                         "The dictionary returned by %r must contain the %r key",
-                        trial_steps_params["function"],
+                        trial_steps_params.function,
                         TRIAL_STEPS_VALUE,
                     )
                     raise

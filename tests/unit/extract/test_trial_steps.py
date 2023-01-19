@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
 
+from blueetl.config.analysis_model import TrialStepsConfig
 from blueetl.constants import CIRCUIT, CIRCUIT_ID, SIMULATION, SIMULATION_ID
 from blueetl.extract import trial_steps as test_module
 from blueetl.utils import ensure_dtypes
@@ -90,19 +91,22 @@ def test_trial_steps_from_simulations():
     )
     mock_simulations = Mock()
     type(mock_simulations).df = mock_simulations_df
-    config = {
-        "target": "hex0",
-        "limit": None,
-        "trial_steps": {
-            "ts1": {
+    trial_steps_config = {
+        "ts1": TrialStepsConfig(
+            **{
                 "function": f"{__name__}.custom_func",
                 "initial_offset": 7000,
                 "bounds": [-50, 25],
-            },
-        },
+            }
+        ),
     }
 
-    result = test_module.TrialSteps.from_simulations(simulations=mock_simulations, config=config)
+    result = test_module.TrialSteps.from_simulations(
+        simulations=mock_simulations,
+        trial_steps_config=trial_steps_config,
+        target="hex0",
+        limit=None,
+    )
 
     expected_df = pd.DataFrame(
         [

@@ -28,6 +28,8 @@ REQUIREMENTS = {
         "orjson",  # faster json decoder used by fastparquet
         "xarray>=0.18.0",
         "bluepy>=2.4",
+        "pydantic>=1.10",
+        "jsonschema>=4.0",
     ],
     "bnac": [
         "seaborn>=0.11.2",
@@ -62,7 +64,8 @@ setup(
     install_requires=REQUIREMENTS["core"],
     packages=find_packages(where="src"),
     package_dir={"": "src"},
-    python_requires=">=3.8",
+    include_package_data=True,
+    python_requires=">=3.9",
     extras_require={
         "docs": REQUIREMENTS["docs"],
         "bnac": REQUIREMENTS["extra"] + REQUIREMENTS["bnac"],

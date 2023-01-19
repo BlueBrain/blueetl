@@ -9,10 +9,12 @@ New Features
 - Add MultiAnalyzer class to support multiple reports [NSETM-2015]
 - Allow to resolve windows by reference [NSETM-2015]
 - Support combination of parameters in features configuration [NSETM-2091]
+- Add analysis configuration model and validation [NSETM-2099]
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - The previous analysis configuration format has been replaced by the version 2 to support multiple reports.
+- Require Python >= 3.9.
 
 
 Version 0.1.2
@@ -38,6 +40,7 @@ New Features
 ~~~~~~~~~~~~
 - Ignore simulations for which BlueConfig no longer exists [NSETM-1967]
 - Add optional in-memory filter [NSETM-1965]
+- Support subtargets per neuron class [NSETM-2004]
 
 Improvements
 ~~~~~~~~~~~~

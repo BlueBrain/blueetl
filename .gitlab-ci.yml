@@ -5,7 +5,6 @@ include:
       - /ci/jobs/check-version.yml
       - /ci/jobs/check-packaging.yml
       - /ci/jobs/lint.yml
-      - /ci/jobs/py38.yml
       - /ci/jobs/py39.yml
       - /ci/jobs/coverage.yml
       - /ci/jobs/docs.yml

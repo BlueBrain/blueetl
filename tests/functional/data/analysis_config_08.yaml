@@ -63,7 +63,7 @@ analysis:
       windows:
         w1: { bounds: [ 20, 90 ], window_type: spontaneous }
         w2: { bounds: [ 20, 60 ], initial_offset: 10, n_trials: 3, trial_steps_value: 10 }
-        w9: spikes.repo.windows.w3
+        w9: spikes.extraction.windows.w3
     features:
       - type: multi
         groupby: [ simulation_id, circuit_id, neuron_class, window ]

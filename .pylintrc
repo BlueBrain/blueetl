@@ -1,3 +1,6 @@
+[MAIN]
+load-plugins=pylint_pydantic
+
 [MESSAGES CONTROL]
 disable=fixme,invalid-name,len-as-condition,no-else-return,
     # TODO: fix too-many-locals
@@ -50,4 +53,4 @@ ignore-docstrings=yes
 #as of numpy 1.8.0, name resolution seems to be a problem.  Ignore lookups in numpy
 ignored-classes=numpy,list
 
-extension-pkg-whitelist=numpy,lxml
+extension-pkg-whitelist=numpy,lxml,pydantic

@@ -1,6 +1,7 @@
 Components
 ==========
 
+This page describes the main internal components, and it can be ignored by regular users.
 
 Core Transformations
 --------------------
@@ -23,20 +24,20 @@ The class ``blueetl.config.simulations.SimulationsConfig`` is used to load a Sim
 Internally, it stores the list of simulations and their attributes as a Pandas DataFrame.
 
 
-Spike Analysis
---------------
+Report Analysis
+---------------
 
-The class ``blueetl.analysis.Analyzer`` can be initialized with a specific configuration file, that should provide:
+The class ``blueetl.analysis.MultiAnalyzer`` can be initialized with a specific configuration file, that should provide:
 
 - the path to the simulation campaign configuration
-- the parameters needed to extract the spikes from the simulations
-- the parameters needed to calculate the features from the extracted spikes
+- the parameters needed to extract the report from the simulations
+- the parameters needed to calculate the features from the extracted report
 
 
 Repository (Extraction)
 -----------------------
 
-The class ``blueetl.repository.Repository`` is responsible for the extraction of the spikes from the simulations.
+The class ``blueetl.repository.Repository`` is responsible for the extraction of the report from the simulations.
 
 It exposes the extracted data as objects wrapping the following Pandas DataFrames, that can be accessed directly if needed:
 
@@ -45,14 +46,14 @@ It exposes the extracted data as objects wrapping the following Pandas DataFrame
 - neuron_classes
 - trial_steps
 - windows
-- spikes
+- report
 
 
 FeaturesCollection
 ------------------
 
-The class ``blueetl.features.FesaturesCollection`` is responsible for the calculation of the features, using to the given configuration.
+The class ``blueetl.features.FeaturesCollection`` is responsible for the calculation of the features, using to the given configuration.
 
-The configuration should specify how the spikes should be grouped and the name of a user defined function that's called for each group of spikes.
+The configuration should specify how the report should be grouped and the name of a user defined function that's called for each group.
 
 One or more dataframes of features can be produced, and they will be exposed by wrapper objects similar to the ones used for the repository.

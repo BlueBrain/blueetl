@@ -85,23 +85,7 @@ class ExtractionConfig(BaseModel):
 
 
 class FeaturesConfig(BaseModel):
-    """FeaturesConfig Model.
-
-    Attributes:
-        type: 'single' to calculate a single dataframe of features,
-            or 'multi' to calculate multiple dataframes of features (parallelized).
-        name: name of the features dataframe, used only if type=multi.
-        groupby: columns for aggregation.
-        function: Function to be executed to calculate the features.
-            If type=single, it should return a dict, where each key is a column in the DataFrame.
-            If type=multi, it should accept (repo, key, df, params) and return a dict of DataFrames.
-        neuron_classes: list of neuron classes to consider, or empty to consider them all.
-        windows: list of windows to consider, or empty to consider them all.
-        params: optional dict of params that will be passed to the function.
-        params_product: optional dict of params that should be combined with itertools.product.
-        params_zip: optional dict of params that should be combined with itertools.zip.
-        suffix: suffix to be added to the features DataFrames, used only if type=multi.
-    """
+    """FeaturesConfig Model."""
 
     type: str
     name: Optional[str] = None
@@ -134,6 +118,7 @@ class MultiAnalysisConfig(BaseModel):
     simulations_filter: Dict[str, Any] = {}
     simulations_filter_in_memory: Dict[str, Any] = {}
     analysis: Dict[str, SingleAnalysisConfig]
+    custom: Dict[str, Any] = {}
 
     @validator("version")
     def version_match(cls, version):

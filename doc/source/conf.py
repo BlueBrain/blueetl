@@ -39,6 +39,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     "sphinx.ext.extlinks",
+    "sphinx-jsonschema",
     "myst_nb",
 ]
 

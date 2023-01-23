@@ -1,9 +1,10 @@
 """Analysis Configuration."""
 import logging
+from collections.abc import Iterator
 from copy import deepcopy
 from itertools import chain
 from pathlib import Path
-from typing import Dict, Iterator, List, NamedTuple, Optional, Union
+from typing import NamedTuple, Optional, Union
 
 from blueetl.config.analysis_model import (
     FeaturesConfig,
@@ -73,7 +74,7 @@ def _resolve_windows(global_config: MultiAnalysisConfig) -> None:
 
     for analysis_name, analysis_config in global_config.analysis.items():
         windows = analysis_config.extraction.windows
-        new_windows: Dict[str, Union[str, WindowConfig]] = {}
+        new_windows: dict[str, Union[str, WindowConfig]] = {}
         for window_name, cfg in windows.items():
             if isinstance(cfg, str):
                 checksum = _calculate_checksum(cfg)
@@ -89,8 +90,8 @@ def _resolve_windows(global_config: MultiAnalysisConfig) -> None:
         analysis_config.extraction.windows = new_windows
 
 
-def _resolve_features(features_config_list: List[FeaturesConfig]) -> List[FeaturesConfig]:
-    def expand_product(params: Dict, params_product: Dict) -> Iterator[Dict]:
+def _resolve_features(features_config_list: list[FeaturesConfig]) -> list[FeaturesConfig]:
+    def expand_product(params: dict, params_product: dict) -> Iterator[dict]:
         for items in dict_product(params_product):
             new_params = deepcopy(params)
             for key, v, i in items:
@@ -98,8 +99,8 @@ def _resolve_features(features_config_list: List[FeaturesConfig]) -> List[Featur
                 new_params["__suffix__"] = new_params.get("__suffix__", "") + f"_{i}"
             yield new_params
 
-    def expand_zip(params: Dict, params_zip: Dict) -> Iterator[Dict]:
-        if len(set(len(values) for values in params_zip.values())) != 1:
+    def expand_zip(params: dict, params_zip: dict) -> Iterator[dict]:
+        if len({len(values) for values in params_zip.values()}) != 1:
             raise ValueError("All the zip params must have the same length")
         for i, zip_values in enumerate(zip(*params_zip.values())):
             new_params = deepcopy(params)
@@ -139,7 +140,7 @@ def _resolve_analysis_configs(global_config: MultiAnalysisConfig) -> None:
 
 
 def init_multi_analysis_configuration(
-    global_config: Dict, base_path: Optional[Path] = None
+    global_config: dict, base_path: Optional[Path] = None
 ) -> MultiAnalysisConfig:
     """Return a config object from a config dict."""
     validate_config(global_config, schema=read_schema("analysis_config"))

@@ -1,6 +1,6 @@
 """NeuronClasses extractor."""
 import logging
-from typing import Dict, Optional
+from typing import Optional
 
 import pandas as pd
 
@@ -23,7 +23,7 @@ class NeuronClasses(BaseExtractor):
         cls,
         neurons: Neurons,
         target: Optional[str],
-        neuron_classes: Dict[str, Dict],
+        neuron_classes: dict[str, dict],
         limit: Optional[int] = None,
     ) -> "NeuronClasses":
         """Load neuron classes information for each circuit.

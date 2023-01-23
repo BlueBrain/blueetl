@@ -1,6 +1,6 @@
 """Windows extractor."""
 import logging
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Union
 
 import numpy as np
 import pandas as pd
@@ -67,7 +67,7 @@ class Windows(BaseExtractor):
         simulation_id: int,
         circuit_id: int,
         resolver: Resolver,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         # example of valid win: spikes.extraction.windows.w1#checksum
         win, _, _checksum = win.rpartition(CHECKSUM_SEP)
         ref, _, window = win.rpartition(LEVEL_SEP)
@@ -85,7 +85,7 @@ class Windows(BaseExtractor):
         simulation_id: int,
         circuit_id: int,
         trial_steps: TrialSteps,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         initial_offset = win.initial_offset
         t_start, t_stop = win.bounds
         t_step = win.t_step
@@ -126,7 +126,7 @@ class Windows(BaseExtractor):
         cls,
         simulations: Simulations,
         trial_steps: TrialSteps,
-        windows_config: Dict[str, Union[str, WindowConfig]],
+        windows_config: dict[str, Union[str, WindowConfig]],
         resolver: Resolver,
     ) -> "Windows":
         """Return a new Windows instance from the given simulations and configuration.
@@ -171,7 +171,7 @@ class Windows(BaseExtractor):
         df = pd.DataFrame(results)
         return cls(df)
 
-    def get_bounds(self, window: str) -> Tuple[float, float]:
+    def get_bounds(self, window: str) -> tuple[float, float]:
         """Return the interval (t_start, t_stop) for the specified window.
 
         The returned values don't depend on the simulation or the trial,

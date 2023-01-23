@@ -5,11 +5,12 @@ import json
 import logging
 import os.path
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
 from functools import cache
 from importlib import import_module
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Optional, Union
 
 import pandas as pd
 import yaml
@@ -52,7 +53,7 @@ def setup_logging(loglevel: Union[int, str], logformat: Optional[str] = None, **
 
 def load_yaml(filepath: StrOrPath) -> Any:
     """Load from YAML file."""
-    with open(filepath, "r", encoding="utf-8") as f:
+    with open(filepath, encoding="utf-8") as f:
         # Any conversion when loading back the values can be done later,
         # so that the loaded object can be validated using jsonschema.
         return yaml.load(f, Loader=yaml.SafeLoader)
@@ -65,13 +66,13 @@ def dump_yaml(filepath: StrOrPath, data: Any) -> None:
         yaml.dump(data, stream=f, sort_keys=False, Dumper=_get_internal_yaml_dumper())
 
 
-def ensure_list(x: Any) -> Union[List, Tuple]:
+def ensure_list(x: Any) -> Union[list, tuple]:
     """Return x if x is a list or a tuple, [x] otherwise."""
     return x if isinstance(x, (list, tuple)) else [x]
 
 
 def ensure_dtypes(
-    df: pd.DataFrame, desired_dtypes: Optional[Dict[str, Any]] = None
+    df: pd.DataFrame, desired_dtypes: Optional[dict[str, Any]] = None
 ) -> pd.DataFrame:
     """Return a DataFrame with the columns and index cast to the desired types.
 
@@ -146,7 +147,7 @@ def checksum_json(obj: Any) -> str:
 
 
 @cache
-def _get_internal_yaml_dumper() -> Type[yaml.SafeDumper]:
+def _get_internal_yaml_dumper() -> type[yaml.SafeDumper]:
     """Return the custom internal yaml dumper class."""
     _representers = {
         Path: str,
@@ -165,7 +166,7 @@ def _get_internal_yaml_dumper() -> Type[yaml.SafeDumper]:
     return Dumper
 
 
-def dict_product(d: Dict) -> Iterator[Tuple]:
+def dict_product(d: dict) -> Iterator[tuple]:
     """Iterate over the product of the values of the given dict.
 
     Yield tuples of tuples, where each item is composed by:

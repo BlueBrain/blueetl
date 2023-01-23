@@ -1,9 +1,10 @@
 """Features collection."""
 import logging
 from collections import defaultdict
+from collections.abc import Iterator, Mapping
 from copy import deepcopy
 from functools import partial
-from typing import Any, Callable, Dict, Iterator, List, Mapping, NamedTuple, Optional
+from typing import Any, Callable, NamedTuple, Optional
 
 import pandas as pd
 
@@ -31,10 +32,10 @@ class FeaturesCollection:
 
     def __init__(
         self,
-        features_configs: List[FeaturesConfig],
+        features_configs: list[FeaturesConfig],
         repo: Repository,
         cache_manager: CacheManager,
-        _dataframes: Optional[Dict[str, pd.DataFrame]] = None,
+        _dataframes: Optional[dict[str, pd.DataFrame]] = None,
     ) -> None:
         """Initialize the FeaturesCollection from the given list of configurations.
 
@@ -50,7 +51,7 @@ class FeaturesCollection:
         self._data = self._dataframes_to_features(_dataframes, config=None) if _dataframes else {}
 
     @property
-    def names(self) -> List[str]:
+    def names(self) -> list[str]:
         """Return the names of all the calculated features."""
         if not self._data:
             self.calculate()
@@ -132,8 +133,8 @@ class FeaturesCollection:
             )
 
     def _dataframes_to_features(
-        self, df_dict: Dict[str, pd.DataFrame], config: Optional[FeaturesConfig]
-    ) -> Dict[str, Feature]:
+        self, df_dict: dict[str, pd.DataFrame], config: Optional[FeaturesConfig]
+    ) -> dict[str, Feature]:
         query = {SIMULATION_ID: self._repo.simulation_ids}
         result = {}
         for name, df in df_dict.items():
@@ -143,12 +144,12 @@ class FeaturesCollection:
                 result[name].df.attrs["config"] = deepcopy(config)
         return result
 
-    def _calculate_single(self, features_config: FeaturesConfig) -> Dict[str, Feature]:
+    def _calculate_single(self, features_config: FeaturesConfig) -> dict[str, Feature]:
         df = calculate_features_single(repo=self._repo, features_config=features_config)
         name = features_config.name or "undefined"
         return self._dataframes_to_features({name: df}, config=features_config)
 
-    def _calculate_multi(self, features_config: FeaturesConfig) -> Dict[str, Feature]:
+    def _calculate_multi(self, features_config: FeaturesConfig) -> dict[str, Feature]:
         df_dict = calculate_features_multi(repo=self._repo, features_config=features_config)
         return self._dataframes_to_features(df_dict, config=features_config)
 
@@ -167,7 +168,7 @@ class FeaturesCollection:
 
 
 def _get_report_for_all_neurons_and_windows(
-    repo: Repository, windows: List[str], neuron_classes: List[str]
+    repo: Repository, windows: list[str], neuron_classes: list[str]
 ) -> pd.DataFrame:
     """Extend the report df to include all the possible neurons and windows, even without data."""
     neurons_df = repo.neurons.df[[CIRCUIT_ID, NEURON_CLASS, GID, NEURON_CLASS_INDEX]]
@@ -219,7 +220,7 @@ def calculate_features_multi(
     features_config: FeaturesConfig,
     jobs: Optional[int] = None,
     backend: Optional[str] = None,
-) -> Dict[str, pd.DataFrame]:
+) -> dict[str, pd.DataFrame]:
     """Calculate features in parallel for the given repository as a dict of DataFrames.
 
     Args:
@@ -233,7 +234,7 @@ def calculate_features_multi(
 
     """
 
-    def func_wrapper(key: NamedTuple, df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
+    def func_wrapper(key: NamedTuple, df: pd.DataFrame) -> dict[str, pd.DataFrame]:
         # executed in a subprocess
         features_records = {}
         L.debug("Calculating features for %s", key)
@@ -275,12 +276,12 @@ def calculate_features_multi(
 
 def call_by_simulation(
     simulations: pd.DataFrame,
-    dataframes_to_filter: Dict[str, pd.DataFrame],
+    dataframes_to_filter: dict[str, pd.DataFrame],
     func: Callable,
     jobs: Optional[int] = None,
     backend: Optional[str] = None,
     how: str = "namedtuple",
-) -> List[Any]:
+) -> list[Any]:
     """Execute the given function in parallel, one task for each simulation.
 
     Args:

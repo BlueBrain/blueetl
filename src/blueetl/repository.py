@@ -3,7 +3,7 @@ import logging
 import warnings
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Any, Dict, Generic, List, Optional, Type
+from typing import Any, Generic, Optional
 
 import pandas as pd
 
@@ -231,9 +231,9 @@ class Repository:
         simulations_config: SimulationsConfig,
         extraction_config: ExtractionConfig,
         cache_manager: CacheManager,
-        simulations_filter: Optional[Dict[str, Any]] = None,
+        simulations_filter: Optional[dict[str, Any]] = None,
         resolver: Optional[Resolver] = None,
-        _dataframes: Optional[Dict[str, pd.DataFrame]] = None,
+        _dataframes: Optional[dict[str, pd.DataFrame]] = None,
     ) -> None:
         """Initialize the repository.
 
@@ -251,12 +251,12 @@ class Repository:
         self._simulations_filter = simulations_filter
         self._resolver = resolver
         report_type = extraction_config.report.type
-        available_reports: Dict[str, Type[BaseExtractor]] = {
+        available_reports: dict[str, type[BaseExtractor]] = {
             "spikes": SpikesExtractor,
             "soma": SomaReportExtractor,
             "compartment": CompartmentReportExtractor,
         }
-        self._mapping: Dict[str, Type[BaseExtractor]] = {
+        self._mapping: dict[str, type[BaseExtractor]] = {
             "simulations": SimulationsExtractor,
             "neurons": NeuronsExtractor,
             "neuron_classes": NeuronClassesExtractor,
@@ -268,7 +268,7 @@ class Repository:
         if _dataframes:
             self._assign_from_dataframes(_dataframes)
 
-    def __getstate__(self) -> Dict:
+    def __getstate__(self) -> dict:
         """Get the object state when the object is pickled."""
         if not self.is_extracted():
             # ensure that the dataframes are extracted and stored to disk,
@@ -279,7 +279,7 @@ class Repository:
         names_set = set(self.names)
         return {k: v for k, v in self.__dict__.items() if k not in names_set}
 
-    def __setstate__(self, state: Dict) -> None:
+    def __setstate__(self, state: dict) -> None:
         """Set the object state when the object is unpickled."""
         self.__dict__.update(state)
 
@@ -299,12 +299,12 @@ class Repository:
         return self._cache_manager
 
     @property
-    def simulations_filter(self) -> Optional[Dict[str, Any]]:
+    def simulations_filter(self) -> Optional[dict[str, Any]]:
         """Access to the simulations filter."""
         return self._simulations_filter
 
     @property
-    def names(self) -> List[str]:
+    def names(self) -> list[str]:
         """Return the list of names of the extracted objects."""
         return self._names
 
@@ -355,7 +355,7 @@ class Repository:
         return self._mapping["report"](self).extract(name="report")
 
     @property
-    def simulation_ids(self) -> List[int]:
+    def simulation_ids(self) -> list[int]:
         """Return the list of simulation ids, possibly filtered."""
         return self.simulations.df[SIMULATION_ID].to_list()
 
@@ -404,14 +404,14 @@ class Repository:
             print("Extraction:", name)
             print(getattr(self, name).df)
 
-    def _assign_from_dataframes(self, dicts: Dict[str, pd.DataFrame]) -> None:
+    def _assign_from_dataframes(self, dicts: dict[str, pd.DataFrame]) -> None:
         """Assign the repository properties from the given dict of DataFrames."""
         for name, df in dicts.items():
             assert name not in self.__dict__
             value = self._mapping[name](self).extract_cached(df)
             setattr(self, name, value)
 
-    def apply_filter(self, simulations_filter: Dict[str, Any]) -> "Repository":
+    def apply_filter(self, simulations_filter: dict[str, Any]) -> "Repository":
         """Apply the given filter and return a new object.
 
         Filtered dataframes are not written to disk.

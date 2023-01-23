@@ -1,8 +1,9 @@
 """Utilities for parallelization."""
 import logging
 import os
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable, List, Optional
+from typing import Any, Callable, Optional
 
 import numpy as np
 from joblib import Parallel, delayed
@@ -72,7 +73,7 @@ def run_parallel(
     backend: Optional[str] = None,
     verbose: Optional[int] = None,
     base_seed: Optional[int] = None,
-) -> List[Any]:
+) -> list[Any]:
     """Run tasks in parallel.
 
     Args:

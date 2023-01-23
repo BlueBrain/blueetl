@@ -2,7 +2,7 @@
 import logging
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Type, TypeVar
+from typing import Optional, TypeVar
 
 import pandas as pd
 from bluepy import Simulation
@@ -67,7 +67,7 @@ class ReportExtractor(BaseExtractor, metaclass=ABCMeta):
 
     @classmethod
     def from_simulations(
-        cls: Type[ReportExtractorT],
+        cls: type[ReportExtractorT],
         simulations: Simulations,
         neurons: Neurons,
         windows: Windows,

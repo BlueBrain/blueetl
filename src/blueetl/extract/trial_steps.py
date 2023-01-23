@@ -1,6 +1,6 @@
 """TrialSteps extractor."""
 import logging
-from typing import Dict, Optional
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -55,7 +55,7 @@ class TrialSteps(BaseExtractor):
     def from_simulations(
         cls,
         simulations: Simulations,
-        trial_steps_config: Dict[str, TrialStepsConfig],
+        trial_steps_config: dict[str, TrialStepsConfig],
         target: Optional[str],
         limit: Optional[int],
     ) -> "TrialSteps":

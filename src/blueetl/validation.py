@@ -1,7 +1,6 @@
 """Validation utilities."""
 import importlib.resources
 import logging
-from typing import Dict
 
 import jsonschema
 import yaml
@@ -15,14 +14,14 @@ class ValidationError(Exception):
     """Validation error."""
 
 
-def read_schema(schema_name: str) -> Dict:
+def read_schema(schema_name: str) -> dict:
     """Load a schema and return the result as a dictionary."""
     traversable = importlib.resources.files(PACKAGE) / "schemas" / f"{schema_name}.yaml"
     with traversable.open(encoding="utf-8") as stream:
         return yaml.safe_load(stream)
 
 
-def validate_config(config: Dict, schema: Dict) -> None:
+def validate_config(config: dict, schema: dict) -> None:
     """Raise an exception if the configuration is not valid.
 
     Args:

@@ -1,7 +1,7 @@
 """Neurons extractor."""
 import logging
 from itertools import chain
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -30,9 +30,9 @@ class Neurons(BaseExtractor):
     def _get_gids(
         circuit: Circuit,
         target: Optional[str],
-        neuron_classes: Dict[str, Dict],
+        neuron_classes: dict[str, dict],
         limit: Optional[int] = None,
-    ) -> Dict[str, np.ndarray]:
+    ) -> dict[str, np.ndarray]:
         cells_cache = {}
         properties = set(chain.from_iterable(neuron_classes.values()))
         properties = [p for p in properties if not p.startswith("$")]
@@ -74,7 +74,7 @@ class Neurons(BaseExtractor):
         cls,
         simulations: Simulations,
         target: Optional[str],
-        neuron_classes: Dict[str, Dict],
+        neuron_classes: dict[str, dict],
         limit: Optional[int] = None,
     ) -> "Neurons":
         """Return a new Neurons instance from the given simulations and configuration.
@@ -89,7 +89,7 @@ class Neurons(BaseExtractor):
             Neurons: new instance.
         """
         grouped = simulations.df.groupby([CIRCUIT_ID])[CIRCUIT].first()
-        records: List[Tuple[int, str, int, int]] = []
+        records: list[tuple[int, str, int, int]] = []
         for circuit_id, circuit in grouped.items():
             gids_by_class = cls._get_gids(circuit, target, neuron_classes, limit=limit)
             records.extend(

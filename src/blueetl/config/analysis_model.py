@@ -1,6 +1,6 @@
 """Analysis Configuration Models."""
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Optional, TypeVar, Union
 
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Extra, validator
@@ -27,7 +27,7 @@ class BaseModel(PydanticBaseModel):
         dump_yaml(path, self)
 
     @classmethod
-    def load(cls: Type[BaseModelT], path: Path) -> BaseModelT:
+    def load(cls: type[BaseModelT], path: Path) -> BaseModelT:
         """Load the model from file in yaml format."""
         return cls.parse_obj(load_yaml(path))
 
@@ -47,7 +47,7 @@ class WindowConfig(BaseModel):
     """WindowConfig Model."""
 
     initial_offset: float = 0.0
-    bounds: Tuple[float, float]
+    bounds: tuple[float, float]
     t_step: float = 0.0
     n_trials: int = 1
     trial_steps_value: float = 0.0
@@ -65,18 +65,18 @@ class TrialStepsConfig(BaseModel):
 
     function: str
     initial_offset: float = 0.0
-    bounds: Tuple[float, float]
+    bounds: tuple[float, float]
 
 
 class ExtractionConfig(BaseModel):
     """ExtractionConfig Model."""
 
     report: ReportConfig
-    neuron_classes: Dict[str, Dict[str, Any]] = {}
+    neuron_classes: dict[str, dict[str, Any]] = {}
     limit: Optional[int] = None
     target: Optional[str] = None
-    windows: Dict[str, Union[str, WindowConfig]] = {}
-    trial_steps: Dict[str, TrialStepsConfig] = {}
+    windows: dict[str, Union[str, WindowConfig]] = {}
+    trial_steps: dict[str, TrialStepsConfig] = {}
 
 
 class FeaturesConfig(BaseModel):
@@ -84,13 +84,13 @@ class FeaturesConfig(BaseModel):
 
     type: str
     name: Optional[str] = None
-    groupby: List[str]
+    groupby: list[str]
     function: str
-    neuron_classes: List[str] = []
-    windows: List[str] = []
-    params: Dict[str, Any] = {}
-    params_product: Dict[str, Any] = {}
-    params_zip: Dict[str, Any] = {}
+    neuron_classes: list[str] = []
+    windows: list[str] = []
+    params: dict[str, Any] = {}
+    params_product: dict[str, Any] = {}
+    params_zip: dict[str, Any] = {}
     suffix: str = ""
 
 
@@ -98,10 +98,10 @@ class SingleAnalysisConfig(BaseModel):
     """SingleAnalysisConfig Model."""
 
     output: Optional[Path] = None
-    simulations_filter: Dict[str, Any] = {}
-    simulations_filter_in_memory: Dict[str, Any] = {}
+    simulations_filter: dict[str, Any] = {}
+    simulations_filter_in_memory: dict[str, Any] = {}
     extraction: ExtractionConfig
-    features: List[FeaturesConfig] = []
+    features: list[FeaturesConfig] = []
 
 
 class MultiAnalysisConfig(BaseModel):
@@ -110,10 +110,10 @@ class MultiAnalysisConfig(BaseModel):
     version: int
     simulation_campaign: Path
     output: Path
-    simulations_filter: Dict[str, Any] = {}
-    simulations_filter_in_memory: Dict[str, Any] = {}
-    analysis: Dict[str, SingleAnalysisConfig]
-    custom: Dict[str, Any] = {}
+    simulations_filter: dict[str, Any] = {}
+    simulations_filter_in_memory: dict[str, Any] = {}
+    analysis: dict[str, SingleAnalysisConfig]
+    custom: dict[str, Any] = {}
 
     @validator("version")
     def version_match(cls, version):

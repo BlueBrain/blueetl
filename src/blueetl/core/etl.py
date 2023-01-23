@@ -1,20 +1,9 @@
 """Pandas accessors."""
 from abc import ABC, abstractmethod
 from collections import namedtuple
+from collections.abc import Iterator
 from functools import partial
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Generic,
-    Iterator,
-    List,
-    NamedTuple,
-    Optional,
-    Tuple,
-    TypeVar,
-    Union,
-)
+from typing import Any, Callable, Generic, NamedTuple, Optional, TypeVar, Union
 
 import pandas as pd
 from pandas.core.groupby import DataFrameGroupBy, SeriesGroupBy
@@ -47,11 +36,11 @@ class ETLBaseAccessor(ABC, Generic[PandasT, PandasGroupByT]):
         # assert all(obj.index.names), "All the index levels must have a name"
         # assert len(set(obj.index.names)) == obj.index.nlevels, "The level names must be unique"
 
-    def conditions(self) -> List[str]:
+    def conditions(self) -> list[str]:
         """Names for each of the index levels."""
         return self._obj.index.names
 
-    def complementary_conditions(self, conditions: Union[str, List[str]]) -> List[str]:
+    def complementary_conditions(self, conditions: Union[str, list[str]]) -> list[str]:
         """Return the difference between the object conditions and the specified conditions.
 
         Args:
@@ -61,7 +50,7 @@ class ETLBaseAccessor(ABC, Generic[PandasT, PandasGroupByT]):
         # TODO: raise a KeyError if any condition is not found in self.conditions?
         return self._obj.index.names.difference(conditions)
 
-    def labels(self, conditions: Optional[List[str]] = None) -> List[pd.Index]:
+    def labels(self, conditions: Optional[list[str]] = None) -> list[pd.Index]:
         """Unique labels for each level, or for the specified levels.
 
         Args:
@@ -84,7 +73,7 @@ class ETLBaseAccessor(ABC, Generic[PandasT, PandasGroupByT]):
         """
         return self._obj.index.unique(condition)
 
-    def remove_conditions(self, conditions: Union[str, List[str]]) -> PandasT:
+    def remove_conditions(self, conditions: Union[str, list[str]]) -> PandasT:
         """Remove one or more conditions.
 
         Args:
@@ -95,7 +84,7 @@ class ETLBaseAccessor(ABC, Generic[PandasT, PandasGroupByT]):
         """
         return self._obj.droplevel(conditions, axis=0)
 
-    def keep_conditions(self, conditions: Union[str, List[str]]) -> PandasT:
+    def keep_conditions(self, conditions: Union[str, list[str]]) -> PandasT:
         """Remove the conditions not specified.
 
         Args:
@@ -108,7 +97,7 @@ class ETLBaseAccessor(ABC, Generic[PandasT, PandasGroupByT]):
 
     def add_conditions(
         self,
-        conditions: Union[str, List[str]],
+        conditions: Union[str, list[str]],
         values: Any,
         inner: bool = False,
         drop: bool = False,
@@ -164,7 +153,7 @@ class ETLBaseAccessor(ABC, Generic[PandasT, PandasGroupByT]):
         labels, values = zip(*kwargs.items())
         return self._obj.xs(level=labels, key=values, drop_level=drop_level, axis=0)
 
-    def groupby_except(self, conditions: Union[str, List[str]], *args, **kwargs) -> PandasGroupByT:
+    def groupby_except(self, conditions: Union[str, list[str]], *args, **kwargs) -> PandasGroupByT:
         """Group by all the conditions except for the ones specified.
 
         Args:
@@ -173,7 +162,7 @@ class ETLBaseAccessor(ABC, Generic[PandasT, PandasGroupByT]):
         complementary_conditions = self.complementary_conditions(conditions)
         return self._obj.groupby(complementary_conditions, *args, **kwargs)
 
-    def pool(self, conditions: Union[str, List[str]], func: Callable) -> PandasT:
+    def pool(self, conditions: Union[str, list[str]], func: Callable) -> PandasT:
         """Remove one or more conditions grouping by the remaining conditions.
 
         Args:
@@ -185,10 +174,10 @@ class ETLBaseAccessor(ABC, Generic[PandasT, PandasGroupByT]):
         return self.groupby_except(conditions).apply(func)
 
     @abstractmethod
-    def _query_dict(self, query: Dict) -> PandasT:
+    def _query_dict(self, query: dict) -> PandasT:
         """Given a query dictionary, return the filtered Series or DataFrame."""
 
-    def q(self, _query: Optional[Dict] = None, /, **params) -> PandasT:
+    def q(self, _query: Optional[dict] = None, /, **params) -> PandasT:
         """Given a query dict or some query parameters, return the filtered Series or DataFrame.
 
         Filter by columns (for DataFrames) and index names (for both Series and DataFrames).
@@ -221,14 +210,14 @@ class ETLBaseAccessor(ABC, Generic[PandasT, PandasGroupByT]):
             raise ValueError("Query and params cannot be specified together")
         return self._query_dict(_query or params)
 
-    def one(self, _query: Optional[Dict] = None, /, **params) -> Any:
+    def one(self, _query: Optional[dict] = None, /, **params) -> Any:
         """Execute the query and return the unique resulting record."""
         result = self.q(_query, **params)
         if len(result) != 1:
             raise RuntimeError(f"The query returned {len(result)} records instead of 1.")
         return result.iloc[0]
 
-    def first(self, _query: Optional[Dict] = None, /, **params) -> Any:
+    def first(self, _query: Optional[dict] = None, /, **params) -> Any:
         """Execute the query and return the first resulting record."""
         result = self.q(_query, **params)
         if len(result) == 0:
@@ -249,7 +238,7 @@ class ETLSeriesAccessor(ETLBaseAccessor[pd.Series, SeriesGroupBy]):
         """
         return self._obj.apply(func).stack()
 
-    def iter(self) -> Iterator[Tuple[NamedTuple, Any]]:
+    def iter(self) -> Iterator[tuple[NamedTuple, Any]]:
         """Iterate over the items, yielding a tuple (named_index, value) for each element.
 
         The returned named_index is a namedtuple representing the value of the index.
@@ -257,7 +246,7 @@ class ETLSeriesAccessor(ETLBaseAccessor[pd.Series, SeriesGroupBy]):
         """
         return zip(self._obj.index.etl.iter(), iter(self._obj))
 
-    def iterdict(self) -> Iterator[Tuple[Dict, Any]]:
+    def iterdict(self) -> Iterator[tuple[dict, Any]]:
         """Iterate over the items, yielding a tuple (named_index, value) for each element.
 
         The returned named_index is a dict representing the value of the index.
@@ -273,7 +262,7 @@ class ETLSeriesAccessor(ETLBaseAccessor[pd.Series, SeriesGroupBy]):
         """
         return zip(self._obj.index.etl.iterdict(), iter(self._obj))
 
-    def _query_dict(self, query: Dict) -> pd.Series:
+    def _query_dict(self, query: dict) -> pd.Series:
         """Given a query dictionary, return the Series filtered by index."""
         return query_series(self._obj, query)
 
@@ -281,7 +270,7 @@ class ETLSeriesAccessor(ETLBaseAccessor[pd.Series, SeriesGroupBy]):
 class ETLDataFrameAccessor(ETLBaseAccessor[pd.DataFrame, DataFrameGroupBy]):
     """DataFrame accessor."""
 
-    def iter(self) -> Iterator[Tuple[NamedTuple, NamedTuple]]:
+    def iter(self) -> Iterator[tuple[NamedTuple, NamedTuple]]:
         """Iterate over the items, yielding a tuple (named_index, value) for each element.
 
         The returned ``named_index`` is a namedtuple representing the value of the index.
@@ -289,7 +278,7 @@ class ETLDataFrameAccessor(ETLBaseAccessor[pd.DataFrame, DataFrameGroupBy]):
         """
         return zip(self._obj.index.etl.iter(), self._obj.itertuples(index=False, name="Values"))
 
-    def iterdict(self) -> Iterator[Tuple[Dict, Dict]]:
+    def iterdict(self) -> Iterator[tuple[dict, dict]]:
         """Iterate over the items, yielding a tuple (named_index, value) for each element.
 
         The returned ``named_index`` is a dict representing the value of the index.
@@ -309,17 +298,17 @@ class ETLDataFrameAccessor(ETLBaseAccessor[pd.DataFrame, DataFrameGroupBy]):
         ):
             yield named_index, dict(zip(columns, value))
 
-    def _query_dict(self, query: Dict) -> pd.DataFrame:
+    def _query_dict(self, query: dict) -> pd.DataFrame:
         """Given a query dictionary, return the DataFrame filtered by columns and index."""
         return query_frame(self._obj, query)
 
     def groupby_iter(
         self,
-        groupby_columns: List[str],
-        selected_columns: Optional[List[str]] = None,
+        groupby_columns: list[str],
+        selected_columns: Optional[list[str]] = None,
         sort: bool = True,
         observed: bool = True,
-    ) -> Iterator[Tuple[NamedTuple, pd.DataFrame]]:
+    ) -> Iterator[tuple[NamedTuple, pd.DataFrame]]:
         """Group the dataframe by columns and yield each record as a tuple (key, df).
 
         It can be used as a replacement for the iteration over df.groupby, but:
@@ -347,15 +336,15 @@ class ETLDataFrameAccessor(ETLBaseAccessor[pd.DataFrame, DataFrameGroupBy]):
 
     def groupby_run_parallel(
         self,
-        groupby_columns: List[str],
-        selected_columns: Optional[List[str]] = None,
+        groupby_columns: list[str],
+        selected_columns: Optional[list[str]] = None,
         *,
         sort: bool = True,
         observed: bool = True,
         func: Optional[Callable] = None,
         jobs: Optional[int] = None,
         backend: Optional[str] = None,
-    ) -> List[Any]:
+    ) -> list[Any]:
         """Call groupby_iter and apply the given function in parallel, returning the results.
 
         Args:
@@ -382,8 +371,8 @@ class ETLDataFrameAccessor(ETLBaseAccessor[pd.DataFrame, DataFrameGroupBy]):
 
     def groupby_apply_parallel(
         self,
-        groupby_columns: List[str],
-        selected_columns: Optional[List[str]] = None,
+        groupby_columns: list[str],
+        selected_columns: Optional[list[str]] = None,
         *,
         sort: bool = True,
         observed: bool = True,
@@ -417,7 +406,7 @@ class ETLIndexAccessor:
         """Initialize the accessor."""
         self._obj = pandas_obj
 
-    def _mangle_names(self) -> List[str]:
+    def _mangle_names(self) -> list[str]:
         """Return the index names, replacing missing names with ilevel_N, where N is the level.
 
         The name ilevel_N is the same name used by convention in DataFrame.query to identify
@@ -440,7 +429,7 @@ class ETLIndexAccessor:
         for i in self._obj:
             yield Index(*ensure_list(i))
 
-    def iterdict(self) -> Iterator[Dict]:
+    def iterdict(self) -> Iterator[dict]:
         """Iterate over the index, yielding a dict for each element.
 
         This method can be used as an alternative to ``iter`` when:

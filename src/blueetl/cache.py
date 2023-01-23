@@ -6,7 +6,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from functools import wraps
 from pathlib import Path
-from typing import Dict, Generic, List, Optional, Set, Type, TypeVar
+from typing import Generic, Optional, TypeVar
 
 import pandas as pd
 
@@ -80,7 +80,7 @@ class LockManager:
         self._fd = os.open(self._path, os.O_RDONLY)
         try:
             fcntl.flock(self._fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except IOError:
+        except OSError:
             os.close(self._fd)
             self._fd = None
             raise CacheError(f"Another process is locking {self._path}") from None
@@ -100,7 +100,7 @@ class CacheManager:
         self,
         analysis_config: SingleAnalysisConfig,
         simulations_config: SimulationsConfig,
-        store_class: Type[BaseStore] = DefaultStore,
+        store_class: type[BaseStore] = DefaultStore,
     ) -> None:
         """Initialize the object.
 
@@ -172,7 +172,7 @@ class CacheManager:
         path = self._cached_simulations_config_path
         return SimulationsConfig.load(path) if path.exists() else None
 
-    def _load_cached_checksums(self) -> Dict:
+    def _load_cached_checksums(self) -> dict:
         """Load the cached checksums, or return null checksums if the file doesn't exist."""
         path = self._cached_checksums_path
         checksums = None
@@ -216,7 +216,7 @@ class CacheManager:
         path = self._cached_checksums_path
         dump_yaml(path, self._cached_checksums)
 
-    def _invalidate_cached_checksums(self, names: Optional[Set[str]] = None) -> None:
+    def _invalidate_cached_checksums(self, names: Optional[set[str]] = None) -> None:
         """Invalidate the checksums for the given names.
 
         This function takes into consideration the dependencies between the dataframes,
@@ -253,7 +253,7 @@ class CacheManager:
             "features",
         ]
         assert not names or names.issubset(ordered_names), "Invalid names specified."
-        invalidated: List[str] = []
+        invalidated: list[str] = []
         for name in ordered_names:
             if invalidated or not names or name in names:
                 if name == "features":
@@ -320,7 +320,7 @@ class CacheManager:
 
         return is_valid
 
-    def _check_cached_repo_files(self) -> Set[str]:
+    def _check_cached_repo_files(self) -> set[str]:
         """Determine the cached repo files to be deleted b/c the checksum is None or different.
 
         Returns:
@@ -332,7 +332,7 @@ class CacheManager:
                 to_be_deleted.add(name)
         return to_be_deleted
 
-    def _delete_cached_repo_files(self, to_be_deleted: Set[str]) -> None:
+    def _delete_cached_repo_files(self, to_be_deleted: set[str]) -> None:
         """Delete the given repository files.
 
         Args:
@@ -343,7 +343,7 @@ class CacheManager:
             self._repo_store.delete(name)
             del self._cached_checksums["repo"][name]
 
-    def _check_cached_features_files(self) -> Set[str]:
+    def _check_cached_features_files(self) -> set[str]:
         """Determine the cached features files to be delated b/c the checksum is None or different.
 
         Returns:
@@ -413,7 +413,7 @@ class CacheManager:
         self._dump_cached_checksums()
 
     @_raise_if(locked=False)
-    def load_features(self, features_config: FeaturesConfig) -> Optional[Dict[str, pd.DataFrame]]:
+    def load_features(self, features_config: FeaturesConfig) -> Optional[dict[str, pd.DataFrame]]:
         """Load features dataframes from the cache.
 
         The cache key is determined by the hash of features_config.
@@ -439,7 +439,7 @@ class CacheManager:
     @_raise_if(readonly=True)
     @_raise_if(locked=False)
     def dump_features(
-        self, features_dict: Dict[str, pd.DataFrame], features_config: FeaturesConfig
+        self, features_dict: dict[str, pd.DataFrame], features_config: FeaturesConfig
     ) -> None:
         """Write features dataframes to the cache.
 

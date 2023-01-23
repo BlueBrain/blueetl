@@ -1,6 +1,6 @@
 """Simulation Campaign configuration."""
 import logging
-from typing import Dict, List, Optional
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -20,8 +20,8 @@ class SimulationsConfig:
         self,
         data: pd.DataFrame,
         name: Optional[str] = None,
-        attrs: Optional[Dict] = None,
-        conditions: Optional[List[str]] = None,
+        attrs: Optional[dict] = None,
+        conditions: Optional[list[str]] = None,
     ) -> None:
         """Init the configuration.
 
@@ -83,12 +83,12 @@ class SimulationsConfig:
         return self.data.name or ""
 
     @property
-    def attrs(self) -> Dict:
+    def attrs(self) -> dict:
         """Return the attributes dict associated with the simulations campaign."""
         return self.data.attrs
 
     @property
-    def conditions(self) -> List[str]:
+    def conditions(self) -> list[str]:
         """Return the list of conditions associated with the simulations campaign.
 
         The conditions are the names of columns considered as parameters of the simulations.
@@ -137,12 +137,12 @@ class SimulationsConfig:
         dump_yaml(path, data=self.to_dict())
 
     @classmethod
-    def from_dict(cls, d: Dict) -> "SimulationsConfig":
+    def from_dict(cls, d: dict) -> "SimulationsConfig":
         """Load the configuration from dict."""
         data = pd.DataFrame.from_dict(d["data"])
         return cls(data=data, name=d["name"], attrs=d["attrs"], conditions=d["conditions"])
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Convert the configuration to dict."""
         return {
             "format": "blueetl",

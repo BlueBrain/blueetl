@@ -1,7 +1,7 @@
 """Base extractor."""
 import logging
 from abc import ABC
-from typing import Dict, List, Optional, Type, TypeVar
+from typing import Optional, TypeVar
 
 import pandas as pd
 
@@ -14,7 +14,7 @@ ExtractorT = TypeVar("ExtractorT", bound="BaseExtractor")
 class BaseExtractor(ABC):
     """Base extractor class."""
 
-    COLUMNS: List[str] = []
+    COLUMNS: list[str] = []
     _allow_missing_columns = False
     _allow_extra_columns = False
     _allow_empty_data = False
@@ -56,7 +56,7 @@ class BaseExtractor(ABC):
 
     @classmethod
     def from_pandas(
-        cls: Type[ExtractorT], df: pd.DataFrame, query: Optional[Dict] = None
+        cls: type[ExtractorT], df: pd.DataFrame, query: Optional[dict] = None
     ) -> ExtractorT:
         """Return a new object from the given dataframe.
 

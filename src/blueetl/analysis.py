@@ -2,7 +2,7 @@
 import gc
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
+from typing import Any, NamedTuple, Optional, Union
 
 import pandas as pd
 
@@ -109,7 +109,7 @@ class Analyzer:
         self.features.calculate()
         gc.collect()
 
-    def apply_filter(self, simulations_filter: Optional[Dict[str, Any]] = None) -> "Analyzer":
+    def apply_filter(self, simulations_filter: Optional[dict[str, Any]] = None) -> "Analyzer":
         """Return a new object where the in memory filter is applied to repo and features.
 
         Before applying the filter, all the repo dataframes are extracted,
@@ -135,7 +135,7 @@ class Analyzer:
         self.repo.show()
         self.features.show()
 
-    def try_one(self, groupby: List[str]) -> Tuple[NamedTuple, pd.DataFrame]:
+    def try_one(self, groupby: list[str]) -> tuple[NamedTuple, pd.DataFrame]:
         """Return the first key and df when grouping spikes by the given list of columns.
 
         The returned parameters are the same passed to the feature function defined by the user.
@@ -157,9 +157,9 @@ class MultiAnalyzer:
 
     def __init__(
         self,
-        global_config: Union[Dict, MultiAnalysisConfig],
+        global_config: Union[dict, MultiAnalysisConfig],
         base_path: StrOrPath = ".",
-        _analyzers: Optional[Dict[str, Analyzer]] = None,
+        _analyzers: Optional[dict[str, Analyzer]] = None,
     ) -> None:
         """Initialize the MultiAnalyzer from the given configuration.
 
@@ -173,7 +173,7 @@ class MultiAnalyzer:
             self._global_config = init_multi_analysis_configuration(global_config, Path(base_path))
         else:
             self._global_config = global_config
-        self._analyzers: Optional[Dict[str, Analyzer]] = _analyzers
+        self._analyzers: Optional[dict[str, Analyzer]] = _analyzers
 
     @classmethod
     def from_file(cls, path: StrOrPath) -> "MultiAnalyzer":
@@ -186,7 +186,7 @@ class MultiAnalyzer:
         return self._global_config
 
     @property
-    def analyzers(self) -> Dict[str, Analyzer]:
+    def analyzers(self) -> dict[str, Analyzer]:
         """Load and return the dict of analyzers."""
         if self._analyzers is None:
             resolver = AttrResolver(self)
@@ -202,15 +202,15 @@ class MultiAnalyzer:
         return self._analyzers
 
     @property
-    def names(self) -> List[str]:
+    def names(self) -> list[str]:
         """Return the names of all the analyzers."""
         return list(self.analyzers)
 
-    def __getstate__(self) -> Dict:
+    def __getstate__(self) -> dict:
         """Get the object state when the object is pickled."""
         return {"_global_config": self.global_config, "_analyzers": None}
 
-    def __setstate__(self, state: Dict) -> None:
+    def __setstate__(self, state: dict) -> None:
         """Set the object state when the object is unpickled."""
         self.__dict__.update(state)
 
@@ -254,7 +254,7 @@ class MultiAnalyzer:
         for a in self.analyzers.values():
             a.calculate_features()
 
-    def apply_filter(self, simulations_filter: Optional[Dict[str, Any]] = None) -> "MultiAnalyzer":
+    def apply_filter(self, simulations_filter: Optional[dict[str, Any]] = None) -> "MultiAnalyzer":
         """Return a new object where the in memory filter is applied to repo and features.
 
         Before applying the filter, all the repo dataframes are extracted,

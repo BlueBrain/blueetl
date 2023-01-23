@@ -2,7 +2,7 @@
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import pandas as pd
 from bluepy import Circuit, Simulation
@@ -21,7 +21,7 @@ L = logging.getLogger(__name__)
 _STATUS = "_status"
 
 
-def _get_circuit_hash(circuit_config: Dict[str, Any]) -> str:
+def _get_circuit_hash(circuit_config: dict[str, Any]) -> str:
     """Return a hash of the relevant keys in the circuit configuration.
 
     Circuits are considered different in this context if any relevant key is different.
@@ -88,10 +88,10 @@ class Simulations(BaseExtractor):
     def _build_record(
         cls,
         simulation_id: int,
-        rec: Dict[str, Any],
-        circuit_hashes: Dict[str, int],
-        circuits: Dict[int, Circuit],
-    ) -> Dict[str, Any]:
+        rec: dict[str, Any],
+        circuit_hashes: dict[str, int],
+        circuits: dict[int, Circuit],
+    ) -> dict[str, Any]:
         """Build a record to be added to the simulations dataframe."""
         # use the cached simulation_id if available
         simulation_id = rec.get(SIMULATION_ID, simulation_id)
@@ -142,8 +142,8 @@ class Simulations(BaseExtractor):
         Returns:
             DataFrame of simulations.
         """
-        circuit_hashes: Dict[str, int] = {}  # map circuit_hash -> circuit_id
-        circuits: Dict[int, Circuit] = {}  # map circuit_id -> circuit
+        circuit_hashes: dict[str, int] = {}  # map circuit_hash -> circuit_id
+        circuits: dict[int, Circuit] = {}  # map circuit_id -> circuit
         records = []
         for simulation_id, (_, rec) in enumerate(simulation_paths.etl.iterdict()):
             record = cls._build_record(
@@ -159,7 +159,7 @@ class Simulations(BaseExtractor):
 
     @classmethod
     def _filter_simulations_df(
-        cls, df: pd.DataFrame, query: Optional[Dict], cached: bool = False
+        cls, df: pd.DataFrame, query: Optional[dict], cached: bool = False
     ) -> pd.DataFrame:
         """Remove the missing and incomplete simulations and filter by the given query.
 
@@ -202,7 +202,7 @@ class Simulations(BaseExtractor):
         return df
 
     @classmethod
-    def from_config(cls, config: SimulationsConfig, query: Optional[Dict] = None) -> "Simulations":
+    def from_config(cls, config: SimulationsConfig, query: Optional[dict] = None) -> "Simulations":
         """Extract simulations from the given simulation campaign."""
         df = config.to_pandas()
         df = cls._from_paths(df)
@@ -210,7 +210,7 @@ class Simulations(BaseExtractor):
         return cls(df)
 
     @classmethod
-    def from_pandas(cls, df: pd.DataFrame, query: Optional[Dict] = None) -> "Simulations":
+    def from_pandas(cls, df: pd.DataFrame, query: Optional[dict] = None) -> "Simulations":
         """Extract simulations from a dataframe containing valid simulation ids and circuit ids."""
         df = cls._from_paths(df)
         df = cls._filter_simulations_df(df, query, cached=True)

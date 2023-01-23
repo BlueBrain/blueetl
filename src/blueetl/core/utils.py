@@ -2,7 +2,7 @@
 import operator
 from copy import deepcopy
 from itertools import chain
-from typing import Any, Dict, Union
+from typing import Any, Union
 
 import numpy as np
 import pandas as pd
@@ -11,7 +11,7 @@ from pandas.api.types import is_list_like
 from blueetl.core import L
 
 
-def query_frame(df: pd.DataFrame, query: Dict[str, Any]) -> pd.DataFrame:
+def query_frame(df: pd.DataFrame, query: dict[str, Any]) -> pd.DataFrame:
     """Given a query dictionary, return the DataFrame filtered by columns and index."""
     if not query:
         return df
@@ -22,7 +22,7 @@ def query_frame(df: pd.DataFrame, query: Dict[str, Any]) -> pd.DataFrame:
         **{k: "columns" for k in df.columns if k is not None},
     }
     # dictionary with query keys split into columns and index
-    q: Dict[str, Any] = {"columns": {}, "index": {}}
+    q: dict[str, Any] = {"columns": {}, "index": {}}
     for key, value in query.items():
         q[mapping[key]][key] = value
     # filter by columns and index
@@ -35,7 +35,7 @@ def query_frame(df: pd.DataFrame, query: Dict[str, Any]) -> pd.DataFrame:
     return df.loc[masks[0] if len(masks) == 1 else np.all(masks, axis=0)]
 
 
-def query_series(series: pd.Series, query: Dict) -> pd.Series:
+def query_series(series: pd.Series, query: dict) -> pd.Series:
     """Given a query dictionary, return the Series filtered by index."""
     if not query:
         return series
@@ -89,7 +89,7 @@ def compare(obj: Union[pd.DataFrame, pd.Series, pd.Index], value: Any) -> np.nda
     return result
 
 
-def is_subfilter(left: Dict, right: Dict) -> bool:
+def is_subfilter(left: dict, right: dict) -> bool:
     """Return True if ``left`` is a subfilter of ``right``, False otherwise.
 
     ``left`` is a subfilter of ``right`` if it's equal or more specific.
@@ -119,7 +119,7 @@ def is_subfilter(left: Dict, right: Dict) -> bool:
         False
     """
 
-    def _to_dict(obj) -> Dict:
+    def _to_dict(obj) -> dict:
         """Return a normalized filter, i.e. a dict where "eq" is replaced by "isin"."""
         obj = deepcopy(obj)
         if isinstance(obj, dict):
@@ -134,7 +134,7 @@ def is_subfilter(left: Dict, right: Dict) -> bool:
         # any other type of object is considered for equality with "isin"
         return {"isin": [obj]}
 
-    def _is_subdict(d1: Dict, d2: Dict) -> bool:
+    def _is_subdict(d1: dict, d2: dict) -> bool:
         """Return True if d1 is a subdict of d2."""
         # mapping operator -> operation
         operators = {

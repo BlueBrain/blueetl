@@ -74,6 +74,9 @@ class BaseExtractor(ABC):
         if query:
             L.debug("Filtering dataframe by %s", query)
             df = df.etl.q(query)
+            if not isinstance(df.index, pd.MultiIndex) and not df.index.name:
+                # reset the index to remove any gap
+                df = df.reset_index(drop=True)
         return cls(df)
 
     def to_pandas(self) -> pd.DataFrame:

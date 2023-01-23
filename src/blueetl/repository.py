@@ -1,5 +1,6 @@
 """Repository."""
 import logging
+import warnings
 from abc import ABC, abstractmethod
 from functools import cached_property
 from typing import Any, Dict, Generic, List, Optional, Type
@@ -340,6 +341,11 @@ class Repository:
     @property
     def spikes(self) -> ReportExtractor:
         """Return the Spikes extraction."""
+        warnings.warn(
+            "Accessing Repository.spikes is deprecated, please use Repository.report",
+            FutureWarning,
+            stacklevel=2,
+        )
         assert isinstance(self.report, Spikes)
         return self.report
 

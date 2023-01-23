@@ -92,7 +92,7 @@ class TrialSteps(BaseExtractor):
                     t_start=t_start,
                     t_end=t_end,
                 )
-                trial_steps_result = func(spikes, trial_steps_params)
+                trial_steps_result = func(spikes, trial_steps_params.dict())
                 try:
                     trial_steps_value = trial_steps_result.pop(TRIAL_STEPS_VALUE)
                 except KeyError:

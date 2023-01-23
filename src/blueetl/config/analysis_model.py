@@ -22,11 +22,6 @@ class BaseModel(PydanticBaseModel):
         allow_inf_nan = False
         validate_assignment = True
 
-    def __getitem__(self, name):
-        """Allow to get the fields of the model as items."""
-        # note: self.__fields__ doesn't contain extra fields even when they are allowed
-        return self.__dict__[name]
-
     def dump(self, path: Path) -> None:
         """Dump the model to file in yaml format."""
         dump_yaml(path, self)

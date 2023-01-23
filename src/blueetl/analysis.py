@@ -14,6 +14,7 @@ from blueetl.features import FeaturesCollection
 from blueetl.repository import Repository
 from blueetl.resolver import AttrResolver, Resolver
 from blueetl.types import StrOrPath
+from blueetl.utils import load_yaml
 
 L = logging.getLogger(__name__)
 
@@ -173,6 +174,11 @@ class MultiAnalyzer:
         else:
             self._global_config = global_config
         self._analyzers: Optional[Dict[str, Analyzer]] = _analyzers
+
+    @classmethod
+    def from_file(cls, path: StrOrPath) -> "MultiAnalyzer":
+        """Return a new instance loaded using the given configuration file."""
+        return cls(global_config=load_yaml(path), base_path=Path(path).parent)
 
     @property
     def global_config(self) -> MultiAnalysisConfig:

@@ -30,6 +30,7 @@ REQUIREMENTS = {
         "bluepy>=2.4",
         "pydantic>=1.10",
         "jsonschema>=4.0",
+        "click>=8",
     ],
     "bnac": [
         "seaborn>=0.11.2",
@@ -44,6 +45,7 @@ REQUIREMENTS = {
         "sphinx",
         "sphinx-bluebrain-theme",
         "sphinx-jsonschema",
+        "sphinxcontrib-programoutput",
         "myst-nb",
     ],
 }
@@ -69,6 +71,7 @@ setup(
     python_requires=">=3.9",
     extras_require={
         "docs": REQUIREMENTS["docs"],
+        "extra": REQUIREMENTS["extra"],
         "bnac": REQUIREMENTS["extra"] + REQUIREMENTS["bnac"],
         "bluecv": REQUIREMENTS["extra"] + REQUIREMENTS["bluecv"],
         "all": REQUIREMENTS["extra"] + REQUIREMENTS["bnac"] + REQUIREMENTS["bluecv"],
@@ -79,8 +82,13 @@ setup(
         "Intended Audience :: Science/Research",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Topic :: Scientific/Engineering :: Bio-Informatics",
     ],
+    entry_points={
+        "console_scripts": [
+            "blueetl=blueetl.apps.main:cli",
+        ],
+    },
 )

@@ -26,7 +26,7 @@ Analysis of reports
 
 To perform the analysis of reports across multiple simulations in a given simulation campaign, a configuration file needs to be provided.
 
-A simple way to initialize the object from a configuration file is:
+A simple way to initialize the object from a configuration file in your code is:
 
 .. code-block:: python
 
@@ -87,6 +87,26 @@ The list of the available names of the dataframes can be obtained with:
 
     ma.spikes.repo.names
     ma.spikes.features.names
+
+
+Command Line Interface
+++++++++++++++++++++++
+
+BlueETL includes a simple CLI providing a few subcommands:
+
+.. command-output:: blueetl --help
+
+To extract and calculate features without writing additional code, you can use the ``run`` subcommand:
+
+.. command-output:: blueetl run --help
+
+To validate the configuration file without running the analysis, you can use the ``validate-config`` subcommand:
+
+.. command-output:: blueetl validate-config --help
+
+To migrate an old configuration, you can use the ``migrate-config`` subcommand:
+
+.. command-output:: blueetl migrate-config --help
 
 
 Output and caching

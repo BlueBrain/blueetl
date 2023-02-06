@@ -59,11 +59,11 @@ def load_yaml(filepath: StrOrPath) -> Any:
         return yaml.load(f, Loader=yaml.SafeLoader)
 
 
-def dump_yaml(filepath: StrOrPath, data: Any) -> None:
+def dump_yaml(filepath: StrOrPath, data: Any, **kwargs) -> None:
     """Dump to YAML file."""
     with open(filepath, "w", encoding="utf-8") as f:
         # The custom dumper dumps unsupported types (for example Path) as simple strings.
-        yaml.dump(data, stream=f, sort_keys=False, Dumper=_get_internal_yaml_dumper())
+        yaml.dump(data, stream=f, sort_keys=False, Dumper=_get_internal_yaml_dumper(), **kwargs)
 
 
 def ensure_list(x: Any) -> Union[list, tuple]:

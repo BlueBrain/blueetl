@@ -15,6 +15,16 @@ Note that there aren't breaking changes in the core functionalities.
 Configuration
 ~~~~~~~~~~~~~
 
+You can automatically migrate a configuration file executing in a virtualenv with blueetl installed:
+
+.. code-block::
+
+    blueetl migrate-config INPUT_CONFIG_FILE OUTPUT_CONFIG_FILE
+
+However, you may need to manually copy any commented lines from the old configuration, or they will be lost.
+
+If you prefer to migrate the configuration manually, follow these steps:
+
 1. The specification ``version: 2`` should be added at the top level of the file.
 2. The section ``extraction`` should be moved to ``analysis.spikes.extraction``.
 3. The section ``analysis.features`` should be moved to ``analysis.spikes.features``.

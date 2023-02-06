@@ -40,6 +40,7 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.extlinks",
     "sphinx-jsonschema",
+    "sphinxcontrib.programoutput",
     "myst_nb",
 ]
 

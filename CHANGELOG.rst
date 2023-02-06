@@ -10,6 +10,7 @@ New Features
 - Allow to resolve windows by reference [NSETM-2015]
 - Support combination of parameters in features configuration [NSETM-2091]
 - Add analysis configuration model and validation [NSETM-2099]
+- Add blueetl CLI [NSETM-2115]
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

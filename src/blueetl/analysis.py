@@ -227,6 +227,10 @@ class MultiAnalyzer:
                 f"{self.__class__.__name__!r} object has no attribute {name!r}"
             ) from ex
 
+    def __dir__(self):
+        """Allow autocompletion of dynamic attributes."""
+        return list(super().__dir__()) + list(self.analyzers)
+
     def __enter__(self):
         """Initialize the object when used as a context manager."""
         return self

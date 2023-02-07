@@ -28,7 +28,7 @@ If you prefer to migrate the configuration manually, follow these steps:
 1. The specification ``version: 2`` should be added at the top level of the file.
 2. The section ``extraction`` should be moved to ``analysis.spikes.extraction``.
 3. The section ``analysis.features`` should be moved to ``analysis.spikes.features``.
-4. Any custom key should be moved into an optional top level dict named ``custom``.
+4. Any custom key should be moved into an optional dict: ``custom`` if the parameters are global, or ``analysis.spikes.custom`` if the parameters are specific to the spikes analysis.
 5. The following sub-section should be added to ``analysis.spikes.extraction``:
 
 .. code-block:: yaml
@@ -90,4 +90,7 @@ you should use instead the generic ``report`` attribute, valid for any type of r
 
 The old name `spikes` is kept for backward compatibility, but it should be considered deprecated and it will be removed later.
 
-Lastly, if you stored any custom configuration, you can get the values from the dictionary ``ma.global_config.custom``.
+Lastly, if you stored any custom configuration, you can get the values from the dictionaries:
+
+- ``ma.global_config.custom``
+- ``ma.spikes.analysis_config.custom``

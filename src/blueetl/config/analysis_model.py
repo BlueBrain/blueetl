@@ -102,6 +102,7 @@ class SingleAnalysisConfig(BaseModel):
     simulations_filter_in_memory: dict[str, Any] = {}
     extraction: ExtractionConfig
     features: list[FeaturesConfig] = []
+    custom: dict[str, Any] = {}
 
 
 class MultiAnalysisConfig(BaseModel):

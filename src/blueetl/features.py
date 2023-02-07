@@ -48,7 +48,9 @@ class FeaturesCollection:
         self._features_configs = features_configs
         self._repo = repo
         self._cache_manager = cache_manager
-        self._data = self._dataframes_to_features(_dataframes, config=None) if _dataframes else {}
+        self._data: dict[str, Feature] = {}
+        if _dataframes:
+            self._data = self._dataframes_to_features(_dataframes, config=None)
 
     @property
     def names(self) -> list[str]:
@@ -76,6 +78,10 @@ class FeaturesCollection:
             raise AttributeError(
                 f"{self.__class__.__name__!r} object has no attribute {name!r}"
             ) from ex
+
+    def __dir__(self):
+        """Allow autocompletion of dynamic attributes."""
+        return list(super().__dir__()) + list(self._data)
 
     def _update(self, mapping: Mapping[str, Feature]) -> None:
         if overlapping := set(mapping).intersection(self._data):

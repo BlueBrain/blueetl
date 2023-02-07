@@ -53,7 +53,7 @@ properties:
     additionalProperties:
       $ref: '#/$defs/SingleAnalysisConfig'
   custom:
-    title: Custom Parameters
+    title: Global Custom Parameters
     description: Optional dict of parameters that can be used in user code.
     default: "{}"
     type: object
@@ -94,6 +94,11 @@ $defs:
         type: array
         items:
           $ref: '#/$defs/FeaturesConfig'
+      custom:
+        title: Single Analysis Custom Parameters
+        description: Optional dict of parameters that can be used in user code.
+        default: "{}"
+        type: object
     required:
     - extraction
     additionalProperties: false

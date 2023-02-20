@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+import pytest
 from click.testing import CliRunner
 
 from blueetl.apps import main as test_module
@@ -10,22 +11,30 @@ from blueetl.utils import dump_yaml, load_yaml
 from blueetl.validation import ValidationError
 
 
+@pytest.mark.parametrize(
+    "options, called_method",
+    [
+        (["--extract"], "extract_repo"),
+        (["--calculate"], "calculate_features"),
+        (["--show"], "show"),
+    ],
+)
 @patch(test_module.__name__ + ".MultiAnalyzer")
-def test_run(mock_multi_analyzer_class, tmp_path):
+def test_run(mock_multi_analyzer_class, tmp_path, options, called_method):
     analysis_config_file = "config.yaml"
     runner = CliRunner()
 
     with runner.isolated_filesystem(temp_dir=tmp_path) as td:
         Path(analysis_config_file).write_text("---")
-        result = runner.invoke(test_module.cli, ["run", analysis_config_file, "--show", "-vv"])
+        result = runner.invoke(test_module.cli, ["run", analysis_config_file, "-vv", *options])
 
     assert result.output == ""
     assert result.exit_code == 0
     mock_multi_analyzer_class.from_file.assert_called_once_with(analysis_config_file)
     instance = mock_multi_analyzer_class.from_file.return_value
-    assert instance.extract_repo.call_count == 1
-    assert instance.calculate_features.call_count == 1
-    assert instance.show.call_count == 1
+    assert instance.extract_repo.call_count == (called_method == "extract_repo")
+    assert instance.calculate_features.call_count == (called_method == "calculate_features")
+    assert instance.show.call_count == (called_method == "show")
 
 
 @patch.dict(sys.modules, {"IPython": Mock()})

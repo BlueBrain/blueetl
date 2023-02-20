@@ -327,7 +327,11 @@ class ETLDataFrameAccessor(ETLBaseAccessor[pd.DataFrame, DataFrameGroupBy]):
         Yields:
             a tuple (key, df), where key is a namedtuple with the grouped columns
         """
-        grouped = self._obj.groupby(groupby_columns, sort=sort, observed=observed)
+        # Workaround to avoid: FutureWarning: In a future version of pandas, a length 1 tuple will
+        # be returned when iterating over a groupby with a grouper equal to a list of length 1.
+        # Don't supply a list with a single grouper to avoid this warning.
+        by = groupby_columns[0] if len(groupby_columns) == 1 else groupby_columns
+        grouped = self._obj.groupby(by, sort=sort, observed=observed)
         if selected_columns:
             grouped = grouped[selected_columns]
         RecordKey = namedtuple("RecordKey", groupby_columns)  # type: ignore

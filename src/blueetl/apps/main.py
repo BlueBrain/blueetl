@@ -30,18 +30,22 @@ def cli():
 @cli.command()
 @click.argument("analysis_config_file", type=click.Path(exists=True))
 @click.option("--seed", type=int, default=0, help="Pseudo-random generator seed", show_default=True)
-@click.option("--show", is_flag=True, help="Calculate and show repo and features dataframes.")
+@click.option("--extract", is_flag=True, help="Extract or load from the cache the repository.")
+@click.option("--calculate", is_flag=True, help="Calculate or load from the cache the features.")
+@click.option("--show", is_flag=True, help="Show repository and features dataframes.")
 @click.option("-i", "--interactive", is_flag=True, help="Start an interactive IPython shell.")
 @click.option("-v", "--verbose", count=True, help="-v for INFO, -vv for DEBUG")
-def run(analysis_config_file, seed, show, interactive, verbose):
+def run(analysis_config_file, seed, extract, calculate, show, interactive, verbose):
     """Run the analysis."""
     loglevel = (logging.WARNING, logging.INFO, logging.DEBUG)[min(verbose, 2)]
     setup_logging(loglevel=loglevel)
     np.random.seed(seed)
     ma = MultiAnalyzer.from_file(analysis_config_file)
-    if show:
+    if extract:
         ma.extract_repo()
+    if calculate:
         ma.calculate_features()
+    if show:
         ma.show()
     if interactive:
         try:

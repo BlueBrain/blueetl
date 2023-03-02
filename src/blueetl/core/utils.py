@@ -1,6 +1,7 @@
 """Core utilities."""
 import operator
 from copy import deepcopy
+from dataclasses import dataclass
 from itertools import chain
 from typing import Any, Union
 
@@ -225,3 +226,91 @@ def concat_tuples(iterable, *args, **kwargs):
 
     iterable = (pd.Series([data], index=_index(conditions)) for data, conditions in iterable)
     return safe_concat(iterable, *args, **kwargs)
+
+
+def longest_match_count(iter1, iter2) -> int:
+    """Return the number of matching elements from the beginning of the given iterables."""
+    count = 0
+    for i1, i2 in zip(iter1, iter2):
+        if i1 != i2:
+            break
+        count += 1
+    return count
+
+
+@dataclass
+class CachedItem:
+    """Item of CachedDataFrame."""
+
+    df: pd.DataFrame
+    key: str
+    value: Any
+
+    def __eq__(self, other: object) -> bool:
+        """Return True if the objects are considered equal, False otherwise."""
+        if not isinstance(other, CachedItem):
+            return NotImplemented
+        return self.key == other.key and self.value == other.value and self.df.equals(other.df)
+
+
+class CachedDataFrame:
+    """DataFrame wrapper to cache partial queries."""
+
+    def __init__(self, df: pd.DataFrame) -> None:
+        """Initialize the object with the base DataFrame.
+
+        The internal stack will contain CachedItems, each one containing a DataFrame filtered by
+        the corresponding key and value, and by all the previous keys and values in the stack.
+
+        Examples:
+            .. code-block:: python
+
+                self._stack = [
+                    CachedItem(df=df0, key="simulation_id", value=1),
+                    CachedItem(df=df1, key="circuit_id", value=0),
+                    CachedItem(df=df2, key="window", value="w1"),
+                    CachedItem(df=df3, key="trial", value=0),
+                ]
+
+            where:
+
+            - ``df0`` is ``self._df`` filtered by ``simulation_id=1``
+            - ``df1`` is ``df0`` filtered by ``circuit_id=0``
+            - ``df2`` is ``df1`` filtered by ``window="w1"``
+            - ``df3`` is ``df2`` filtered by ``trial=0``
+
+        """
+        self._df = df
+        self._stack: list[CachedItem] = []
+        self._matched = 0  # for test and debug
+
+    def _longest_keys_count(self, keys) -> int:
+        return longest_match_count((item.key for item in self._stack), keys)
+
+    def _longest_values_count(self, values) -> int:
+        return longest_match_count((item.value for item in self._stack), values)
+
+    def query(self, query: dict[str, Any]) -> pd.DataFrame:
+        """Return the DataFrame filtered by query, using cached DataFrames if possible.
+
+        - The order of the keys in the query dict is important.
+        - The cache is reused only when the keys and their order are the same.
+        - The cache is reused also when only some keys and their values match.
+
+        """
+        query_keys = tuple(query.keys())
+        query_values = tuple(query.values())
+        # find the cached dataframe with the longest key
+        self._matched = min(
+            self._longest_keys_count(query_keys),
+            self._longest_values_count(query_values),
+        )
+        self._stack = self._stack[: self._matched]
+        df = self._stack[-1].df if self._stack else self._df
+        # update the cache for every partial key, if needed
+        while len(self._stack) < len(query):
+            col = query_keys[len(self._stack)]
+            val = query_values[len(self._stack)]
+            df = df.etl.q({col: val})
+            self._stack.append(CachedItem(df=df, key=col, value=val))
+        return df

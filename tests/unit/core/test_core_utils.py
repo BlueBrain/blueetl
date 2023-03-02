@@ -158,3 +158,139 @@ def test_safe_concat_dataframes_having_indexes_with_different_number_of_levels(d
     match = re.escape("Length of order must be same as number of levels (3), got 2")
     with pytest.raises(RuntimeError, match=match):
         test_module.safe_concat(iterable)
+
+
+@pytest.mark.parametrize(
+    "iterables, expected",
+    [
+        ([[], []], 0),
+        ([[], [1, 2, 3]], 0),
+        ([[1, 2], [1, 2, 3]], 2),
+        ([[1, 2, 3], [1, 2]], 2),
+        ([[1, 2, 3], [1, 2, 3]], 3),
+        ([[2, 3, 1], [1, 2, 3]], 0),
+        ([[1, 4, 3], [1, 2, 3]], 1),
+        ([(i for i in "abc"), ["a", "b", "c"]], 3),
+        ([(i for i in "acc"), ["a", "b", "c"]], 1),
+    ],
+)
+def test_longest_match_count(iterables, expected):
+    result = test_module.longest_match_count(*iterables)
+    assert result == expected
+
+
+def test_cached_dataframe():
+    df = pd.DataFrame(
+        {
+            "simulation_id": [0, 0, 0, 0, 1, 1, 1, 1],
+            "circuit_id": [0, 0, 0, 0, 0, 0, 0, 0],
+            "window": ["w0", "w0", "w1", "w1", "w0", "w0", "w1", "w1"],
+            "trial": [0, 1, 0, 1, 0, 1, 0, 1],
+        }
+    )
+    query = {"simulation_id": 1, "circuit_id": 0, "window": "w0"}
+    expected_df = pd.DataFrame(
+        {
+            "simulation_id": [1, 1],
+            "circuit_id": [0, 0],
+            "window": ["w0", "w0"],
+            "trial": [0, 1],
+        },
+        index=[4, 5],
+    )
+    expected_stack = [
+        test_module.CachedItem(
+            df=pd.DataFrame(
+                {
+                    "simulation_id": [1, 1, 1, 1],
+                    "circuit_id": [0, 0, 0, 0],
+                    "window": ["w0", "w0", "w1", "w1"],
+                    "trial": [0, 1, 0, 1],
+                },
+                index=[4, 5, 6, 7],
+            ),
+            key="simulation_id",
+            value=1,
+        ),
+        test_module.CachedItem(
+            df=pd.DataFrame(
+                {
+                    "simulation_id": [1, 1, 1, 1],
+                    "circuit_id": [0, 0, 0, 0],
+                    "window": ["w0", "w0", "w1", "w1"],
+                    "trial": [0, 1, 0, 1],
+                },
+                index=[4, 5, 6, 7],
+            ),
+            key="circuit_id",
+            value=0,
+        ),
+        test_module.CachedItem(
+            df=pd.DataFrame(
+                {
+                    "simulation_id": [1, 1],
+                    "circuit_id": [0, 0],
+                    "window": ["w0", "w0"],
+                    "trial": [0, 1],
+                },
+                index=[4, 5],
+            ),
+            key="window",
+            value="w0",
+        ),
+    ]
+    cache = test_module.CachedDataFrame(df=df)
+
+    result = cache.query(query=query)
+    assert_frame_equal(result, expected_df)
+    assert cache._stack == expected_stack
+    assert cache._matched == 0
+
+    query["trial"] = 1
+
+    result = cache.query(query=query)
+    assert_frame_equal(result, expected_df.iloc[[1]])
+    assert cache._stack == expected_stack + [
+        test_module.CachedItem(
+            df=pd.DataFrame(
+                {
+                    "simulation_id": [1],
+                    "circuit_id": [0],
+                    "window": ["w0"],
+                    "trial": [1],
+                },
+                index=[5],
+            ),
+            key="trial",
+            value=1,
+        )
+    ]
+    assert cache._matched == len(expected_stack)
+
+    query["trial"] = 0
+
+    result = cache.query(query=query)
+    assert_frame_equal(result, expected_df.iloc[[0]])
+    assert cache._stack == expected_stack + [
+        test_module.CachedItem(
+            df=pd.DataFrame(
+                {
+                    "simulation_id": [1],
+                    "circuit_id": [0],
+                    "window": ["w0"],
+                    "trial": [0],
+                },
+                index=[4],
+            ),
+            key="trial",
+            value=0,
+        )
+    ]
+    assert cache._matched == len(expected_stack)
+
+    del query["trial"]
+
+    result = cache.query(query=query)
+    assert_frame_equal(result, expected_df)
+    assert cache._stack == expected_stack
+    assert cache._matched == len(expected_stack)

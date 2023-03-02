@@ -109,7 +109,7 @@ def calculate_features_multi(repo, key, df, params):
     if not export_all_neurons:
         # return only neurons with spikes
         # TODO: to be tested
-        by_gid = by_gid.dropna("all")
+        by_gid = by_gid.dropna(how="all")
 
     # df with (trial, gid) as index, and features as columns
     by_gid_and_trial = pd.concat(
@@ -121,7 +121,7 @@ def calculate_features_multi(repo, key, df, params):
     if not export_all_neurons:
         # return only neurons with spikes
         # TODO: to be tested
-        by_gid_and_trial = by_gid_and_trial.dropna("all")
+        by_gid_and_trial = by_gid_and_trial.dropna(how="all")
 
     # df with features as columns and a single row
     # the index will be dropped when concatenating because it's unnamed

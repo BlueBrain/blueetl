@@ -10,16 +10,9 @@ import pandas as pd
 
 from blueetl.cache import CacheManager
 from blueetl.config.analysis_model import FeaturesConfig
-from blueetl.constants import (
-    CIRCUIT_ID,
-    GID,
-    NEURON_CLASS,
-    NEURON_CLASS_INDEX,
-    SIMULATION_ID,
-    TRIAL,
-    WINDOW,
-)
+from blueetl.constants import CIRCUIT_ID, SIMULATION_ID
 from blueetl.core.parallel import Task, run_parallel
+from blueetl.core.utils import CachedDataFrame
 from blueetl.extract.feature import Feature
 from blueetl.repository import Repository
 from blueetl.utils import ensure_dtypes, import_by_string, timed, timed_log
@@ -119,8 +112,7 @@ class FeaturesCollection:
                 is_cached = True
             else:
                 L.info("Processing new features %s/%s", n + 1, features_len)
-                method = getattr(self, f"_calculate_{features_config.type}")
-                features = method(features_config)
+                features = self._calculate_result(features_config)
                 to_be_written = set(features)
                 is_cached = False
             self._update(features)
@@ -150,13 +142,8 @@ class FeaturesCollection:
                 result[name].df.attrs["config"] = deepcopy(config)
         return result
 
-    def _calculate_single(self, features_config: FeaturesConfig) -> dict[str, Feature]:
-        df = calculate_features_single(repo=self._repo, features_config=features_config)
-        name = features_config.name or "undefined"
-        return self._dataframes_to_features({name: df}, config=features_config)
-
-    def _calculate_multi(self, features_config: FeaturesConfig) -> dict[str, Feature]:
-        df_dict = calculate_features_multi(repo=self._repo, features_config=features_config)
+    def _calculate_result(self, features_config: FeaturesConfig) -> dict[str, Feature]:
+        df_dict = calculate_features(repo=self._repo, features_config=features_config)
         return self._dataframes_to_features(df_dict, config=features_config)
 
     def apply_filter(self, repo: Repository) -> "FeaturesCollection":
@@ -173,55 +160,105 @@ class FeaturesCollection:
         )
 
 
-def _get_report_for_all_neurons_and_windows(
-    repo: Repository, windows: list[str], neuron_classes: list[str]
-) -> pd.DataFrame:
-    """Extend the report df to include all the possible neurons and windows, even without data."""
-    neurons_df = repo.neurons.df[[CIRCUIT_ID, NEURON_CLASS, GID, NEURON_CLASS_INDEX]]
-    windows_df = repo.windows.df[[SIMULATION_ID, CIRCUIT_ID, WINDOW, TRIAL]]
-    report_df = repo.report.df
-    if neuron_classes:
-        neurons_df = neurons_df.etl.q(neuron_class=neuron_classes)
-        report_df = report_df.etl.q(neuron_class=neuron_classes)
-    if windows:
-        windows_df = windows_df.etl.q(window=windows)
-        report_df = report_df.etl.q(window=windows)
-    return neurons_df.merge(windows_df, how="left").merge(report_df, how="left")
+def _get_tasks_generator(
+    neurons_df: pd.DataFrame,
+    windows_df: pd.DataFrame,
+    report_df: pd.DataFrame,
+    func: Callable,
+    features_config: FeaturesConfig,
+) -> Iterator[Task]:
+    def _unique_rows(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+        columns = [col for col in columns if col in df]
+        return df[columns].drop_duplicates(ignore_index=True)
+
+    def _query(nt: NamedTuple, columns: list[str]) -> dict[str, Any]:
+        return {col: getattr(nt, col) for col in columns}
+
+    def _groups(
+        neurons_df: pd.DataFrame, windows_df: pd.DataFrame, groupby: list[str]
+    ) -> pd.DataFrame:
+        """Get all the possible groups and return a sorted merged dataframe."""
+        u_neurons = _unique_rows(neurons_df, groupby)
+        u_windows = _unique_rows(windows_df, groupby)
+        if diff := [col for col in groupby if col not in u_neurons and col not in u_windows]:
+            raise ValueError(f"Unknown columns specified in groupby: {diff}")
+        if len(u_neurons) > 0 and len(u_windows) == 0:
+            result = u_neurons
+        elif len(u_neurons) == 0 and len(u_windows) > 0:
+            result = u_windows
+        else:
+            result = pd.merge(left=u_windows, right=u_neurons, how="inner")
+        # ensure that the groups are sorted as requested
+        return result[groupby].sort_values(groupby, ignore_index=True)
+
+    if features_config.neuron_classes:
+        neurons_df = neurons_df.etl.q(neuron_class=features_config.neuron_classes)
+    if features_config.windows:
+        windows_df = windows_df.etl.q(window=features_config.windows)
+
+    caches = {
+        "neurons": CachedDataFrame(neurons_df),
+        "windows": CachedDataFrame(windows_df),
+        "report": CachedDataFrame(report_df),
+    }
+    merged = _groups(neurons_df, windows_df, groupby=features_config.groupby)
+    # keep the order of the columns because needed for the cache
+    columns = {
+        "neurons": [col for col in merged if col in neurons_df],
+        "windows": [col for col in merged if col in windows_df],
+        "report": [col for col in merged if col in report_df],
+    }
+
+    # for each group, yield a task that will be called in a subprocess,
+    # passing the group key and the filtered DataFrames as parameters
+    L.info("Tasks to be executed: %s", len(merged))
+    for _, key in merged.etl.iter():
+        yield Task(
+            partial(
+                func,
+                key=key,
+                neurons_df=caches["neurons"].query(query=_query(key, columns["neurons"])),
+                windows_df=caches["windows"].query(query=_query(key, columns["windows"])),
+                report_df=caches["report"].query(query=_query(key, columns["report"])),
+            )
+        )
 
 
-@timed(L.info, "Executed calculate_features_single")
-def calculate_features_single(repo: Repository, features_config: FeaturesConfig) -> pd.DataFrame:
-    """Calculate features for the given repository as a single DataFrame.
-
-    Args:
-        repo: repository containing spikes.
-        features_config: features configuration.
-
-    Returns:
-        DataFrame
-
-    """
+def _func_wrapper(
+    key: NamedTuple,
+    neurons_df: pd.DataFrame,
+    windows_df: pd.DataFrame,
+    report_df: pd.DataFrame,
+    repo: Repository,
+    features_config: FeaturesConfig,
+) -> dict[str, pd.DataFrame]:
+    # executed in a subprocess
+    L.debug("Calculating features for %s", key)
+    merged_df = neurons_df.merge(windows_df, how="left").merge(report_df, how="left")
+    # The params dict is deepcopied because it could be modified in the user function.
+    # It could happen even with multiprocessing, because joblib may process tasks in batch.
     func = import_by_string(features_config.function)
-    records = []
-    key = None
-    main_df = _get_report_for_all_neurons_and_windows(
-        repo, windows=features_config.windows, neuron_classes=features_config.neuron_classes
-    )
-    for key, group_df in main_df.etl.groupby_iter(features_config.groupby):
-        record = key._asdict()
-        # The params dict is deepcopied because it could be modified in the user function
-        result = func(repo=repo, key=key, df=group_df, params=deepcopy(features_config.params))
-        assert isinstance(result, dict), "The returned object must be a dict"
-        record.update(result)
-        records.append(record)
-    features_df = ensure_dtypes(pd.DataFrame(records))
-    if key:
-        features_df = features_df.set_index(list(key._fields))
-    return features_df
+    features_dict = func(repo=repo, key=key, df=merged_df, params=deepcopy(features_config.params))
+    # compatibility with features defined with type=single
+    if features_config.type == "single":
+        features_dict = {features_config.name: features_dict}
+    # verify and process the result
+    if not isinstance(features_dict, dict):
+        raise ValueError("The user function must return a dict of dataframes")
+    features_records = {}
+    for feature_group, result_df in features_dict.items():
+        if not isinstance(result_df, pd.DataFrame):
+            raise ValueError(f"Expected a DataFrame, not {type(result_df).__name__}")
+        # ignore the index if it's unnamed and with one level; this can be useful
+        # for example when the returned DataFrame has a RangeIndex to be dropped
+        drop = result_df.index.names == [None]
+        result_df = result_df.etl.add_conditions(conditions=key._fields, values=key, drop=drop)
+        features_records[feature_group + features_config.suffix] = result_df
+    return features_records
 
 
 @timed(L.info, "Executed calculate_features_multi")
-def calculate_features_multi(
+def calculate_features(
     repo: Repository,
     features_config: FeaturesConfig,
     jobs: Optional[int] = None,
@@ -239,35 +276,15 @@ def calculate_features_multi(
         dict of DataFrames
 
     """
-
-    def func_wrapper(key: NamedTuple, df: pd.DataFrame) -> dict[str, pd.DataFrame]:
-        # executed in a subprocess
-        features_records = {}
-        L.debug("Calculating features for %s", key)
-        record = key._asdict()
-        conditions = list(record.keys())
-        values = tuple(record.values())
-        # The params dict is deepcopied because it could be modified in the user function.
-        # It could happen even with multiprocessing, because joblib may process tasks in batch.
-        features_dict = func(repo=repo, key=key, df=df, params=deepcopy(features_config.params))
-        assert isinstance(features_dict, dict), "The returned object must be a dict"
-        for feature_group, result_df in features_dict.items():
-            assert isinstance(result_df, pd.DataFrame), "Each contained object must be a DataFrame"
-            # ignore the index if it's unnamed and with one level; this can be useful
-            # for example when the returned DataFrame has a RangeIndex to be dropped
-            drop = result_df.index.names == [None]
-            result_df = result_df.etl.add_conditions(conditions, values, drop=drop)
-            features_records[feature_group + features_config.suffix] = result_df
-        return features_records
-
-    func = import_by_string(features_config.function)
-    main_df = _get_report_for_all_neurons_and_windows(
-        repo, windows=features_config.windows, neuron_classes=features_config.neuron_classes
+    func = partial(_func_wrapper, repo=repo, features_config=features_config)
+    tasks_generator = _get_tasks_generator(
+        neurons_df=repo.neurons.df,
+        windows_df=repo.windows.df,
+        report_df=repo.report.df,
+        func=func,
+        features_config=features_config,
     )
-    # list of dicts: feature_group -> dataframe
-    results = main_df.etl.groupby_run_parallel(
-        features_config.groupby, func=func_wrapper, jobs=jobs, backend=backend
-    )
+    results = run_parallel(tasks_generator, jobs=jobs, backend=backend)
     # concatenate all the dataframes having the same feature_group label
     all_features_records = defaultdict(list)
     for result in results:

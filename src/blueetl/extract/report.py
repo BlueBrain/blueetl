@@ -2,7 +2,7 @@
 import logging
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, TypeVar
+from typing import NamedTuple, Optional, TypeVar
 
 import pandas as pd
 from bluepy import Simulation
@@ -12,6 +12,7 @@ from blueetl.extract.base import BaseExtractor
 from blueetl.extract.neurons import Neurons
 from blueetl.extract.simulations import Simulations
 from blueetl.extract.windows import Windows
+from blueetl.parallel import merge_filter
 
 L = logging.getLogger(__name__)
 ReportExtractorT = TypeVar("ReportExtractorT", bound="ReportExtractor")
@@ -84,25 +85,29 @@ class ReportExtractor(BaseExtractor, metaclass=ABCMeta):
         Returns:
             New instance.
         """
-        merged = pd.merge(simulations.df, neurons.df, sort=False)
-        # group the gids together
-        columns = [SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS]
-        grouped = merged.groupby(columns, sort=False, observed=True).agg(
-            {GID: tuple, SIMULATION: "first"}
+
+        def _func(key: NamedTuple, df_list: list[pd.DataFrame]) -> tuple[NamedTuple, pd.DataFrame]:
+            # executed in a subprocess
+            simulations_df, neurons_df, windows_df = df_list
+            simulation_id, simulation = simulations_df.etl.one()[[SIMULATION_ID, SIMULATION]]
+            assert simulation_id == key.simulation_id  # type: ignore[attr-defined]
+            df_list = []
+            for inner_key, df in neurons_df.etl.groupby_iter([CIRCUIT_ID, NEURON_CLASS]):
+                result_df = cls._load_values(
+                    simulation=simulation,
+                    gids=df[GID],
+                    windows_df=windows_df,
+                    name=name,
+                )
+                result_df[[SIMULATION_ID, *inner_key._fields]] = [simulation_id, *inner_key]
+                df_list.append(result_df)
+            return pd.concat(df_list, ignore_index=True, copy=False)
+
+        all_df = merge_filter(
+            df_list=[simulations.df, neurons.df, windows.df],
+            groupby=[SIMULATION_ID, CIRCUIT_ID],
+            func=_func,
+            parallel=True,
         )
-        df_list = []
-        for index, rec in grouped.etl.iter():
-            L.info(
-                "Extracting %s for simulation_id=%s, circuit_id=%s, neuron_class=%s: %s gids",
-                cls.__name__,
-                *index,
-                len(rec.gid),
-            )
-            windows_df = windows.df.etl.q(simulation_id=index.simulation_id)
-            tmp_df = cls._load_values(
-                simulation=rec.simulation, gids=rec.gid, windows_df=windows_df, name=name
-            )
-            tmp_df[columns] = list(index)
-            df_list.append(tmp_df)
-        df = pd.concat(df_list, ignore_index=True, copy=False)
+        df = pd.concat(all_df, ignore_index=True, copy=False)
         return cls(df)

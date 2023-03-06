@@ -43,5 +43,4 @@ class Spikes(ReportExtractor):
         df = df.rename(columns={"t": TIME})
         df = pd.concat(cls._assign_window(df, rec) for rec in windows_df.itertuples())
         df = df.reset_index(drop=True)
-        L.info("Selected spikes: %s", len(df))
         return df

@@ -281,6 +281,7 @@ class CachedDataFrame:
 
         """
         self._df = df
+        self._valid_keys = {*df.columns, *(key for key in df.index.names if key)}
         self._stack: list[CachedItem] = []
         self._matched = 0  # for test and debug
 
@@ -290,14 +291,21 @@ class CachedDataFrame:
     def _longest_values_count(self, values) -> int:
         return longest_match_count((item.value for item in self._stack), values)
 
-    def query(self, query: dict[str, Any]) -> pd.DataFrame:
+    def query(self, query: dict[str, Any], ignore_unknown_keys: bool = False) -> pd.DataFrame:
         """Return the DataFrame filtered by query, using cached DataFrames if possible.
 
         - The order of the keys in the query dict is important.
         - The cache is reused only when the keys and their order are the same.
         - The cache is reused also when only some keys and their values match.
 
+        Args:
+            query: dict to be passed to ``etl.q``.
+            ignore_unknown_keys: if True, ignore keys specified in the query but not present in the
+            DataFrame columns or in the index level names. If False, unknown keys raise an error.
+
         """
+        if ignore_unknown_keys:
+            query = {key: value for key, value in query.items() if key in self._valid_keys}
         query_keys = tuple(query.keys())
         query_values = tuple(query.values())
         # find the cached dataframe with the longest key

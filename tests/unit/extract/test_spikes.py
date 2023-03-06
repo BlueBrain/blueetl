@@ -1,4 +1,5 @@
-from unittest.mock import Mock, PropertyMock
+import os
+from unittest.mock import Mock, PropertyMock, patch
 
 import pandas as pd
 from pandas.testing import assert_frame_equal
@@ -20,6 +21,7 @@ from blueetl.constants import (
     WINDOW,
     WINDOW_TYPE,
 )
+from blueetl.core.constants import BLUEETL_JOBLIB_JOBS
 from blueetl.extract import spikes as test_module
 from blueetl.utils import ensure_dtypes
 
@@ -34,6 +36,7 @@ def _get_spikes(gids):
     return spikes[spikes.isin(gids)]
 
 
+@patch.dict(os.environ, {BLUEETL_JOBLIB_JOBS: "1"})
 def test_spikes_from_simulations():
     mock_circuit = Mock()
     mock_sim = Mock()
@@ -112,4 +115,4 @@ def test_spikes_from_simulations():
     assert_frame_equal(result.df, expected_df)
     assert mock_simulations_df.call_count == 1
     assert mock_neurons_df.call_count == 1
-    assert mock_windows_df.call_count == 2
+    assert mock_windows_df.call_count == 1

@@ -1,4 +1,5 @@
-from unittest.mock import Mock, PropertyMock
+import os
+from unittest.mock import Mock, PropertyMock, patch
 
 import pandas as pd
 from bluepy import Section
@@ -21,6 +22,7 @@ from blueetl.constants import (
     WINDOW,
     WINDOW_TYPE,
 )
+from blueetl.core.constants import BLUEETL_JOBLIB_JOBS
 from blueetl.extract import compartment_report as test_module
 from blueetl.utils import ensure_dtypes
 
@@ -49,6 +51,7 @@ def _get_compartment_report(t_start=None, t_end=None, t_step=None, gids=None):
     return df.etl.q(time={"ge": t_start, "lt": t_end})[list(gids)]
 
 
+@patch.dict(os.environ, {BLUEETL_JOBLIB_JOBS: "1"})
 def test_compartment_report_from_simulations():
     mock_circuit = Mock()
     mock_sim = Mock()
@@ -232,4 +235,4 @@ def test_compartment_report_from_simulations():
     assert_frame_equal(result.df, expected_df)
     assert mock_simulations_df.call_count == 1
     assert mock_neurons_df.call_count == 1
-    assert mock_windows_df.call_count == 2
+    assert mock_windows_df.call_count == 1

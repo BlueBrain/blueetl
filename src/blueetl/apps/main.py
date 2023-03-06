@@ -22,7 +22,7 @@ class NaturalOrderGroup(click.Group):
 
 
 @click.group(cls=NaturalOrderGroup)
-@click.version_option()
+@click.version_option(__version__)
 def cli():
     """The CLI entry point."""
 

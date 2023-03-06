@@ -392,11 +392,11 @@ class CacheManager:
         Returns:
             The loaded dataframe, or None if it's not cached.
         """
-        L.info("Loading cached %s if they exist", name)
-        file_checksum = self._cached_checksums["repo"].get(name)
+        is_cached = bool(self._cached_checksums["repo"].get(name))
+        L.debug("The repository %s is cached: %s", name, is_cached)
         # the checksums have been checked in _initialize_cache/_delete_cached_repo_files,
         # so they are not calculate again here
-        return self._repo_store.load(name) if file_checksum else None
+        return self._repo_store.load(name) if is_cached else None
 
     @_raise_if(readonly=True)
     @_raise_if(locked=False)
@@ -413,6 +413,16 @@ class CacheManager:
         self._dump_cached_checksums()
 
     @_raise_if(locked=False)
+    def get_cached_features_checksums(
+        self, features_config: FeaturesConfig
+    ) -> dict[str, dict[str, str]]:
+        """Return the cached features checksums, or an empty dict if the cache doesn't exist."""
+        config_checksum = features_config.checksum()
+        cached = self._cached_checksums["features"].get(config_checksum, {})
+        L.debug("The features %s are cached: %s", config_checksum, bool(cached))
+        return cached
+
+    @_raise_if(locked=False)
     def load_features(self, features_config: FeaturesConfig) -> Optional[dict[str, pd.DataFrame]]:
         """Load features dataframes from the cache.
 
@@ -424,13 +434,11 @@ class CacheManager:
         Returns:
             Dict of dataframes, or None if they are not cached.
         """
-        L.info("Loading cached features if they exist")
-        config_checksum = features_config.checksum()
-        cached_dataframes = self._cached_checksums["features"].get(config_checksum, {})
+        cached_checksums = self.get_cached_features_checksums(features_config)
         features = {}
         # the checksums have been checked in _initialize_cache/_delete_cached_features_files,
         # so they are not calculate again here
-        for name, file_checksum in cached_dataframes.items():
+        for name, file_checksum in cached_checksums.items():
             assert file_checksum is not None
             features[name] = self._features_store.load(name)
             assert features[name] is not None
@@ -451,8 +459,16 @@ class CacheManager:
         """
         L.info("Writing cached features")
         config_checksum = features_config.checksum()
-        d = self._cached_checksums["features"][config_checksum] = {}
+        old_checksums = self._cached_checksums["features"].pop(config_checksum, None)
+        new_checksums = self._cached_checksums["features"][config_checksum] = {}
         for name, feature in features_dict.items():
             self._features_store.dump(feature, name)
-            d[name] = self._features_store.checksum(name)
+            new_checksums[name] = self._features_store.checksum(name)
+        if old_checksums is not None:
+            assert (
+                len(set(old_checksums).difference(new_checksums)) == 0
+            ), "Some features have been found only in the old cached data"
+            assert (
+                len(set(new_checksums).difference(old_checksums)) == 0
+            ), "Some features have been found only in the new cached data"
         self._dump_cached_checksums()

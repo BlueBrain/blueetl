@@ -20,9 +20,9 @@ class Neurons(BaseExtractor):
 
     COLUMNS = [CIRCUIT_ID, NEURON_CLASS, GID, NEURON_CLASS_INDEX]
 
-    def __init__(self, df: pd.DataFrame) -> None:
+    def __init__(self, df: pd.DataFrame, cached: bool, filtered: bool) -> None:
         """Initialize the extractor."""
-        super().__init__(df)
+        super().__init__(df, cached=cached, filtered=filtered)
         # ensure that the neurons are sorted
         self._df: pd.DataFrame = self._df.sort_values(self.COLUMNS, ignore_index=True)
 
@@ -39,7 +39,7 @@ class Neurons(BaseExtractor):
 
         def _load_cells(_target):
             if _target not in cells_cache:
-                with timed(L.info, "Cells loaded from circuit for target %s", _target):
+                with timed(L.info, "Loading cells from circuit for target %s", _target):
                     _cells_group = {"$target": _target} if _target else None
                     _cells = circuit.cells.get(group=_cells_group, properties=properties)
                     cells_cache[_target] = _cells
@@ -98,7 +98,7 @@ class Neurons(BaseExtractor):
                 for neuron_class_index, gid in enumerate(gids)
             )
         df = pd.DataFrame.from_records(records, columns=cls.COLUMNS)
-        return cls(df)
+        return cls(df, cached=False, filtered=False)
 
     def count_by_neuron_class(self, observed: bool = True) -> pd.Series:
         """Return the number of gids for each circuit and neuron class.

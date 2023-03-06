@@ -54,4 +54,4 @@ class NeuronClasses(BaseExtractor):
                 }
             )
         df = pd.DataFrame(results)
-        return cls(df)
+        return cls(df, cached=False, filtered=False)

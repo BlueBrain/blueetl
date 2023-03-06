@@ -61,8 +61,8 @@ class SimulationsConfig:
     def _validate(self) -> None:
         if SIMULATION_PATH not in self.data.columns:
             raise ValueError(f"Missing required column: {SIMULATION_PATH}")
-        if diff := sorted(set(self.conditions) - set(self.data.columns)):
-            raise ValueError(f"Invalid extra conditions: {diff}")
+        if diff := set(self.conditions) - set(self.data.columns):
+            raise ValueError(f"Invalid extra conditions: {sorted(diff)}")
 
     def __eq__(self, other: object) -> bool:
         """Return True if the objects are considered equal, False otherwise."""

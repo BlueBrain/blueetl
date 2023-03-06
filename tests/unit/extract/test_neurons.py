@@ -162,7 +162,7 @@ def test_neurons_count_by_neuron_class():
             },
         ],
     )
-    neurons = Neurons(df)
+    neurons = Neurons.from_pandas(df)
     result = neurons.count_by_neuron_class()
     expected_series = ensure_dtypes(
         pd.DataFrame(

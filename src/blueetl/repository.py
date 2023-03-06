@@ -22,7 +22,7 @@ from blueetl.extract.spikes import Spikes
 from blueetl.extract.trial_steps import TrialSteps
 from blueetl.extract.windows import Windows
 from blueetl.resolver import Resolver
-from blueetl.utils import timed_log
+from blueetl.utils import timed
 
 L = logging.getLogger(__name__)
 
@@ -48,21 +48,19 @@ class BaseExtractor(ABC, Generic[ExtractorT]):
         Args:
             name: name of the dataframe.
         """
-        t_log = timed_log(L.info)
-        is_new = is_modified = False
-        df = self._repo.cache_manager.load_repo(name)
-        if df is not None:
-            initial_len = len(df)
-            instance = self.extract_cached(df)
-            is_modified = initial_len != len(instance.df)
-        else:
-            instance = self.extract_new()
-            is_new = True
-        assert instance is not None, "The extraction didn't return a valid instance."
-        if is_new or is_modified:
-            self._repo.cache_manager.dump_repo(df=instance.to_pandas(), name=name)
-        t_log("Extracted %s: cached=%s, modified=%s", name, not is_new, is_modified)
-        return instance
+        with timed(L.info, "Extracting %s", name):
+            df = self._repo.cache_manager.load_repo(name)
+            if df is not None:
+                instance = self.extract_cached(df)
+            else:
+                instance = self.extract_new()
+            assert instance is not None, "The extraction didn't return a valid instance."
+            is_cached = instance._cached  # pylint: disable=protected-access
+            is_filtered = instance._filtered  # pylint: disable=protected-access
+            if not is_cached or is_filtered:
+                self._repo.cache_manager.dump_repo(df=instance.to_pandas(), name=name)
+            L.info("Extracting %s: cached=%s, filtered=%s", name, is_cached, is_filtered)
+            return instance
 
 
 class SimulationsExtractor(BaseExtractor[Simulations]):

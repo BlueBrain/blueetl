@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any, Optional, TypeVar, Union
 
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Extra, validator
+from pydantic import Extra, Field, validator
 
 from blueetl.constants import CONFIG_VERSION
 from blueetl.utils import checksum_str, dump_yaml, load_yaml
@@ -82,6 +82,8 @@ class ExtractionConfig(BaseModel):
 class FeaturesConfig(BaseModel):
     """FeaturesConfig Model."""
 
+    # do not consider id in the checksum
+    id: Optional[int] = Field(None, exclude=True)
     type: str
     name: Optional[str] = None
     groupby: list[str]
@@ -103,6 +105,13 @@ class SingleAnalysisConfig(BaseModel):
     extraction: ExtractionConfig
     features: list[FeaturesConfig] = []
     custom: dict[str, Any] = {}
+
+    @validator("features")
+    def assign_features_config_id(cls, lst):
+        """Assign an incremental id to each FeaturesConfig."""
+        for i, item in enumerate(lst):
+            item.id = i
+        return lst
 
 
 class MultiAnalysisConfig(BaseModel):

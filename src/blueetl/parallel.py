@@ -21,13 +21,12 @@ def _unique_rows(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     - Only the specified columns are used to determine the uniqueness of the rows.
     - If a column is not present in the DataFrame, it's ignored.
     """
-    if df.index.nlevels > 1 or df.index.name:
+    if any(df.index.names):
         # reset the index if any columns are contained in the index levels
         if levels := [level for level in columns if level in df.index.names]:
             df = df.reset_index(level=levels)
     # find the unique rows
-    columns = [col for col in columns if col in df]
-    df = df[columns].drop_duplicates(ignore_index=True)
+    df = df[df.columns.intersection(columns)].drop_duplicates(ignore_index=True)
     L.info("Considering %s rows for columns %s", len(df), list(df.columns))
     return df
 
@@ -54,8 +53,8 @@ def _groups(df_list: list[pd.DataFrame], groupby: list[str]) -> pd.DataFrame:
                 break
     if result is None:
         raise RuntimeError("At least one filtering DataFrame must be specified")
-    if diff := sorted(set(groupby) - set(result.columns)):
-        raise ValueError(f"Unknown columns in groupby: {diff}")
+    if diff := set(groupby) - set(result.columns):
+        raise ValueError(f"Unknown columns in groupby: {sorted(diff)}")
     # ensure that the groups are sorted by the specified columns
     return result[groupby].sort_values(groupby, ignore_index=True)
 

@@ -169,7 +169,7 @@ class Windows(BaseExtractor):
                 results.extend(partial_results)
 
         df = pd.DataFrame(results)
-        return cls(df)
+        return cls(df, cached=False, filtered=False)
 
     def get_bounds(self, window: str) -> tuple[float, float]:
         """Return the interval (t_start, t_stop) for the specified window.

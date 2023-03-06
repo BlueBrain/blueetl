@@ -110,4 +110,4 @@ class ReportExtractor(BaseExtractor, metaclass=ABCMeta):
             parallel=True,
         )
         df = pd.concat(all_df, ignore_index=True, copy=False)
-        return cls(df)
+        return cls(df, cached=False, filtered=False)

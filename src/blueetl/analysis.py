@@ -1,6 +1,7 @@
 """Analysis functions."""
 import gc
 import logging
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, NamedTuple, Optional, Union
 
@@ -276,7 +277,7 @@ class MultiAnalyzer:
         if not simulations_filter:
             return self
         analyzers = {name: a.apply_filter(simulations_filter) for name, a in self.analyzers.items()}
-        return MultiAnalyzer(global_config=self.global_config.copy(deep=True), _analyzers=analyzers)
+        return MultiAnalyzer(global_config=deepcopy(self.global_config), _analyzers=analyzers)
 
     def show(self):
         """Print all the DataFrames."""

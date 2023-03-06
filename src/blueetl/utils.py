@@ -21,28 +21,17 @@ from blueetl.types import StrOrPath
 
 
 @contextmanager
-def timed(log: Callable, msg: str, *args) -> Iterator[None]:
+def timed(log: Callable, msg, *args) -> Iterator[None]:
     """Context manager to log the execution time using the specified logger function."""
+    log(f"{msg}...", *args)
     start_time = time.monotonic()
+    status = "failed"
     try:
         yield
+        status = "done"
     finally:
         elapsed = time.monotonic() - start_time
-        log(f"{msg} [{elapsed:.2f} seconds]", *args)
-
-
-def timed_log(log: Callable) -> Callable:
-    """Return a function to log the elapsed time since the initialization or the last call."""
-
-    def _timed_log(msg, *args):
-        nonlocal start_time
-        now = time.monotonic()
-        elapsed = now - start_time
-        start_time = now
-        log(f"{msg} [{elapsed:.2f} seconds]", *args)
-
-    start_time = time.monotonic()
-    return _timed_log
+        log(f"{msg} [{status} in {elapsed:.2f} seconds]", *args)
 
 
 def setup_logging(loglevel: Union[int, str], logformat: Optional[str] = None, **logparams) -> None:

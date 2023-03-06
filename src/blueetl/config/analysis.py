@@ -110,7 +110,7 @@ def _resolve_features(features_config_list: list[FeaturesConfig]) -> list[Featur
 
     new = []
     for config in features_config_list:
-        config = config.copy(deep=True)
+        config = deepcopy(config)
         params_list = [config.params]
         config.params = {}
         if params_product := config.params_product:
@@ -122,7 +122,7 @@ def _resolve_features(features_config_list: list[FeaturesConfig]) -> list[Featur
             config.params_zip = {}
             params_list = list(chain.from_iterable(expand_zip(p, params_zip) for p in params_list))
         for p in params_list:
-            new_features_config = config.copy(deep=True)
+            new_features_config = deepcopy(config)
             new.append(new_features_config)
             if p:
                 # suffix becomes part of the configuration

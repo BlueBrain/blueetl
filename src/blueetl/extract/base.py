@@ -19,8 +19,10 @@ class BaseExtractor(ABC):
     _allow_extra_columns = False
     _allow_empty_data = False
 
-    def __init__(self, df: pd.DataFrame) -> None:
+    def __init__(self, df: pd.DataFrame, cached: bool, filtered: bool) -> None:
         """Initialize the extractor."""
+        self._cached = cached
+        self._filtered = filtered
         self._validate(df)
         self._df = ensure_dtypes(df)
 
@@ -56,7 +58,10 @@ class BaseExtractor(ABC):
 
     @classmethod
     def from_pandas(
-        cls: type[ExtractorT], df: pd.DataFrame, query: Optional[dict] = None
+        cls: type[ExtractorT],
+        df: pd.DataFrame,
+        query: Optional[dict] = None,
+        cached: bool = True,
     ) -> ExtractorT:
         """Return a new object from the given dataframe.
 
@@ -67,17 +72,19 @@ class BaseExtractor(ABC):
         Args:
             df: dataframe to load.
             query: optional filter dictionary, passed to ``etl.q``.
+            cached: True if the data is loaded from the cache, False otherwise.
 
         Returns:
             a new extractor instance.
         """
+        original_len = len(df)
         if query:
-            L.debug("Filtering dataframe by %s", query)
+            L.debug("Filtering dataframe %s by %s", cls.__name__, query)
             df = df.etl.q(query)
-            if not isinstance(df.index, pd.MultiIndex) and not df.index.name:
+            if not any(df.index.names):
                 # reset the index to remove any gap
                 df = df.reset_index(drop=True)
-        return cls(df)
+        return cls(df, cached=cached, filtered=len(df) != original_len)
 
     def to_pandas(self) -> pd.DataFrame:
         """Return a dataframe that can be serialized and stored to disk.

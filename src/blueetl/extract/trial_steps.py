@@ -37,7 +37,7 @@ class TrialSteps(BaseExtractor):
     ) -> np.ndarray:
         # circuit is passed explicitly instead of loading it from simulation.circuit
         # to take advantage of any circuit already loaded in memory
-        with timed(L.info, "Cells loaded from circuit"):
+        with timed(L.info, "Loading cells from circuit"):
             cells_group = {"$target": target} if target else None
             gids = circuit.cells.get(group=cells_group, properties=[]).index.to_numpy()
         neuron_count = len(gids)
@@ -113,4 +113,4 @@ class TrialSteps(BaseExtractor):
                     }
                 )
         df = pd.DataFrame(results) if results else pd.DataFrame([], columns=cls.COLUMNS)
-        return cls(df)
+        return cls(df, cached=False, filtered=False)

@@ -218,7 +218,7 @@ class FeaturesCollection:
             result[name] = Feature.from_pandas(df, query=query, cached=cached)
             if config is not None:
                 # make a copy of the config accessible from the features dataframe attrs
-                result[name].df.attrs["config"] = deepcopy(config)
+                result[name].df.attrs["config"] = config.dict()
         return result
 
     def apply_filter(self, repo: Repository) -> "FeaturesCollection":

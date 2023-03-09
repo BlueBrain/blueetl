@@ -2,7 +2,7 @@
 import importlib.util
 from pathlib import Path
 
-from setuptools import find_packages, setup
+from setuptools import find_namespace_packages, setup
 
 README = Path("README.rst").read_text(encoding="utf-8")
 
@@ -65,7 +65,7 @@ setup(
     },
     license="BBP-internal-confidential",
     install_requires=REQUIREMENTS["core"],
-    packages=find_packages(where="src"),
+    packages=find_namespace_packages(where="src"),
     package_dir={"": "src"},
     include_package_data=True,
     python_requires=">=3.9",

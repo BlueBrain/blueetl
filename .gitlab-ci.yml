@@ -1,20 +1,3 @@
 include:
   - project: nse/ci
-    file:
-      - /ci/lib/tox-bb5.yml
-      - /ci/jobs/check-version.yml
-      - /ci/jobs/check-packaging.yml
-      - /ci/jobs/lint.yml
-      - /ci/jobs/py39.yml
-      - /ci/jobs/py310.yml
-      - /ci/jobs/coverage.yml
-      - /ci/jobs/docs.yml
-      - /ci/jobs/build-package.yml
-      - /ci/jobs/publish-package.yml
-      - /ci/jobs/publish-docs.yml
-      - /ci/jobs/tag.yml
-
-functional:
-  extends: .tox-template
-  variables:
-    TOXENV: functional
+    file: /ci/pipelines/nse.blueetl.yml

@@ -1,22 +1,92 @@
 """Features collection."""
 import logging
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Iterator
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, NamedTuple, Optional
+from functools import cached_property
+from typing import Any, NamedTuple, Optional, Union
 
 import pandas as pd
 
 from blueetl.cache import CacheManager
 from blueetl.config.analysis_model import FeaturesConfig
 from blueetl.constants import SIMULATION_ID
+from blueetl.core.utils import safe_concat
 from blueetl.extract.feature import Feature
 from blueetl.parallel import merge_filter
 from blueetl.repository import Repository
-from blueetl.utils import ensure_dtypes, import_by_string, timed
+from blueetl.utils import all_equal, ensure_dtypes, extract_items, import_by_string, timed
 
 L = logging.getLogger(__name__)
+
+
+class ConcatenatedFeatures:
+    """ConcatenatedFeatures class.
+
+    It can be used to view as a single DataFrame all the features calculated
+    for various combinations of parameters.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the object."""
+        self._features: list[Feature] = []
+        self._configs: list[FeaturesConfig] = []
+
+    def update(self, feature: Feature, features_config: FeaturesConfig) -> None:
+        """Update the list of features and configurations."""
+        self.clear_cache()
+        self._features.append(feature)
+        self._configs.append(features_config)
+
+    def clear_cache(self) -> None:
+        """Clear the cached properties."""
+        for key in "params", "aliases", "df":
+            self.__dict__.pop(key, None)
+
+    @cached_property
+    def params(self) -> pd.DataFrame:
+        """Return all the parameters as a DataFrame."""
+        return pd.DataFrame(
+            [dict(extract_items(config.params)) for params_id, config in enumerate(self._configs)],
+            index=pd.RangeIndex(len(self._configs), name="params_id"),
+        )
+
+    @cached_property
+    def aliases(self) -> pd.DataFrame:
+        """Return the varying column names used as parameters and their aliases."""
+        params_df = self.params
+        # drop columns containing only constant values
+        columns = [col for col in params_df.columns if not all_equal(params_df[col])]
+        # shorten unambiguous column names
+        aliases = [col.rsplit(".", maxsplit=1)[-1] for col in columns]
+        counter = Counter(aliases)
+        return pd.DataFrame(
+            [
+                {"column": col, "alias": alias if counter[alias] == 1 else col}
+                for col, alias in zip(columns, aliases)
+            ]
+        )
+
+    @cached_property
+    def df(self) -> pd.DataFrame:
+        """Return the concatenation of features."""
+        params_df = self.params[self.aliases["column"]]
+        params_df.columns = self.aliases["alias"]
+        # add params_id as a column
+        params_df = params_df.reset_index()
+        # concatenate all the features together
+        return safe_concat(
+            self._augment_dataframe(feature.df, params)
+            for feature, (_, params) in zip(self._features, params_df.etl.iterdict())
+        )
+
+    @staticmethod
+    def _augment_dataframe(df: pd.DataFrame, params: dict[str, Any]) -> pd.DataFrame:
+        """Return a copy of the DataFrame after adding columns from the given dict."""
+        # this is done to handle values when they are lists
+        params = {k: [v] * len(df) for k, v in params.items()}
+        return df.assign(**params)
 
 
 @dataclass(frozen=True)
@@ -68,6 +138,7 @@ class FeaturesCollection:
         self._repo = repo
         self._cache_manager = cache_manager
         self._data: dict[str, Feature] = {}
+        self._concatenated_features: dict[str, ConcatenatedFeatures] = {}
         if _dataframes:
             self._data = self._dataframes_to_features(_dataframes, config=None, cached=True)
 
@@ -83,7 +154,7 @@ class FeaturesCollection:
         """Access to the cache manager."""
         return self._cache_manager
 
-    def __getattr__(self, name: str) -> Feature:
+    def __getattr__(self, name: str) -> Union[Feature, ConcatenatedFeatures]:
         """Return the features by name.
 
         It mimics the behaviour of Repository, where each Extractor can be accessed by attribute.
@@ -91,23 +162,41 @@ class FeaturesCollection:
         Args:
             name: name of the features.
         """
-        try:
+        if name in self._data:
             return self._data[name]
-        except KeyError as ex:
-            raise AttributeError(
-                f"{self.__class__.__name__!r} object has no attribute {name!r}"
-            ) from ex
+        if name in self._concatenated_features:
+            return self._concatenated_features[name]
+        raise AttributeError(f"{self.__class__.__name__!r} object has no attribute {name!r}")
 
     def __dir__(self):
         """Allow autocompletion of dynamic attributes."""
         return list(super().__dir__()) + list(self._data)
 
-    def _update(self, mapping: dict[str, Feature]) -> None:
+    def _update_features(self, mapping: dict[str, Feature]) -> None:
         if overlapping := set(mapping).intersection(self._data):
             raise RuntimeError(
                 f"Overlapping features dataframes aren't allowed: {sorted(overlapping)}"
             )
+        if overlapping := set(mapping).intersection(self._concatenated_features):
+            raise RuntimeError(
+                f"Features cannot overlap with concatenated features: {sorted(overlapping)}"
+            )
         self._data.update(mapping)
+
+    def _update_concatenated_features(
+        self, mapping: dict[str, Feature], features_config: FeaturesConfig
+    ) -> None:
+        if not features_config.suffix:
+            # not a concatenated feature, nothing to do
+            return
+        for name, feature in mapping.items():
+            basename = name.removesuffix(features_config.suffix)
+            if basename in self._data:
+                raise RuntimeError(
+                    f"Concatenated features {basename} cannot overlap with features dataframes"
+                )
+            concatenated = self._concatenated_features.setdefault(basename, ConcatenatedFeatures())
+            concatenated.update(feature=feature, features_config=features_config)
 
     def show(self) -> None:
         """Print some information about the instance, mainly for debug and inspection."""
@@ -148,7 +237,8 @@ class FeaturesCollection:
             features_config: FeaturesConfig, features: dict[str, Feature]
         ) -> None:
             """Update the features of the instance, and write the cache if needed."""
-            self._update(features)
+            self._update_features(features)
+            self._update_concatenated_features(features, features_config)
             to_be_written: dict[str, pd.DataFrame] = {}
             for name, f in features.items():
                 if not f._cached or f._filtered:  # pylint: disable=protected-access

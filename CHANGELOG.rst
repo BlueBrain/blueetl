@@ -9,13 +9,14 @@ New Features
 - Add MultiAnalyzer class to support multiple reports [NSETM-2015]
 - Allow to resolve windows by reference [NSETM-2015]
 - Support combination of parameters in features configuration [NSETM-2091]
+- Allow to access the concatenation of features dataframes using the basename [NSETM-2149]
 - Add analysis configuration model and validation [NSETM-2099]
 - Add blueetl CLI [NSETM-2115]
 - Add blueetl.analysis.run_from_file [NSETM-2151]
 - Improve performance of report extraction [NSETM-2116]
 - Improve performance of features calculation [NSETM-2116]
 - Process features in group when possible.
-- Add `cached` and `filtered` attributes to `BaseExtractor`.
+- Add `_cached` and `_filtered` private attributes to `BaseExtractor`.
 - Add `clear_cache` parameter to `run_from_file` and to the configuration schema [NSETM-2150]
 
 Breaking changes

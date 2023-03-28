@@ -9,6 +9,7 @@
    installation
    usage
    configuration
+   features
    components
    migration
    notebooks

@@ -24,6 +24,9 @@ See the Jupyter notebook :doc:`/notebooks/01_core_transformations` for more info
 Analysis of reports
 -------------------
 
+Basic usage
++++++++++++
+
 To perform the analysis of reports across multiple simulations in a given simulation campaign, a configuration file needs to be provided.
 
 The configuration file should specify in particular:

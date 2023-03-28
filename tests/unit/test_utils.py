@@ -183,3 +183,44 @@ path: /custom/path
 def test_dict_product(d, expected):
     result = test_module.dict_product(d)
     assert list(result) == expected
+
+
+def test_extract_items():
+    obj = {
+        "latency": {"params": {"onset": False}},
+        "decay": {"params": {"ratio": [0.25, 0.5, 0.75]}},
+        "baseline_PSTH": {"params": {"bin_size": 0.5, "sigma": 0, "offset": -6}},
+    }
+    expected = [
+        ("latency.params.onset", False),
+        ("decay.params.ratio", [0.25, 0.5, 0.75]),
+        ("baseline_PSTH.params.bin_size", 0.5),
+        ("baseline_PSTH.params.sigma", 0),
+        ("baseline_PSTH.params.offset", -6),
+    ]
+    result = list(test_module.extract_items(obj))
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "iterable, expected",
+    [
+        ([], True),
+        ([1], True),
+        ([1, 1], True),
+        ([1, 1, 2], False),
+        ("", True),
+        ("aaaaaa", True),
+        ("aaaaaba", False),
+        ([[123, 456]], True),
+        ([[123, 456], [123, 456]], True),
+        ([[123, 456], [123, 456], [123, 999]], False),
+    ],
+)
+def test_all_equal(iterable, expected):
+    # with a list
+    result = test_module.all_equal(iterable)
+    assert result == expected
+    # with an iterator
+    result = test_module.all_equal(iter(iterable))
+    assert result == expected

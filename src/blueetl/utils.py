@@ -5,7 +5,7 @@ import json
 import logging
 import os.path
 import time
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from functools import cache
 from importlib import import_module
@@ -187,3 +187,57 @@ def dict_product(d: dict) -> Iterator[tuple]:
         yield from itertools.product(
             *[[(key, v, i) for i, v in enumerate(values)] for key, values in d.items()]
         )
+
+
+def extract_items(obj: dict[str, Any], path: Optional[str] = None) -> Iterator[tuple[str, Any]]:
+    """Yield tuples (path, item) from the traversal of the given dict.
+
+    Each yielded path is obtained from the concatenation of the nested keys, separated by ".".
+
+    All the keys of the dicts are expected to be strings, not containing ".".
+
+    For examples, iterating over the result of:
+
+    .. code-block:: python
+
+        extract_items(
+            {
+                "latency": {"params": {"onset": False}},
+                "decay": {"params": {"ratio": [0.25, 0.5, 0.75]}},
+                "baseline_PSTH": {"params": {"bin_size": 0.5, "sigma": 0, "offset": -6}},
+            }
+        )
+
+    would yield the following tuples:
+
+    .. code-block:: python
+
+        ("latency.params.onset", False)
+        ("decay.params.ratio",  [0.25, 0.5, 0.75])
+        ("baseline_PSTH.params.bin_size", 0.5)
+        ("baseline_PSTH.params.sigma", 0)
+        ("baseline_PSTH.params.offset", -6)
+
+    """
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            assert isinstance(k, str)
+            assert "." not in k
+            yield from extract_items(v, path=k if path is None else f"{path}.{k}")
+    else:
+        yield path, obj
+
+
+def all_equal(iterable: Iterable) -> bool:
+    """Return True if all the items of the given iterable are equal, False otherwise.
+
+    Notes:
+    - The items doesn't need to be hashable, because they are compared with equality.
+    - The function returns True also when the iterable doesn't contain any item.
+    """
+    prev = None
+    for n, item in enumerate(iterable):
+        if n > 0 and item != prev:
+            return False
+        prev = item
+    return True

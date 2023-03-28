@@ -11,6 +11,7 @@ New Features
 - Support combination of parameters in features configuration [NSETM-2091]
 - Add analysis configuration model and validation [NSETM-2099]
 - Add blueetl CLI [NSETM-2115]
+- Add blueetl.analysis.run_from_file [NSETM-2151]
 - Improve performance of report extraction [NSETM-2116]
 - Improve performance of features calculation [NSETM-2116]
 - Process features in group when possible.

@@ -1,3 +1,4 @@
+import logging
 import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -11,16 +12,17 @@ from blueetl.utils import dump_yaml, load_yaml
 from blueetl.validation import ValidationError
 
 
-@pytest.mark.parametrize(
-    "options, called_method",
-    [
-        (["--extract"], "extract_repo"),
-        (["--calculate"], "calculate_features"),
-        (["--show"], "show"),
-    ],
-)
-@patch(test_module.__name__ + ".MultiAnalyzer")
-def test_run(mock_multi_analyzer_class, tmp_path, options, called_method):
+@pytest.mark.parametrize("show", [True, False])
+@pytest.mark.parametrize("calculate", [True, False])
+@pytest.mark.parametrize("extract", [True, False])
+@patch(test_module.__name__ + ".run_from_file")
+def test_run(mock_run_from_file, tmp_path, extract, calculate, show):
+    options_dict = {
+        "extract": extract,
+        "calculate": calculate,
+        "show": show,
+    }
+    options = [f"--{k}" if v else f"--no-{k}" for k, v in options_dict.items() if v is not None]
     analysis_config_file = "config.yaml"
     runner = CliRunner()
 
@@ -30,16 +32,19 @@ def test_run(mock_multi_analyzer_class, tmp_path, options, called_method):
 
     assert result.output == ""
     assert result.exit_code == 0
-    mock_multi_analyzer_class.from_file.assert_called_once_with(analysis_config_file)
-    instance = mock_multi_analyzer_class.from_file.return_value
-    assert instance.extract_repo.call_count == (called_method == "extract_repo")
-    assert instance.calculate_features.call_count == (called_method == "calculate_features")
-    assert instance.show.call_count == (called_method == "show")
+    mock_run_from_file.assert_called_once_with(
+        analysis_config_file=analysis_config_file,
+        seed=0,
+        extract=extract,
+        calculate=calculate,
+        show=show,
+        loglevel=logging.DEBUG,
+    )
 
 
 @patch.dict(sys.modules, {"IPython": Mock()})
-@patch(test_module.__name__ + ".MultiAnalyzer")
-def test_run_interactive_success(mock_multi_analyzer_class, tmp_path):
+@patch(test_module.__name__ + ".run_from_file")
+def test_run_interactive_success(mock_run_from_file, tmp_path):
     analysis_config_file = "config.yaml"
     runner = CliRunner()
 
@@ -49,13 +54,13 @@ def test_run_interactive_success(mock_multi_analyzer_class, tmp_path):
 
     assert result.output == ""
     assert result.exit_code == 0
-    mock_multi_analyzer_class.from_file.assert_called_once_with(analysis_config_file)
+    assert mock_run_from_file.call_count == 1
     assert sys.modules["IPython"].embed.call_count == 1
 
 
 @patch.dict(sys.modules, {"IPython": None})
-@patch(test_module.__name__ + ".MultiAnalyzer")
-def test_run_interactive_failure(mock_multi_analyzer_class, tmp_path):
+@patch(test_module.__name__ + ".run_from_file")
+def test_run_interactive_failure(mock_run_from_file, tmp_path):
     analysis_config_file = "config.yaml"
     runner = CliRunner()
 
@@ -65,7 +70,7 @@ def test_run_interactive_failure(mock_multi_analyzer_class, tmp_path):
 
     assert result.output.strip() == "You need to install IPython to start an interactive session."
     assert result.exit_code == 1
-    mock_multi_analyzer_class.from_file.assert_called_once_with(analysis_config_file)
+    assert mock_run_from_file.call_count == 1
 
 
 def test_migrate_config(tmp_path):

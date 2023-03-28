@@ -26,18 +26,6 @@ Analysis of reports
 
 To perform the analysis of reports across multiple simulations in a given simulation campaign, a configuration file needs to be provided.
 
-A simple way to initialize the object from a configuration file in your code is:
-
-.. code-block:: python
-
-    import logging
-    import numpy as np
-    from blueetl.analysis import MultiAnalyzer
-
-    logging.basicConfig(level=logging.INFO)
-    np.random.seed(0)
-    ma = MultiAnalyzer.from_file("analysis_config.yaml")
-
 The configuration file should specify in particular:
 
 - ``simulation_campaign``: path to the json configuration file of the Simulation Campaign produced by bbp-workflow.
@@ -51,7 +39,27 @@ and for each report:
 
 See the :ref:`ref-configuration` page for full reference and examples.
 
-To run the extraction of the data from the report and the calculation of the features, you can run:
+A simple way to initialize a MultiAnalyzer object from the configuration file in your code is:
+
+.. code-block:: python
+
+    from blueetl.analysis import run_from_file
+
+    ma = run_from_file("analysis_config.yaml", loglevel="INFO")
+
+The code above will automatically execute the extraction of the report data, and the calculation of the features.
+
+If you prefer to execute the `extraction` and `calculation` steps manually, you could use instead:
+
+.. code-block:: python
+
+    from blueetl.analysis import run_from_file
+
+    ma = run_from_file("analysis_config.yaml", loglevel="INFO", extract=False, calculate=False)
+
+You can also specify a particular ``seed`` in the same call, or ``seed=None`` if you don't want to initialize the random number generator used to select random neurons.
+
+If not already done automatically with the initialization code above, you can execute the `extraction` of the data from the report and the `calculation` of the features with:
 
 .. code-block:: python
 

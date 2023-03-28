@@ -5,6 +5,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, NamedTuple, Optional, Union
 
+import numpy as np
 import pandas as pd
 
 from blueetl.cache import CacheManager
@@ -15,7 +16,7 @@ from blueetl.features import FeaturesCollection
 from blueetl.repository import Repository
 from blueetl.resolver import AttrResolver, Resolver
 from blueetl.types import StrOrPath
-from blueetl.utils import load_yaml
+from blueetl.utils import load_yaml, setup_logging
 
 L = logging.getLogger(__name__)
 
@@ -285,3 +286,38 @@ class MultiAnalyzer:
             print("#" * 80)
             print("Analysis:", name)
             getattr(self, name).show()
+
+
+def run_from_file(
+    analysis_config_file: StrOrPath,
+    seed: Optional[int] = 0,
+    extract: bool = True,
+    calculate: bool = True,
+    show: bool = False,
+    loglevel: Optional[int] = None,
+) -> MultiAnalyzer:
+    """Initialize and return the MultiAnalyzer.
+
+    Args:
+        analysis_config_file: path to the analysis configuration file.
+        seed: if not None, random seed used to select random gids.
+        extract: if True, run the extraction of the repository.
+        calculate: if True, run the calculation of the features.
+        show: if True, show a short representation of all the Pandas DataFrames, mainly for debug.
+        loglevel: if specified, used to set up logging.
+
+    Returns:
+        a new MultiAnalyzer instance.
+    """
+    if loglevel is not None:
+        setup_logging(loglevel=loglevel)
+    if seed is not None:
+        np.random.seed(seed)
+    ma = MultiAnalyzer.from_file(analysis_config_file)
+    if extract:
+        ma.extract_repo()
+    if calculate:
+        ma.calculate_features()
+    if show:
+        ma.show()
+    return ma

@@ -63,13 +63,9 @@ you should use something like:
 
 .. code-block:: python
 
-    import logging
-    import numpy as np
-    from blueetl.analysis import MultiAnalyzer
+    from blueetl.analysis import run_from_file
 
-    logging.basicConfig(level=logging.INFO)
-    np.random.seed(0)
-    ma = MultiAnalyzer.from_file("analysis_config.yaml")
+    ma = run_from_file("analysis_config.yaml", loglevel="INFO", extract=False, calculate=False)
     a = ma.spikes
 
 where ``ma`` is an instance of ``MultiAnalyzer`` and ``a`` is an instance of ``SingleAnalyzer``.

@@ -1,16 +1,13 @@
 """BlueETL CLI."""
-# pylint: disable=unused-import,import-outside-toplevel
 import logging
 import sys
 
 import click
-import numpy as np
-import pandas as pd
 
 from blueetl import __version__, validation
-from blueetl.analysis import MultiAnalyzer
+from blueetl.analysis import run_from_file
 from blueetl.constants import CONFIG_VERSION
-from blueetl.utils import dump_yaml, load_yaml, setup_logging
+from blueetl.utils import dump_yaml, load_yaml
 
 
 class NaturalOrderGroup(click.Group):
@@ -30,24 +27,29 @@ def cli():
 @cli.command()
 @click.argument("analysis_config_file", type=click.Path(exists=True))
 @click.option("--seed", type=int, default=0, help="Pseudo-random generator seed", show_default=True)
-@click.option("--extract", is_flag=True, help="Extract or load from the cache the repository.")
-@click.option("--calculate", is_flag=True, help="Calculate or load from the cache the features.")
-@click.option("--show", is_flag=True, help="Show repository and features dataframes.")
-@click.option("-i", "--interactive", is_flag=True, help="Start an interactive IPython shell.")
+@click.option("--extract/--no-extract", help="Extract (or load from the cache) the repository.")
+@click.option("--calculate/--no-calculate", help="Calculate (or load from the cache) the features.")
+@click.option("--show/--no-show", help="Show repository and features dataframes.")
+@click.option("-i", "--interactive/--no-interactive", help="Start an interactive IPython shell.")
 @click.option("-v", "--verbose", count=True, help="-v for INFO, -vv for DEBUG")
 def run(analysis_config_file, seed, extract, calculate, show, interactive, verbose):
     """Run the analysis."""
+    # pylint: disable=unused-variable,unused-import,import-outside-toplevel
     loglevel = (logging.WARNING, logging.INFO, logging.DEBUG)[min(verbose, 2)]
-    setup_logging(loglevel=loglevel)
-    np.random.seed(seed)
-    ma = MultiAnalyzer.from_file(analysis_config_file)
-    if extract:
-        ma.extract_repo()
-    if calculate:
-        ma.calculate_features()
-    if show:
-        ma.show()
+    # assign the result to a local variable to make it available in the interactive shell
+    ma = run_from_file(
+        analysis_config_file=analysis_config_file,
+        seed=seed,
+        extract=extract,
+        calculate=calculate,
+        show=show,
+        loglevel=loglevel,
+    )
     if interactive:
+        # make np and pd immediately available in the interactive shell
+        import numpy as np
+        import pandas as pd
+
         try:
             from IPython import embed
         except ImportError:

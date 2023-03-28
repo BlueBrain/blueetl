@@ -10,11 +10,11 @@ from typing import Generic, Optional, TypeVar
 
 import pandas as pd
 
-from blueetl import DefaultStore
 from blueetl.config.analysis_model import FeaturesConfig, SingleAnalysisConfig
 from blueetl.config.simulations import SimulationsConfig
 from blueetl.core.utils import is_subfilter
 from blueetl.store.base import BaseStore
+from blueetl.store.parquet import ParquetStore
 from blueetl.utils import dump_yaml, load_yaml
 
 L = logging.getLogger(__name__)
@@ -100,7 +100,7 @@ class CacheManager:
         self,
         analysis_config: SingleAnalysisConfig,
         simulations_config: SimulationsConfig,
-        store_class: type[BaseStore] = DefaultStore,
+        store_class: type[BaseStore] = ParquetStore,
     ) -> None:
         """Initialize the object.
 

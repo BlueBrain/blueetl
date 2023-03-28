@@ -120,6 +120,7 @@ class MultiAnalysisConfig(BaseModel):
     version: int
     simulation_campaign: Path
     output: Path
+    clear_cache: bool = False
     simulations_filter: dict[str, Any] = {}
     simulations_filter_in_memory: dict[str, Any] = {}
     analysis: dict[str, SingleAnalysisConfig]

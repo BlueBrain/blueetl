@@ -19,6 +19,11 @@ properties:
       If the directory is not empty, its content can be loaded as cache, or it can be automatically deleted if invalid.
     type: string
     format: path
+  clear_cache:
+    title: Clear Cache
+    description: If True, remove any existing cache in the output folder; if False, reuse the existing cache if possible.
+    type: boolean
+    default: "false"
   simulations_filter:
     title: Simulations Filter
     description: |

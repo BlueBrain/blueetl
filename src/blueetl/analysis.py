@@ -29,6 +29,7 @@ class Analyzer:
         analysis_config: SingleAnalysisConfig,
         simulations_config: Optional[SimulationsConfig] = None,
         resolver: Optional[Resolver] = None,
+        clear_cache: bool = False,
         _repo: Optional[Repository] = None,
         _features: Optional[FeaturesCollection] = None,
     ) -> None:
@@ -38,6 +39,7 @@ class Analyzer:
             analysis_config: analysis configuration.
             simulations_config: simulation campaign configuration.
             resolver: resolver instance.
+            clear_cache: if True, remove any existing cache.
             _repo: if specified, use it instead of creating a new object. Only for internal use.
             _features: if specified, use it instead of creating a new object. Only for internal use.
         """
@@ -51,6 +53,7 @@ class Analyzer:
             cache_manager = CacheManager(
                 analysis_config=analysis_config,
                 simulations_config=simulations_config,
+                clear_cache=clear_cache,
             )
             self._repo = Repository(
                 simulations_config=simulations_config,
@@ -161,6 +164,7 @@ class MultiAnalyzer:
         self,
         global_config: Union[dict, MultiAnalysisConfig],
         base_path: StrOrPath = ".",
+        clear_cache: Optional[bool] = None,
         _analyzers: Optional[dict[str, Analyzer]] = None,
     ) -> None:
         """Initialize the MultiAnalyzer from the given configuration.
@@ -168,6 +172,8 @@ class MultiAnalyzer:
         Args:
             global_config: analysis configuration.
             base_path: base path used to resolve relative paths. If omitted, the cwd is used.
+            clear_cache: if True, remove any existing cache; if False, reuse the existing cache;
+                if None, use the value from the configuration file.
             _analyzers: if specified, use it instead of creating a new dict of analyzers.
                 Only for internal use.
         """
@@ -175,12 +181,35 @@ class MultiAnalyzer:
             self._global_config = init_multi_analysis_configuration(global_config, Path(base_path))
         else:
             self._global_config = global_config
-        self._analyzers: Optional[dict[str, Analyzer]] = _analyzers
+        if _analyzers is None:
+            if clear_cache is None:
+                clear_cache = self._global_config.clear_cache
+            self._analyzers = self._init_analyzers(clear_cache=clear_cache)
+        else:
+            self._analyzers = _analyzers
+
+    def _init_analyzers(self, clear_cache: bool) -> dict[str, Analyzer]:
+        """Load and return a dict of analyzers."""
+        resolver = AttrResolver(self)
+        simulations_config = SimulationsConfig.load(self.global_config.simulation_campaign)
+        return {
+            name: Analyzer(
+                analysis_config=analysis_config,
+                simulations_config=simulations_config,
+                resolver=resolver,
+                clear_cache=clear_cache,
+            )
+            for name, analysis_config in self.global_config.analysis.items()
+        }
 
     @classmethod
-    def from_file(cls, path: StrOrPath) -> "MultiAnalyzer":
+    def from_file(cls, path: StrOrPath, clear_cache: Optional[bool] = None) -> "MultiAnalyzer":
         """Return a new instance loaded using the given configuration file."""
-        return cls(global_config=load_yaml(path), base_path=Path(path).parent)
+        return cls(
+            global_config=load_yaml(path),
+            base_path=Path(path).parent,
+            clear_cache=clear_cache,
+        )
 
     @property
     def global_config(self) -> MultiAnalysisConfig:
@@ -189,18 +218,7 @@ class MultiAnalyzer:
 
     @property
     def analyzers(self) -> dict[str, Analyzer]:
-        """Load and return the dict of analyzers."""
-        if self._analyzers is None:
-            resolver = AttrResolver(self)
-            simulations_config = SimulationsConfig.load(self.global_config.simulation_campaign)
-            self._analyzers = {
-                name: Analyzer(
-                    analysis_config=analysis_config,
-                    simulations_config=simulations_config,
-                    resolver=resolver,
-                )
-                for name, analysis_config in self.global_config.analysis.items()
-            }
+        """Return the dict of analyzers."""
         return self._analyzers
 
     @property
@@ -294,6 +312,7 @@ def run_from_file(
     extract: bool = True,
     calculate: bool = True,
     show: bool = False,
+    clear_cache: Optional[bool] = None,
     loglevel: Optional[int] = None,
 ) -> MultiAnalyzer:
     """Initialize and return the MultiAnalyzer.
@@ -304,6 +323,8 @@ def run_from_file(
         extract: if True, run the extraction of the repository.
         calculate: if True, run the calculation of the features.
         show: if True, show a short representation of all the Pandas DataFrames, mainly for debug.
+        clear_cache: if True, remove any existing cache; if False, reuse the existing cache;
+            if None, use the value from the configuration file.
         loglevel: if specified, used to set up logging.
 
     Returns:
@@ -313,7 +334,7 @@ def run_from_file(
         setup_logging(loglevel=loglevel)
     if seed is not None:
         np.random.seed(seed)
-    ma = MultiAnalyzer.from_file(analysis_config_file)
+    ma = MultiAnalyzer.from_file(analysis_config_file, clear_cache=clear_cache)
     if extract:
         ma.extract_repo()
     if calculate:

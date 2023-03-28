@@ -16,6 +16,7 @@ New Features
 - Improve performance of features calculation [NSETM-2116]
 - Process features in group when possible.
 - Add `cached` and `filtered` attributes to `BaseExtractor`.
+- Add `clear_cache` parameter to `run_from_file` and to the configuration schema [NSETM-2150]
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

@@ -30,9 +30,14 @@ def cli():
 @click.option("--extract/--no-extract", help="Extract (or load from the cache) the repository.")
 @click.option("--calculate/--no-calculate", help="Calculate (or load from the cache) the features.")
 @click.option("--show/--no-show", help="Show repository and features dataframes.")
+@click.option(
+    "--clear-cache/--no-clear-cache",
+    help="If specified, force clearing or keeping the cache, regardless of the configuration file.",
+    default=None,
+)
 @click.option("-i", "--interactive/--no-interactive", help="Start an interactive IPython shell.")
 @click.option("-v", "--verbose", count=True, help="-v for INFO, -vv for DEBUG")
-def run(analysis_config_file, seed, extract, calculate, show, interactive, verbose):
+def run(analysis_config_file, seed, extract, calculate, show, clear_cache, interactive, verbose):
     """Run the analysis."""
     # pylint: disable=unused-variable,unused-import,import-outside-toplevel
     loglevel = (logging.WARNING, logging.INFO, logging.DEBUG)[min(verbose, 2)]
@@ -43,6 +48,7 @@ def run(analysis_config_file, seed, extract, calculate, show, interactive, verbo
         extract=extract,
         calculate=calculate,
         show=show,
+        clear_cache=clear_cache,
         loglevel=loglevel,
     )
     if interactive:

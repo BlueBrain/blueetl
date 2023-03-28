@@ -57,7 +57,11 @@ If you prefer to execute the `extraction` and `calculation` steps manually, you 
 
     ma = run_from_file("analysis_config.yaml", loglevel="INFO", extract=False, calculate=False)
 
-You can also specify a particular ``seed`` in the same call, or ``seed=None`` if you don't want to initialize the random number generator used to select random neurons.
+You can also specify other parameters:
+
+- ``seed`` (int): to set a specific seed, or ``None`` if you don't want to initialize the random number generator used to select random neurons.
+- ``clear_cache`` (bool): ``True`` or ``False`` to force clearing or keeping any existing cache, regardless of the value in the configuration file.
+- ``show`` (bool): ``True`` to print a short representation of all the DataFrames, sometimes useful for a quick inspection.
 
 If not already done automatically with the initialization code above, you can execute the `extraction` of the data from the report and the `calculation` of the features with:
 

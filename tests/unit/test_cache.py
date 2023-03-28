@@ -109,3 +109,41 @@ def test_cache_manager_concurrency_is_not_allowed_when_locked(tmp_path):
         analysis_config=analysis_config,
         simulations_config=simulations_config,
     )
+
+
+def test_cache_manager_clear_cache(tmp_path):
+    output = tmp_path / "output"
+    sentinel = output / "sentinel"
+    analysis_config = _get_analysis_config(path=output)
+    simulations_config = _get_simulations_config()
+
+    assert output.exists() is False
+    instance = test_module.CacheManager(
+        analysis_config=analysis_config,
+        simulations_config=simulations_config,
+        clear_cache=True,
+    )
+    instance.close()
+    assert output.exists() is True
+    assert sentinel.exists() is False
+    sentinel.touch()
+
+    # reuse the cache
+    instance = test_module.CacheManager(
+        analysis_config=analysis_config,
+        simulations_config=simulations_config,
+        clear_cache=False,
+    )
+    instance.close()
+    assert output.exists() is True
+    assert sentinel.exists() is True
+
+    # delete the cache
+    instance = test_module.CacheManager(
+        analysis_config=analysis_config,
+        simulations_config=simulations_config,
+        clear_cache=True,
+    )
+    instance.close()
+    assert output.exists() is True
+    assert sentinel.exists() is False

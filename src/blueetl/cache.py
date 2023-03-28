@@ -2,6 +2,7 @@
 import fcntl
 import logging
 import os
+import shutil
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import wraps
@@ -101,6 +102,7 @@ class CacheManager:
         analysis_config: SingleAnalysisConfig,
         simulations_config: SimulationsConfig,
         store_class: type[BaseStore] = ParquetStore,
+        clear_cache: bool = False,
     ) -> None:
         """Initialize the object.
 
@@ -108,9 +110,12 @@ class CacheManager:
             analysis_config: analysis configuration dict.
             simulations_config: simulations campaign configuration.
             store_class: class to be used to load and dump the cached dataframes.
+            clear_cache: if True, remove any existing cache.
         """
         assert analysis_config.output is not None
         self._output_dir = Path(analysis_config.output)
+        if clear_cache:
+            self._clear_cache()
         repo_dir = self._output_dir / "repo"
         features_dir = self._output_dir / "features"
         config_dir = self._output_dir / "config"
@@ -139,6 +144,11 @@ class CacheManager:
         )
         self._cached_checksums = self._load_cached_checksums()
         self._initialize_cache()
+
+    def _clear_cache(self):
+        """Remove the cache directory if it exists."""
+        L.info("Removing cache if it exists: %s", self._output_dir)
+        shutil.rmtree(self._output_dir, ignore_errors=True)
 
     @property
     def locked(self) -> bool:

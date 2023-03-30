@@ -48,6 +48,45 @@ You can see an example of configuration in the old and new format here:
 - https://bbpgitlab.epfl.ch/nse/blueetl/-/blob/blueetl-v0.1.2/tests/functional/data/analysis_config_01.yaml
 - https://bbpgitlab.epfl.ch/nse/blueetl/-/blob/blueetl-v0.2.0.dev0/tests/functional/data/analysis_config_01.yaml
 
+
+Output directory
+................
+
+If the output directory defined in the configuration is a relative path, it's now relative to the configuration file itself.
+
+Previously, using a relative path was not recommended, since it was relative to the working directory.
+
+This means that you can decide to always set ``output: output``, and have a directory layout like the following:
+
+.. code-block::
+
+    analyses
+    ├── analysis_config_01
+    │   ├── config.yaml
+    │   ├── output
+    │   │   └── spikes
+    │   │       ├── config
+    │   │       │   ├── analysis_config.cached.yaml
+    │   │       │   ├── checksums.cached.yaml
+    │   │       │   └── simulations_config.cached.yaml
+    │   │       ├── features
+    │   │       │   ├── baseline_PSTH.parquet
+    │   │       │   ├── decay.parquet
+    │   │       │   ├── latency.parquet
+    │   │       └── repo
+    │   │           ├── neuron_classes.parquet
+    │   │           ├── neurons.parquet
+    │   │           ├── report.parquet
+    │   │           ├── simulations.parquet
+    │   │           ├── trial_steps.parquet
+    │   │           └── windows.parquet
+    ├── analysis_config_02
+    │   ├── config.yaml
+    │   ├── output
+    │   │   └── spikes
+    ...
+
+
 Analysis
 ~~~~~~~~
 
@@ -60,12 +99,12 @@ Instead of code like this:
 
     import logging
     import numpy as np
-    import yaml
     from blueetl.analysis import Analyzer
+    from blueetl.utils import load_yaml
 
     logging.basicConfig(level=logging.INFO)
     np.random.seed(0)
-    config = yaml.safe_load("analysis_config.yaml")
+    config = load_yaml("analysis_config.yaml")
     a = Analyzer(config)
     a.extract_repo()
     a.calculate_features()

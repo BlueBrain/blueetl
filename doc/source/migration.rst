@@ -124,16 +124,16 @@ where ``ma`` is an instance of ``MultiAnalyzer`` and ``a`` is an instance of ``S
 If you need to work with multiple analysis, using the instance of ``MultiAnalyzer`` may be more convenient.
 
 
-Deprecation of the ``spikes`` attribute
-.......................................
+Deprecation of spikes
+.....................
 
-When accessing the ``spikes`` DataFrame with:
+Instead of accessing the ``spikes`` DataFrame with:
 
 .. code-block:: python
 
     a.repo.spikes.df
 
-you should use instead the generic ``report`` attribute, valid for any type of report:
+you should use the generic ``report`` attribute, valid for any type of report:
 
 .. code-block:: python
 
@@ -142,8 +142,8 @@ you should use instead the generic ``report`` attribute, valid for any type of r
 The old name `spikes` is kept for backward compatibility, but it should be considered deprecated and it will be removed later.
 
 
-Accessing the custom configuration
-..................................
+Accessing the custom config
+...........................
 
 If you stored any custom configuration, you can get the values from the dictionaries:
 
@@ -151,7 +151,7 @@ If you stored any custom configuration, you can get the values from the dictiona
 - ``ma.spikes.analysis_config.custom``
 
 
-Using ``call_by_simulation``
-............................
+Using call_by_simulation
+........................
 
 The function ``call_by_simulation`` has been moved from ``bluepy.features`` to ``bluepy.parallel``.

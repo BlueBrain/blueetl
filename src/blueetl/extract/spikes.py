@@ -35,6 +35,7 @@ class Spikes(ReportExtractor):
             simulation: simulation containing the SpikeReport of times and gids.
             gids: array of gids to be selected.
             windows_df: windows dataframe with columns [window, trial, t_start, t_stop]
+            name: name of the report in the simulation configuration, ignored.
 
         Returns:
             pd.DataFrame: dataframe with columns [window, time, gid]

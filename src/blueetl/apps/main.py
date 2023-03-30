@@ -42,7 +42,7 @@ def run(analysis_config_file, seed, extract, calculate, show, clear_cache, inter
     # pylint: disable=unused-variable,unused-import,import-outside-toplevel
     loglevel = (logging.WARNING, logging.INFO, logging.DEBUG)[min(verbose, 2)]
     # assign the result to a local variable to make it available in the interactive shell
-    ma = run_from_file(
+    ma = run_from_file(  # noqa
         analysis_config_file=analysis_config_file,
         seed=seed,
         extract=extract,
@@ -53,8 +53,8 @@ def run(analysis_config_file, seed, extract, calculate, show, clear_cache, inter
     )
     if interactive:
         # make np and pd immediately available in the interactive shell
-        import numpy as np
-        import pandas as pd
+        import numpy as np  # noqa
+        import pandas as pd  # noqa
 
         try:
             from IPython import embed

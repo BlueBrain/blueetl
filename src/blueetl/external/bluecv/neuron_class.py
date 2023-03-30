@@ -58,6 +58,9 @@ def get_PSTH(spiketrains, t_start, t_stop, bin_size=20):
     """Get perstimulus time histogram of the selected population.
 
     Args:
+        spiketrains: array containing multiple arrays of spikes
+        t_start (float): start time
+        t_stop (float): stop time
         bin_size (float): bin size in ms
 
     Returns:

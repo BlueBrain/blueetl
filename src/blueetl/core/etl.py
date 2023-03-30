@@ -158,6 +158,8 @@ class ETLBaseAccessor(ABC, Generic[PandasT, PandasGroupByT]):
 
         Args:
             conditions: single condition or list of conditions to be excluded from the groupby
+            args: positional arguments to be passed to groupby
+            kwargs: key arguments to be passed to groupby
         """
         complementary_conditions = self.complementary_conditions(conditions)
         return self._obj.groupby(complementary_conditions, *args, **kwargs)

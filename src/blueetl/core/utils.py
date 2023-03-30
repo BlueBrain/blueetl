@@ -176,6 +176,8 @@ def safe_concat(iterable, *args, **kwargs):
         iterable: iterable of Series or DataFrames.
             All the objects must be of the same type, and they must have the same index,
             or an exception is raised.
+        args: positional arguments to be passed to pd.concat
+        kwargs: key arguments to be passed to pd.concat
 
     Returns:
         (pd.Series, pd.DataFrame) result of the concatenation, same type of the input elements.
@@ -214,6 +216,9 @@ def concat_tuples(iterable, *args, **kwargs):
             - conditions is a dict containing the conditions to be used for the MultiIndex.
               The keys of the conditions must be the same for each tuple of the iterable,
               or an exception is raised.
+
+        args: positional arguments to be passed to pd.concat
+        kwargs: key arguments to be passed to pd.concat
 
     Returns:
         (pd.Series) result of the concatenation.

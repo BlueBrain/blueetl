@@ -1,14 +1,24 @@
 [tool.black]
 line-length = 100
-target-version = [
-    'py38',
-    'py39',
-]
+target-version = ["py39"]
 include = 'src/blueetl\/.*\.py$|tests\/.*\.py$|doc\/source\/conf\.py$|setup\.py$'
 
 [tool.isort]
 profile = "black"
 line_length = 100
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+select = [
+    "D", # pydocstyle
+    "E", # pycodestyle
+    "F", # pyflakes
+    "UP", # pyupgrade
+]
+
+[tool.ruff.pydocstyle]
+convention = "google"
 
 [tool.pytest.ini_options]
 addopts = [
@@ -17,8 +27,8 @@ addopts = [
 
 [tool.coverage.paths]
 source = [
-   "src",
-   "*/site-packages",
+    "src",
+    "*/site-packages",
 ]
 
 [tool.coverage.run]

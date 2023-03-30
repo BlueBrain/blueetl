@@ -159,13 +159,19 @@ or, depending on the number of variable parameters:
     ma.spikes.features.<custom_name>_0_1.df
     ...
 
-I any case, the list of names including the suffixes can be obtained with:
+You can check the parameters used to build each feature reading the ``config`` key in the ``df.attrs`` dictionary:
+
+.. code-block:: python
+
+    ma.spikes.features.<custom_name>_0_0.df.attrs["config"]
+
+The list of names including the suffixes can be obtained with:
 
 .. code-block:: python
 
     ma.spikes.features.names
 
-Moreover, a DataFrame obtained as the result of the concatenation of the partial DataFrames can be accessed using just the custom name, without suffixes:
+A DataFrame obtained as the result of the concatenation of the partial DataFrames can be accessed using just the custom name, without suffixes:
 
 .. code-block:: python
 

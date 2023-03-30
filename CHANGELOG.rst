@@ -23,6 +23,7 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 - The previous analysis configuration format has been replaced by the version 2 to support multiple reports.
 - After applying a filter, the indices of the repo DataFrames are reset to remove any gap.
+- ``call_by_simulation`` has been refactored and moved into ``blueetl.parallel``.
 - Require Python >= 3.9.
 
 

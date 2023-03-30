@@ -15,6 +15,9 @@ Note that there aren't breaking changes in the core functionalities.
 Configuration
 ~~~~~~~~~~~~~
 
+Automatic migration
+...................
+
 You can automatically migrate a configuration file executing in a virtualenv with blueetl installed:
 
 .. code-block::
@@ -23,7 +26,11 @@ You can automatically migrate a configuration file executing in a virtualenv wit
 
 However, you may need to manually copy any commented lines from the old configuration, or they will be lost.
 
-If you prefer to migrate the configuration manually, follow these steps:
+
+Manual migration
+................
+
+If you prefer to migrate the configuration manually instead, follow these steps:
 
 1. The specification ``version: 2`` should be added at the top level of the file.
 2. The section ``extraction`` should be moved to ``analysis.spikes.extraction``.
@@ -44,6 +51,9 @@ You can see an example of configuration in the old and new format here:
 Analysis
 ~~~~~~~~
 
+Initialization
+..............
+
 Instead of code like this:
 
 .. code-block:: python
@@ -57,20 +67,26 @@ Instead of code like this:
     np.random.seed(0)
     config = yaml.safe_load("analysis_config.yaml")
     a = Analyzer(config)
+    a.extract_repo()
+    a.calculate_features()
 
 
-you should use something like:
+you can use this:
 
 .. code-block:: python
 
     from blueetl.analysis import run_from_file
 
-    ma = run_from_file("analysis_config.yaml", loglevel="INFO", extract=False, calculate=False)
+    ma = run_from_file("analysis_config.yaml", loglevel="INFO")
     a = ma.spikes
 
 where ``ma`` is an instance of ``MultiAnalyzer`` and ``a`` is an instance of ``SingleAnalyzer``.
 
 If you need to work with multiple analysis, using the instance of ``MultiAnalyzer`` may be more convenient.
+
+
+Deprecation of the ``spikes`` attribute
+.......................................
 
 When accessing the ``spikes`` DataFrame with:
 
@@ -86,7 +102,17 @@ you should use instead the generic ``report`` attribute, valid for any type of r
 
 The old name `spikes` is kept for backward compatibility, but it should be considered deprecated and it will be removed later.
 
-Lastly, if you stored any custom configuration, you can get the values from the dictionaries:
+
+Accessing the custom configuration
+..................................
+
+If you stored any custom configuration, you can get the values from the dictionaries:
 
 - ``ma.global_config.custom``
 - ``ma.spikes.analysis_config.custom``
+
+
+Using ``call_by_simulation``
+............................
+
+The function ``call_by_simulation`` has been moved from ``bluepy.features`` to ``bluepy.parallel``.

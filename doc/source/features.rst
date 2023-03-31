@@ -190,3 +190,6 @@ To free memory, the cache can be cleared with:
 .. code-block:: python
 
     ma.spikes.features.<custom_name>.clear_cache()
+
+
+See the Jupyter notebook :doc:`/notebooks/02_features_basics` for an example.

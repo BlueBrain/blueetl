@@ -331,7 +331,7 @@ def run_from_file(
         a new MultiAnalyzer instance.
     """
     if loglevel is not None:
-        setup_logging(loglevel=loglevel)
+        setup_logging(loglevel=loglevel, force=True)
     if seed is not None:
         np.random.seed(seed)
     ma = MultiAnalyzer.from_file(analysis_config_file, clear_cache=clear_cache)

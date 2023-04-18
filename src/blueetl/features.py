@@ -28,16 +28,24 @@ class ConcatenatedFeatures:
     for various combinations of parameters.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        parent: "FeaturesCollection",
+        configs: Optional[dict[str, FeaturesConfig]] = None,
+    ) -> None:
         """Initialize the object."""
-        self._features: list[Feature] = []
-        self._configs: list[FeaturesConfig] = []
+        self._parent = parent
+        self._configs: dict[str, FeaturesConfig] = configs or {}
 
-    def update(self, feature: Feature, features_config: FeaturesConfig) -> None:
+    def clone(self, parent: "FeaturesCollection") -> "ConcatenatedFeatures":
+        """Return a copy using the same config and the new parent."""
+        return self.__class__(parent, deepcopy(self._configs))
+
+    def update(self, feature_name: str, features_config: FeaturesConfig) -> None:
         """Update the list of features and configurations."""
+        assert feature_name not in self._configs, f"Duplicate feature_name: {feature_name}"
+        self._configs[feature_name] = features_config
         self.clear_cache()
-        self._features.append(feature)
-        self._configs.append(features_config)
 
     def clear_cache(self) -> None:
         """Clear the cached properties."""
@@ -48,7 +56,10 @@ class ConcatenatedFeatures:
     def params(self) -> pd.DataFrame:
         """Return all the parameters as a DataFrame."""
         return pd.DataFrame(
-            [dict(extract_items(config.params)) for params_id, config in enumerate(self._configs)],
+            [
+                dict(extract_items(config.params))
+                for params_id, config in enumerate(self._configs.values())
+            ],
             index=pd.RangeIndex(len(self._configs), name="params_id"),
         )
 
@@ -77,14 +88,18 @@ class ConcatenatedFeatures:
         params_df = params_df.reset_index()
         # concatenate all the features together
         return safe_concat(
-            self._augment_dataframe(feature.df, params)
-            for feature, (_, params) in zip(self._features, params_df.etl.iterdict())
+            self._augment_dataframe(self._partial_df(name), params)
+            for name, (_, params) in zip(self._configs, params_df.etl.iterdict())
         )
+
+    def _partial_df(self, name: str) -> pd.DataFrame:
+        """Return the specified partial DataFrame from the parent."""
+        return getattr(self._parent, name).df
 
     @staticmethod
     def _augment_dataframe(df: pd.DataFrame, params: dict[str, Any]) -> pd.DataFrame:
         """Return a copy of the DataFrame after adding columns from the given dict."""
-        # this is done to handle values when they are lists
+        # ensure that a value can be assigned to a cell even when it's a list
         params = {k: [v] * len(df) for k, v in params.items()}
         return df.assign(**params)
 
@@ -125,6 +140,7 @@ class FeaturesCollection:
         repo: Repository,
         cache_manager: CacheManager,
         _dataframes: Optional[dict[str, pd.DataFrame]] = None,
+        _concatenated_features: Optional[dict[str, ConcatenatedFeatures]] = None,
     ) -> None:
         """Initialize the FeaturesCollection from the given list of configurations.
 
@@ -133,6 +149,7 @@ class FeaturesCollection:
             repo: Repository instance.
             cache_manager: CacheManager instance.
             _dataframes: DataFrames to be automatically loaded, only for internal use.
+            _concatenated_features: ConcatenatedFeatures to be cloned, only for internal use.
         """
         self._features_configs = features_configs
         self._repo = repo
@@ -141,13 +158,15 @@ class FeaturesCollection:
         self._concatenated_features: dict[str, ConcatenatedFeatures] = {}
         if _dataframes:
             self._data = self._dataframes_to_features(_dataframes, config=None, cached=True)
+        if _concatenated_features:
+            self._concatenated_features = self._clone_concatenated_features(_concatenated_features)
 
     @property
     def names(self) -> list[str]:
         """Return the names of all the calculated features."""
         if not self._data:
             self.calculate()
-        return sorted(self._data)
+        return sorted([*self._data, *self._concatenated_features])
 
     @property
     def cache_manager(self) -> CacheManager:
@@ -170,7 +189,7 @@ class FeaturesCollection:
 
     def __dir__(self):
         """Allow autocompletion of dynamic attributes."""
-        return list(super().__dir__()) + list(self._data)
+        return list(super().__dir__()) + list(self._data) + list(self._concatenated_features)
 
     def _update_features(self, mapping: dict[str, Feature]) -> None:
         if overlapping := set(mapping).intersection(self._data):
@@ -184,19 +203,21 @@ class FeaturesCollection:
         self._data.update(mapping)
 
     def _update_concatenated_features(
-        self, mapping: dict[str, Feature], features_config: FeaturesConfig
+        self, feature_names: list[str], features_config: FeaturesConfig
     ) -> None:
         if not features_config.suffix:
             # not a concatenated feature, nothing to do
             return
-        for name, feature in mapping.items():
+        for name in feature_names:
             basename = name.removesuffix(features_config.suffix)
             if basename in self._data:
                 raise RuntimeError(
                     f"Concatenated features {basename} cannot overlap with features dataframes"
                 )
-            concatenated = self._concatenated_features.setdefault(basename, ConcatenatedFeatures())
-            concatenated.update(feature=feature, features_config=features_config)
+            if basename not in self._concatenated_features:
+                self._concatenated_features[basename] = ConcatenatedFeatures(self)
+            concatenated = self._concatenated_features[basename]
+            concatenated.update(feature_name=name, features_config=features_config)
 
     def show(self) -> None:
         """Print some information about the instance, mainly for debug and inspection."""
@@ -238,7 +259,7 @@ class FeaturesCollection:
         ) -> None:
             """Update the features of the instance, and write the cache if needed."""
             self._update_features(features)
-            self._update_concatenated_features(features, features_config)
+            self._update_concatenated_features(list(features), features_config)
             to_be_written: dict[str, pd.DataFrame] = {}
             for name, f in features.items():
                 if not f._cached or f._filtered:  # pylint: disable=protected-access
@@ -283,8 +304,8 @@ class FeaturesCollection:
                 _log_features(features, n, len(cached), features_config.id)
 
         def _process_new_features(groups: dict[FeaturesConfigKey, list[FeaturesConfig]]) -> None:
-            for features_configs_key, features_configs_list in groups.items():
-                L.info("Considering: %s", features_configs_key)
+            for num, (features_configs_key, features_configs_list) in enumerate(groups.items(), 1):
+                L.info("Considering group: %s/%s, key: %s", num, len(groups), features_configs_key)
                 for n, (features_config, features) in enumerate(
                     _calculate_new(features_configs_key, features_configs_list), 1
                 ):
@@ -311,6 +332,12 @@ class FeaturesCollection:
                 result[name].df.attrs["config"] = config.dict()
         return result
 
+    def _clone_concatenated_features(
+        self, concatenated_features: dict[str, ConcatenatedFeatures]
+    ) -> dict[str, ConcatenatedFeatures]:
+        """Return a clone of the concatenated_features."""
+        return {name: cf.clone(self) for name, cf in concatenated_features.items()}
+
     def apply_filter(self, repo: Repository) -> "FeaturesCollection":
         """Apply a filter based on the extracted simulations and return a new object.
 
@@ -322,6 +349,7 @@ class FeaturesCollection:
             repo=repo,
             cache_manager=self.cache_manager.to_readonly(),
             _dataframes=dataframes,
+            _concatenated_features=self._concatenated_features,
         )
 
 

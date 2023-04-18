@@ -1,4 +1,5 @@
 from copy import deepcopy
+from unittest.mock import MagicMock
 
 import pandas as pd
 
@@ -21,7 +22,8 @@ def test_concatenated_features():
         }
     ).set_index(["simulation_id", "circuit_id", "neuron_class", "window"])
 
-    obj = test_module.ConcatenatedFeatures()
+    parent = MagicMock()
+    obj = test_module.ConcatenatedFeatures(parent)
     assert {"params", "aliases", "df"}.isdisjoint(obj.__dict__)
 
     base_config = FeaturesConfig(
@@ -39,7 +41,9 @@ def test_concatenated_features():
         config = deepcopy(base_config)
         config.params = {"common": 123, "nested": {"myparam1": i * 10, "myparam2": [0.0, 0.5]}}
         config.suffix = f"_{i}"
-        obj.update(feature=feature, features_config=config)
+        name = f"myfeature{config.suffix}"
+        setattr(parent, name, feature)
+        obj.update(feature_name=name, features_config=config)
 
     expected_params = pd.DataFrame(
         {

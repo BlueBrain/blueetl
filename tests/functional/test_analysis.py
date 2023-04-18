@@ -7,6 +7,8 @@ from pandas.testing import assert_frame_equal
 
 from blueetl.analysis import MultiAnalyzer
 from blueetl.constants import CIRCUIT, SIMULATION
+from blueetl.extract.feature import Feature
+from blueetl.features import ConcatenatedFeatures
 from blueetl.utils import load_yaml
 from tests.functional.utils import (
     EXPECTED_PATH,
@@ -86,12 +88,22 @@ def _test_repo(a, path):
 def _test_features(a, path):
     a.calculate_features()
     path = path / "features"
-    assert sorted(a.features.names) == sorted(p.stem for p in path.glob("*.parquet"))
+    feature_names = []
     for name in a.features.names:
-        expected_df = _load_df(path / f"{name}.parquet")
-        actual_df = _get_subattr(a, ["features", name, "df"])
-        with assertion_error_message(f"Difference in features {name!r}"):
-            assert_frame_equal(actual_df, expected_df)
+        obj = getattr(a.features, name)
+        if isinstance(obj, Feature):
+            feature_names.append(name)
+            actual_df = obj.df
+            expected_df = _load_df(path / f"{name}.parquet")
+            with assertion_error_message(f"Difference in features {name!r}"):
+                assert_frame_equal(actual_df, expected_df)
+        elif isinstance(obj, ConcatenatedFeatures):
+            assert isinstance(obj.df, pd.DataFrame)
+            assert isinstance(obj.params, pd.DataFrame)
+            assert isinstance(obj.aliases, pd.DataFrame)
+        else:
+            raise TypeError(f"Invalid class for feature {name}: {obj.__class__.__name__}")
+    assert sorted(feature_names) == sorted(p.stem for p in path.glob("*.parquet"))
 
 
 def _test_repo_multi(ma, path):

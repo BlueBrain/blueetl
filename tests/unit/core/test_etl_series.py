@@ -330,6 +330,7 @@ def test_remodel(series1):
     )
 
 
+@pytest.mark.parametrize("as_type", ["dict", "list", "kwargs"])
 @pytest.mark.parametrize(
     "query, expected",
     [
@@ -376,18 +377,38 @@ def test_remodel(series1):
         ),
     ],
 )
-def test_query(series1, query, expected):
+def test_query(series1, query, expected, as_type):
     obj = series1
+    assert isinstance(query, dict)
 
-    # test query with dict
+    if as_type == "dict":
+        result = obj.etl.q(query)
+    elif as_type == "list":
+        result = obj.etl.q([query])
+    elif as_type == "kwargs":
+        result = obj.etl.q(**query)
+    else:
+        raise ValueError(f"Invalid as_type: {as_type}")
+
+    # check_index_type=False needed to avoid Attribute "inferred_type" are different
+    assert_series_equal(result, expected, check_index_type=False)
+
+
+def test_query_with_multiple_dicts(series1):
+    obj = series1
+    query = [
+        {"i0": "a"},
+        {"i0": "b", "i1": "d"},
+    ]
+    expected = pd.Series(
+        [0, 1, 3],
+        index=pd.MultiIndex.from_tuples([("a", "c"), ("a", "d"), ("b", "d")], names=["i0", "i1"]),
+        name="values",
+    )
+
     result = obj.etl.q(query)
-    # check_index_type=False needed to avoid Attribute "inferred_type" are different
-    assert_series_equal(result, expected, check_index_type=False)
 
-    # test query with params
-    result = obj.etl.q(**query)
-    # check_index_type=False needed to avoid Attribute "inferred_type" are different
-    assert_series_equal(result, expected, check_index_type=False)
+    assert_series_equal(result, expected)
 
 
 def test_query_with_invalid_params(series1):

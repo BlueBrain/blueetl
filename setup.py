@@ -20,6 +20,7 @@ REQUIREMENTS = {
         "pandas>=1.3.0,<2",
         "pyyaml>=5.4.1",
         "joblib>=1.1.0",
+        "packaging>=21.3",
     ],
     "extra": [
         "tables>=3.6.1",  # needed by pandas to read and write hdf files

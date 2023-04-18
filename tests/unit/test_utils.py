@@ -15,12 +15,13 @@ from blueetl.constants import DTYPES
     "x, expected",
     [
         ([], []),
-        ((), ()),
+        ((), []),
         (None, [None]),
         ("", [""]),
         ("a", ["a"]),
         (["a"], ["a"]),
-        (("a",), ("a",)),
+        (("a",), ["a"]),
+        ({"a": 1}, [{"a": 1}]),
     ],
 )
 def test_ensure_list(x, expected):

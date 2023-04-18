@@ -1,9 +1,10 @@
 """Core utilities."""
 import operator
+from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
 from itertools import chain
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -12,37 +13,68 @@ from pandas.api.types import is_list_like
 from blueetl.core import L
 
 
-def query_frame(df: pd.DataFrame, query: dict[str, Any]) -> pd.DataFrame:
+def _and_or_mask(
+    query_list: list[dict[str, Any]],
+    filter_func: Callable[[dict[str, Any]], list[np.ndarray]],
+) -> Optional[np.ndarray]:
+    """Return the and/or mask obtained after processing each dictionary in query_list.
+
+    Args:
+        query_list: list of query dictionaries, that should be processed and OR-ed together.
+        filter_func: callable accepting a query dict and returning a list of masks,
+            that will be AND-ed together.
+
+    Returns:
+        The resulting mask, or None if no queries have been provided.
+    """
+    or_masks = []
+    for query in query_list:
+        if query:
+            and_masks = filter_func(query)
+            # minor optimization: check if len == 1
+            or_masks.append(and_masks[0] if len(and_masks) == 1 else np.all(and_masks, axis=0))
+    if not or_masks:
+        # no filters
+        return None
+    # minor optimization: check if len == 1
+    return or_masks[0] if len(or_masks) == 1 else np.any(or_masks, axis=0)
+
+
+def query_frame(df: pd.DataFrame, query_list: list[dict[str, Any]]) -> pd.DataFrame:
     """Given a query dictionary, return the DataFrame filtered by columns and index."""
-    if not query:
-        return df
-    # map each name to columns or index
+
+    def _filter_func(query: dict[str, Any]) -> list[np.ndarray]:
+        # dictionary with query keys split into columns and index
+        q: dict[str, Any] = {"columns": {}, "index": {}}
+        for key, value in query.items():
+            q[mapping[key]][key] = value
+        # filter by columns and index
+        return list(
+            chain(
+                (compare(df[key], val) for key, val in q["columns"].items()),
+                (compare(df.index.get_level_values(key), val) for key, val in q["index"].items()),
+            )
+        )
+
+    # map each name to columns or index;
     # if the same key is present in both columns and index, use columns
     mapping = {
         **{k: "index" for k in df.index.names if k is not None},
         **{k: "columns" for k in df.columns if k is not None},
     }
-    # dictionary with query keys split into columns and index
-    q: dict[str, Any] = {"columns": {}, "index": {}}
-    for key, value in query.items():
-        q[mapping[key]][key] = value
-    # filter by columns and index
-    masks = list(
-        chain(
-            (compare(df[key], value) for key, value in q["columns"].items()),
-            (compare(df.index.get_level_values(key), value) for key, value in q["index"].items()),
-        )
-    )
-    return df.loc[masks[0] if len(masks) == 1 else np.all(masks, axis=0)]
+    mask = _and_or_mask(query_list, _filter_func)
+    return df.loc[mask] if mask is not None else df
 
 
-def query_series(series: pd.Series, query: dict) -> pd.Series:
+def query_series(series: pd.Series, query_list: list[dict[str, Any]]) -> pd.Series:
     """Given a query dictionary, return the Series filtered by index."""
-    if not query:
-        return series
-    # filter by index
-    masks = list(compare(series.index.get_level_values(key), value) for key, value in query.items())
-    return series.loc[masks[0] if len(masks) == 1 else np.all(masks, axis=0)]
+
+    def _filter_func(query: dict[str, Any]) -> list[np.ndarray]:
+        # filter by index
+        return list(compare(series.index.get_level_values(key), val) for key, val in query.items())
+
+    mask = _and_or_mask(query_list, _filter_func)
+    return series.loc[mask] if mask is not None else series
 
 
 def compare(obj: Union[pd.DataFrame, pd.Series, pd.Index], value: Any) -> np.ndarray:

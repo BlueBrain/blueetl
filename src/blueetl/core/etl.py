@@ -6,6 +6,7 @@ from functools import partial
 from typing import Any, Callable, Generic, NamedTuple, Optional, TypeVar, Union
 
 import pandas as pd
+from packaging.version import Version
 from pandas.core.groupby import DataFrameGroupBy, SeriesGroupBy
 
 from blueetl.core import L
@@ -176,16 +177,20 @@ class ETLBaseAccessor(ABC, Generic[PandasT, PandasGroupByT]):
         return self.groupby_except(conditions).apply(func)
 
     @abstractmethod
-    def _query_dict(self, query: dict) -> PandasT:
-        """Given a query dictionary, return the filtered Series or DataFrame."""
+    def _query_list(self, query_list: list[dict[str, Any]]) -> PandasT:
+        """Given a list of query dictionaries, return the filtered Series or DataFrame."""
 
-    def q(self, _query: Optional[dict] = None, /, **params) -> PandasT:
-        """Given a query dict or some query parameters, return the filtered Series or DataFrame.
+    def q(
+        self, _query: Optional[Union[dict[str, Any], list[dict[str, Any]]]] = None, /, **params
+    ) -> PandasT:
+        """Given a query dict, list, or some query params, return the filtered Series or DataFrame.
 
         Filter by columns (for DataFrames) and index names (for both Series and DataFrames).
         If a name is present in both columns and index names, only the column is considered.
 
-        All the keys are combined in AND, while the values can be scalar, list, or dict.
+        If a list is passed, the items must be query dictionaries, that will be OR-ed together.
+
+        All the keys of the dict are combined in AND, while the values can be scalar, list, or dict.
 
         * If value is a scalar, the exact value will be matched.
         * If value is a list, the values in the list are considered in OR.
@@ -210,7 +215,7 @@ class ETLBaseAccessor(ABC, Generic[PandasT, PandasGroupByT]):
         """
         if _query and params:
             raise ValueError("Query and params cannot be specified together")
-        return self._query_dict(_query or params)
+        return self._query_list(ensure_list(_query or params))
 
     def one(self, _query: Optional[dict] = None, /, **params) -> Any:
         """Execute the query and return the unique resulting record."""
@@ -264,9 +269,9 @@ class ETLSeriesAccessor(ETLBaseAccessor[pd.Series, SeriesGroupBy]):
         """
         return zip(self._obj.index.etl.iterdict(), iter(self._obj))
 
-    def _query_dict(self, query: dict) -> pd.Series:
-        """Given a query dictionary, return the Series filtered by index."""
-        return query_series(self._obj, query)
+    def _query_list(self, query_list: list[dict[str, Any]]) -> pd.Series:
+        """Given a list of query dictionaries, return the Series filtered by index."""
+        return query_series(self._obj, query_list)
 
 
 class ETLDataFrameAccessor(ETLBaseAccessor[pd.DataFrame, DataFrameGroupBy]):
@@ -300,9 +305,9 @@ class ETLDataFrameAccessor(ETLBaseAccessor[pd.DataFrame, DataFrameGroupBy]):
         ):
             yield named_index, dict(zip(columns, value))
 
-    def _query_dict(self, query: dict) -> pd.DataFrame:
-        """Given a query dictionary, return the DataFrame filtered by columns and index."""
-        return query_frame(self._obj, query)
+    def _query_list(self, query_list: list[dict[str, Any]]) -> pd.DataFrame:
+        """Given a list of query dicts, return the DataFrame filtered by columns and index."""
+        return query_frame(self._obj, query_list)
 
     def groupby_iter(
         self,
@@ -310,7 +315,7 @@ class ETLDataFrameAccessor(ETLBaseAccessor[pd.DataFrame, DataFrameGroupBy]):
         selected_columns: Optional[list[str]] = None,
         sort: bool = True,
         observed: bool = True,
-    ) -> Iterator[tuple[NamedTuple, pd.DataFrame]]:
+    ) -> Iterator[tuple[tuple, pd.DataFrame]]:
         """Group the dataframe by columns and yield each record as a tuple (key, df).
 
         It can be used as a replacement for the iteration over df.groupby, but:
@@ -332,13 +337,18 @@ class ETLDataFrameAccessor(ETLBaseAccessor[pd.DataFrame, DataFrameGroupBy]):
         # Workaround to avoid: FutureWarning: In a future version of pandas, a length 1 tuple will
         # be returned when iterating over a groupby with a grouper equal to a list of length 1.
         # Don't supply a list with a single grouper to avoid this warning.
-        by = groupby_columns[0] if len(groupby_columns) == 1 else groupby_columns
+        fix_pandas = len(groupby_columns) == 1 and Version(pd.__version__) < Version("2")
+        by = groupby_columns[0] if fix_pandas else groupby_columns
         grouped = self._obj.groupby(by, sort=sort, observed=observed)
         if selected_columns:
             grouped = grouped[selected_columns]
-        RecordKey = namedtuple("RecordKey", groupby_columns)  # type: ignore
-        for key, df in grouped:
-            yield RecordKey(*ensure_list(key)), df
+        RecordKey = namedtuple("RecordKey", groupby_columns)  # type: ignore[misc]
+        if fix_pandas:
+            for key, df in grouped:
+                yield RecordKey(key), df  # type: ignore[call-arg]
+        else:
+            for key, df in grouped:
+                yield RecordKey(*key), df
 
     def groupby_run_parallel(
         self,
@@ -422,7 +432,7 @@ class ETLIndexAccessor:
             name if name is not None else f"ilevel_{i}" for i, name in enumerate(self._obj.names)
         ]
 
-    def iter(self) -> Iterator[NamedTuple]:
+    def iter(self) -> Iterator[tuple]:
         """Iterate over the index, yielding a namedtuple for each element.
 
         It can be used as an alternative to the pandas iteration over the index
@@ -431,9 +441,13 @@ class ETLIndexAccessor:
         It works with both Indexes and MultiIndexes.
         """
         names = self._mangle_names()
-        Index = namedtuple("Index", names, rename=True)  # type: ignore
-        for i in self._obj:
-            yield Index(*ensure_list(i))
+        Index = namedtuple("Index", names, rename=True)  # type: ignore[misc]
+        if len(names) == 1:
+            for i in self._obj:
+                yield Index(i)  # type: ignore[call-arg]
+        else:
+            for i in self._obj:
+                yield Index(*i)
 
     def iterdict(self) -> Iterator[dict]:
         """Iterate over the index, yielding a dict for each element.
@@ -446,8 +460,12 @@ class ETLIndexAccessor:
         It works with both Indexes and MultiIndexes.
         """
         names = self._mangle_names()
-        for i in self._obj:
-            yield dict(zip(names, ensure_list(i)))
+        if len(names) == 1:
+            for i in self._obj:
+                yield {names[0]: i}
+        else:
+            for i in self._obj:
+                yield dict(zip(names, i))
 
     @property
     def dtypes(self) -> pd.Series:

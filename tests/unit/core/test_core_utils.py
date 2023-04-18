@@ -2,9 +2,31 @@ import re
 
 import pandas as pd
 import pytest
+from numpy.testing import assert_array_equal
 from pandas.testing import assert_frame_equal, assert_series_equal
 
 from blueetl.core import utils as test_module
+
+
+def test_andor_mask():
+    query_list = [
+        {"col1": 10},  # select row 1
+        {"col1": 11, "col2": 111},  # select row 2
+        {"col1": 99, "col2": 100},  # select none
+    ]
+    df = pd.DataFrame(
+        {
+            "col1": [0, 10, 11, 20, 21],
+            "col2": [100, 110, 111, 111, 111],
+        }
+    )
+
+    def _filter_func(query):
+        return [df[key] == val for key, val in query.items()]
+
+    mask = test_module._and_or_mask(query_list, _filter_func)
+
+    assert_array_equal(mask, [0, 1, 1, 0, 0])
 
 
 @pytest.mark.parametrize(

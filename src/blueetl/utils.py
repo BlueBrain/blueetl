@@ -55,9 +55,13 @@ def dump_yaml(filepath: StrOrPath, data: Any, **kwargs) -> None:
         yaml.dump(data, stream=f, sort_keys=False, Dumper=_get_internal_yaml_dumper(), **kwargs)
 
 
-def ensure_list(x: Any) -> Union[list, tuple]:
-    """Return x if x is a list or a tuple, [x] otherwise."""
-    return x if isinstance(x, (list, tuple)) else [x]
+def ensure_list(x: Any) -> list:
+    """Always return a list from the given argument."""
+    if isinstance(x, list):
+        return x
+    if isinstance(x, tuple):
+        return list(x)
+    return [x]
 
 
 def ensure_dtypes(

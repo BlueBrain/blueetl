@@ -18,6 +18,7 @@ New Features
 - Process features in group when possible.
 - Add `_cached` and `_filtered` private attributes to `BaseExtractor`.
 - Add `clear_cache` parameter to `run_from_file` and to the configuration schema [NSETM-2150]
+- Allow etl.q to accept a list of query dicts [NSETM-2162]
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

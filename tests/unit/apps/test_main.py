@@ -84,7 +84,10 @@ def test_migrate_config(tmp_path):
         "simulations_filter_in_memory": {"simulation_id": 2},
         "output": "output_dir",
         "extraction": {
-            "neuron_classes": {"L1_EXC": {"layer": [1], "synapse_class": ["EXC"]}},
+            "neuron_classes": {
+                "L1_EXC": {"layer": [1], "synapse_class": ["EXC"]},
+                "L1_EXC_gids": {"layer": [1], "synapse_class": ["EXC"], "gid": [1, 2]},
+            },
             "limit": None,
             "target": None,
             "windows": {"w1": {"bounds": [20, 90], "window_type": "spontaneous"}},
@@ -109,7 +112,10 @@ def test_migrate_config(tmp_path):
             "spikes": {
                 "extraction": {
                     "report": {"type": "spikes"},
-                    "neuron_classes": {"L1_EXC": {"layer": [1], "synapse_class": ["EXC"]}},
+                    "neuron_classes": {
+                        "L1_EXC": {"layer": [1], "synapse_class": ["EXC"]},
+                        "L1_EXC_gids": {"layer": [1], "synapse_class": ["EXC"], "$gids": [1, 2]},
+                    },
                     "limit": None,
                     "target": None,
                     "windows": {"w1": {"bounds": [20, 90], "window_type": "spontaneous"}},

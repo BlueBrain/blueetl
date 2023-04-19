@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import numpy as np
@@ -17,19 +18,24 @@ from tests.functional.utils import (
     change_directory,
 )
 
-# analysis_config_file, expected_dir
+TESTING_LOG_LEVEL = os.getenv("TESTING_LOG_LEVEL", "DEBUG")
+TESTING_MATCH_FILES = os.getenv("TESTING_MATCH_FILES", "*")
+TESTING_FORCE_UPDATE = int(os.getenv("TESTING_FORCE_UPDATE", "0"))
+
+# analysis_config_path, expected_path
 analysis_configs = [
-    ("analysis_config_01.yaml", "analysis_01"),
-    ("analysis_config_02.yaml", "analysis_02"),
-    ("analysis_config_03.yaml", "analysis_03"),
-    ("analysis_config_04.yaml", "analysis_04"),
-    ("analysis_config_05.yaml", "analysis_05"),
-    ("analysis_config_06.yaml", "analysis_06"),
-    ("analysis_config_07.yaml", "analysis_07"),
-    ("analysis_config_08.yaml", "analysis_08"),
-    ("analysis_config_09.yaml", "analysis_09"),
-    ("analysis_config_10.yaml", "analysis_10"),
+    (path, EXPECTED_PATH / path.stem.replace("analysis_config_", "analysis_"))
+    for path in sorted(TEST_DATA_PATH.glob("analysis_config_*.yaml"))
+    if path.match(TESTING_MATCH_FILES)
 ]
+
+
+def test_analysis_configs_is_valid():
+    # ensure that there are config files to test
+    assert len(analysis_configs) >= 1
+    for analysis_config_path, expected_path in analysis_configs:
+        assert analysis_config_path.is_file()
+        assert expected_path.is_dir()
 
 
 def _get_subattr(obj, attrs):
@@ -144,27 +150,22 @@ def _update_expected_files(ma, path):
         _dump_all_multi(ma2, path / "_filtered")
 
 
-@pytest.mark.skip(reason="to be executed only to create or overwrite the expected files")
-@pytest.mark.parametrize("analysis_config_file, expected_dir", analysis_configs)
-def test_update_expected_files(analysis_config_file, expected_dir, tmp_path):
+@pytest.mark.skipif(not TESTING_FORCE_UPDATE, reason="Not overwriting files")
+@pytest.mark.parametrize("analysis_config_path, expected_path", analysis_configs)
+def test_update_expected_files(analysis_config_path, expected_path, tmp_path, caplog):
+    caplog.set_level(TESTING_LOG_LEVEL)
     np.random.seed(0)
-    analysis_config = load_yaml(TEST_DATA_PATH / analysis_config_file)
-    expected_path = EXPECTED_PATH / expected_dir
+    analysis_config = load_yaml(analysis_config_path)
 
     with change_directory(tmp_path), MultiAnalyzer(analysis_config) as multi_analyzer:
         _update_expected_files(multi_analyzer, expected_path)
 
-    assert 0, (
-        "This test should be executed only to create or overwrite the expected files. "
-        "You can ignore this error if this is the case."
-    )
 
-
-@pytest.mark.parametrize("analysis_config_file, expected_dir", analysis_configs)
-def test_analyzer(analysis_config_file, expected_dir, tmp_path):
+@pytest.mark.parametrize("analysis_config_path, expected_path", analysis_configs)
+def test_analyzer(analysis_config_path, expected_path, tmp_path, caplog):
+    caplog.set_level(TESTING_LOG_LEVEL)
     np.random.seed(0)
-    analysis_config = load_yaml(TEST_DATA_PATH / analysis_config_file)
-    expected_path = EXPECTED_PATH / expected_dir
+    analysis_config = load_yaml(analysis_config_path)
 
     # test without cache
     with change_directory(tmp_path), MultiAnalyzer(analysis_config) as multi_analyzer:

@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any, Optional, TypeVar, Union
 
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Extra, Field, validator
+from pydantic import Extra, Field, root_validator, validator
 
 from blueetl.constants import CONFIG_VERSION
 from blueetl.utils import checksum_str, dump_yaml, load_yaml
@@ -21,6 +21,15 @@ class BaseModel(PydanticBaseModel):
         allow_mutation = True
         allow_inf_nan = False
         validate_assignment = True
+        smart_union = True
+
+    def dict(self, *args, by_alias=True, **kwargs):
+        """Generate a dictionary representation of the model, using by_alias=True by default."""
+        return super().dict(*args, by_alias=by_alias, **kwargs)
+
+    def json(self, *args, by_alias=True, **kwargs):
+        """Generate a JSON representation of the model, using by_alias=True by default."""
+        return super().json(*args, by_alias=by_alias, **kwargs)
 
     def dump(self, path: Path) -> None:
         """Dump the model to file in yaml format."""
@@ -68,11 +77,33 @@ class TrialStepsConfig(BaseModel):
     bounds: tuple[float, float]
 
 
+class NeuronClassConfig(BaseModel):
+    """NeuronClassConfig Model."""
+
+    query: Union[dict[str, Any], list[dict[str, Any]]] = Field(..., alias="$query")
+    target: Optional[str] = Field(None, alias="$target")
+    limit: Optional[int] = Field(None, alias="$limit")
+    gids: Optional[list[int]] = Field(None, alias="$gids")
+
+    @root_validator(pre=True)
+    def assign_query(cls, values):
+        """Move to $query all the query parameters, if needed."""
+        if "$query" in values:
+            return values
+        new_values = {"$query": {}}
+        for key, val in values.items():
+            if key.startswith("$"):
+                new_values[key] = val
+            else:
+                new_values["$query"][key] = val
+        return new_values
+
+
 class ExtractionConfig(BaseModel):
     """ExtractionConfig Model."""
 
     report: ReportConfig
-    neuron_classes: dict[str, dict[str, Any]] = {}
+    neuron_classes: dict[str, NeuronClassConfig] = {}
     limit: Optional[int] = None
     target: Optional[str] = None
     windows: dict[str, Union[str, WindowConfig]] = {}

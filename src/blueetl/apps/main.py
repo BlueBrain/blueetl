@@ -73,6 +73,16 @@ def run(analysis_config_file, seed, extract, calculate, show, clear_cache, inter
 @click.argument("output_config_file", type=click.Path(exists=False))
 def migrate_config(input_config_file, output_config_file):
     """Migrate a configuration file."""
+
+    def _process_extraction(extraction):
+        """Convert the gid key to $gids, inplace."""
+        for config in extraction["neuron_classes"].values():
+            if "gid" in config:
+                if "$gids" in config:
+                    raise RuntimeError("neuron_classes already contain '$gids'")
+                config["$gids"] = config.pop("gid")
+        return extraction
+
     input_config = load_yaml(input_config_file)
     if input_config.get("version", 0) >= CONFIG_VERSION:
         click.secho("The configuration doesn't need to be converted.", fg="red")
@@ -93,7 +103,7 @@ def migrate_config(input_config_file, output_config_file):
             "spikes": {
                 "extraction": {
                     "report": {"type": "spikes"},
-                    **input_config.pop("extraction"),
+                    **_process_extraction(input_config.pop("extraction")),
                 },
                 "features": input_config.pop("analysis", {}).pop("features", []),
                 **({"custom": input_config} if input_config else {}),

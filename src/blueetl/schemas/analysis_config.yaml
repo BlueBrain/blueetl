@@ -117,11 +117,11 @@ $defs:
       neuron_classes:
         title: Neuron Classes
         description: |
-          Dictionary of ``neuron_class_label -> dict_of_properties``, used to filter the neurons.
+          Used to filter the neurons, it must be a dictionary with neuron class labels as keys.
         default: "{}"
         type: object
         additionalProperties:
-          type: object
+          $ref: '#/$defs/NeuronClassConfig'
       limit:
         title: Limit
         description: |
@@ -181,6 +181,41 @@ $defs:
     required:
     - type
     additionalProperties: false
+  NeuronClassConfig:
+    title: NeuronClassConfig
+    description: NeuronClassConfig Model.
+    type: object
+    properties:
+      $query:
+        title: $query
+        description: |
+          Query dict, or list of query dicts, to be used to filter the neurons using ``etl.q``.
+          If this property is not specified, any additional properties will be considered as keys of the query dict.
+        anyOf:
+        - type: object
+        - type: array
+          items:
+            type: object
+      $target:
+        title: $target
+        description: Optional target, specific to the current neuron class.
+        type:
+        - string
+        - "null"
+      $limit:
+        title: $limit
+        description: Optional limit to the number of neurons, specific to the current neuron class.
+        type:
+        - integer
+        - "null"
+      $gids:
+        title: $gids
+        description: |
+          Optional list of numeric gids that will be used to filter the neurons.
+          It should be avoided if possible, since the ids aren't granted to remain the same in different versions of the libraries.
+        type: array
+        items:
+          type: integer
   WindowConfig:
     title: WindowConfig
     description: WindowConfig Model.

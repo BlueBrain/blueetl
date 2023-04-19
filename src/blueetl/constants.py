@@ -1,6 +1,7 @@
 """Common constants."""
 import numpy as np
 
+# columns names
 GID = "gid"
 TIME = "time"
 SIMULATION_PATH = "simulation_path"
@@ -25,6 +26,10 @@ TIMES = "times"
 BIN = "bin"
 VALUE = "value"
 SECTION = "section"
+LIMIT = "limit"
+TARGET = "target"
+GIDS = "gids"
+QUERY = "query"
 
 DTYPES = {
     GID: np.int64,
@@ -42,5 +47,4 @@ DTYPES = {
 }
 CHECKSUM_SEP = "#"
 LEVEL_SEP = "."
-PACKAGE = "blueetl"
 CONFIG_VERSION = 2

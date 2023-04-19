@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 from pandas.testing import assert_frame_equal, assert_series_equal
 
+from blueetl.config.analysis_model import NeuronClassConfig
 from blueetl.constants import CIRCUIT, CIRCUIT_ID, GID, NEURON_CLASS, SIMULATION, SIMULATION_ID
 from blueetl.extract.neurons import Neurons
 from blueetl.utils import ensure_dtypes
@@ -65,10 +66,10 @@ def test_neurons_from_simulations():
     mock_simulations = Mock()
     type(mock_simulations).df = mock_simulations_df
     neuron_classes = {
-        "L1_INH": {"layer": [1], "synapse_class": ["INH"]},
-        "MY_GIDS": {"gid": [200, 300]},
-        "EMPTY": {"layer": [999]},
-        "LIMITED": {"synapse_class": ["INH"], "$limit": 1},
+        "L1_INH": NeuronClassConfig(**{"layer": [1], "synapse_class": ["INH"]}),
+        "MY_GIDS": NeuronClassConfig(**{"$gids": [200, 300]}),
+        "EMPTY": NeuronClassConfig(**{"layer": [999]}),
+        "LIMITED": NeuronClassConfig(**{"synapse_class": ["INH"], "$limit": 1}),
     }
     result = Neurons.from_simulations(
         simulations=mock_simulations, target="hex0", neuron_classes=neuron_classes, limit=None
@@ -123,8 +124,9 @@ def test_neurons_from_simulations_without_neurons():
     mock_simulations = Mock()
     type(mock_simulations).df = mock_simulations_df
     neuron_classes = {
-        "EMPTY": {"layer": [999]},
+        "EMPTY": NeuronClassConfig(**{"layer": [999]}),
     }
+
     with pytest.raises(RuntimeError, match="No data extracted to Neurons"):
         Neurons.from_simulations(
             simulations=mock_simulations, target="hex0", neuron_classes=neuron_classes, limit=None

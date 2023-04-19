@@ -19,12 +19,14 @@ New Features
 - Add `_cached` and `_filtered` private attributes to `BaseExtractor`.
 - Add `clear_cache` parameter to `run_from_file` and to the configuration schema [NSETM-2150]
 - Allow etl.q to accept a list of query dicts [NSETM-2162]
+- Allow neuron_classes configuration to be defined as a list of query dicts [NSETM-2163]
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - The previous analysis configuration format has been replaced by the version 2 to support multiple reports.
 - After applying a filter, the indices of the repo DataFrames are reset to remove any gap.
-- ``call_by_simulation`` has been refactored and moved into ``blueetl.parallel``.
+- The function ``call_by_simulation`` has been refactored and moved into ``blueetl.parallel``.
+- In neuron_classes configuration, ``gid`` has been renamed to ``$gids``.
 - Require Python >= 3.9.
 
 

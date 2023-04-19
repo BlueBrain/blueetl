@@ -1,9 +1,11 @@
+import json
 from unittest.mock import MagicMock
 
 import pandas as pd
 import pytest
 from pandas.testing import assert_frame_equal
 
+from blueetl.config.analysis_model import NeuronClassConfig
 from blueetl.constants import CIRCUIT_ID, COUNT, GID, NEURON_CLASS
 from blueetl.extract.neuron_classes import NeuronClasses
 from blueetl.utils import ensure_dtypes
@@ -27,8 +29,8 @@ def test_neuron_classes_from_neurons():
         mock_neurons,
         target="hex0",
         neuron_classes={
-            "L23_EXC": {"layer": [2, 3], "synapse_class": ["EXC"]},
-            "L4_INH": {"layer": [4], "synapse_class": ["INH"]},
+            "L23_EXC": NeuronClassConfig(**{"layer": [2, 3], "synapse_class": ["EXC"]}),
+            "L4_INH": NeuronClassConfig(**{"layer": [4], "synapse_class": ["INH"]}),
         },
     )
     assert mock_neurons.count_by_neuron_class.call_count == 1
@@ -41,8 +43,8 @@ def test_neuron_classes_from_neurons():
                 COUNT: 123,
                 "limit": None,
                 "target": "hex0",
-                "layer": [2, 3],
-                "synapse_class": ["EXC"],
+                "gids": None,
+                "query": json.dumps({"layer": [2, 3], "synapse_class": ["EXC"]}),
             },
             {
                 CIRCUIT_ID: 0,
@@ -50,8 +52,8 @@ def test_neuron_classes_from_neurons():
                 COUNT: 456,
                 "limit": None,
                 "target": "hex0",
-                "layer": [4],
-                "synapse_class": ["INH"],
+                "gids": None,
+                "query": json.dumps({"layer": [4], "synapse_class": ["INH"]}),
             },
         ]
     )
@@ -66,6 +68,6 @@ def test_neuron_classes_from_neurons_without_neurons():
         NeuronClasses.from_neurons(
             mock_neurons,
             target="atarget",
-            neuron_classes={"aclass": {"region": "any"}},
+            neuron_classes={"aclass": NeuronClassConfig(**{"region": "any"})},
         )
     assert mock_neurons.count_by_neuron_class.call_count == 1

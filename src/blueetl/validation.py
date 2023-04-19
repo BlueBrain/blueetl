@@ -5,8 +5,6 @@ import logging
 import jsonschema
 import yaml
 
-from blueetl.constants import PACKAGE
-
 L = logging.getLogger(__name__)
 
 
@@ -16,7 +14,7 @@ class ValidationError(Exception):
 
 def read_schema(schema_name: str) -> dict:
     """Load a schema and return the result as a dictionary."""
-    traversable = importlib.resources.files(PACKAGE) / "schemas" / f"{schema_name}.yaml"
+    traversable = importlib.resources.files(__package__) / "schemas" / f"{schema_name}.yaml"
     with traversable.open(encoding="utf-8") as stream:
         return yaml.safe_load(stream)
 

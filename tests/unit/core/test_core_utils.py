@@ -1,5 +1,6 @@
 import re
 
+import numpy as np
 import pandas as pd
 import pytest
 from numpy.testing import assert_array_equal
@@ -27,6 +28,76 @@ def test_andor_mask():
     mask = test_module._and_or_mask(query_list, _filter_func)
 
     assert_array_equal(mask, [0, 1, 1, 0, 0])
+
+
+@pytest.mark.parametrize(
+    "value, expected_true_indices",
+    [
+        (10, [1, 6]),
+        (-1, []),
+        ([11, 20], [2, 4]),
+        ({"eq": 10}, [1, 6]),
+        ({"ne": 10}, [0, 2, 3, 4, 5, 7]),
+        ({"le": 10}, [0, 1, 6, 7]),
+        ({"lt": 10}, [0, 7]),
+        ({"ge": 10}, [1, 2, 3, 4, 5, 6]),
+        ({"gt": 10}, [2, 3, 4, 5]),
+        ({"ge": 10, "lt": 12}, [1, 2, 6]),
+        ({"isin": [11, 20]}, [2, 4]),
+    ],
+)
+def test_compare_int(value, expected_true_indices):
+    obj = pd.Series([0, 10, 11, 12, 20, 21, 10, 2])
+    expected = np.full(len(obj), False)
+    expected[expected_true_indices] = True
+
+    result = test_module.compare(obj, value)
+
+    assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    "value, expected_true_indices",
+    [
+        ("s10", [1, 6]),
+        ("s-1", []),
+        (["s11", "s20"], [2, 4]),
+        ({"eq": "s10"}, [1, 6]),
+        ({"ne": "s10"}, [0, 2, 3, 4, 5, 7]),
+        ({"le": "s10"}, [0, 1, 6]),
+        ({"lt": "s10"}, [0]),
+        ({"ge": "s10"}, [1, 2, 3, 4, 5, 6, 7]),
+        ({"gt": "s10"}, [2, 3, 4, 5, 7]),
+        ({"ge": "s10", "lt": "s12"}, [1, 2, 6]),
+        ({"isin": ["s11", "s20"]}, [2, 4]),
+        ({"regex": "10"}, [1, 6]),
+        ({"regex": "^10"}, []),
+        ({"regex": "s2"}, [4, 5, 7]),
+        ({"regex": "^s2"}, [4, 5, 7]),
+    ],
+)
+def test_compare_str(value, expected_true_indices):
+    obj = pd.Series(["s0", "s10", "s11", "s12", "s20", "s21", "s10", "s2"])
+    expected = np.full(len(obj), False)
+    expected[expected_true_indices] = True
+
+    result = test_module.compare(obj, value)
+
+    assert_array_equal(result, expected)
+
+
+def test_compare_unsupported_operator():
+    obj = pd.Series([0, 10, 11, 12, 20, 21, 10])
+
+    with pytest.raises(ValueError, match="Unsupported operator"):
+        test_module.compare(obj, {"unknown": 10})
+
+
+def test_compare_empty_filter():
+    obj = pd.Series([0, 10, 11, 12, 20, 21, 10])
+
+    with pytest.raises(ValueError, match="Empty filter"):
+        test_module.compare(obj, {})
 
 
 @pytest.mark.parametrize(

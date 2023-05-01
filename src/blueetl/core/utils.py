@@ -4,6 +4,7 @@ from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
 from itertools import chain
+from operator import attrgetter
 from typing import Any, Optional, Union
 
 import numpy as np
@@ -11,6 +12,17 @@ import pandas as pd
 from pandas.api.types import is_list_like
 
 from blueetl.core import L
+
+COMPARISON_OPERATORS = {
+    "eq": attrgetter("__eq__"),
+    "ne": attrgetter("__ne__"),
+    "le": attrgetter("__le__"),
+    "lt": attrgetter("__lt__"),
+    "ge": attrgetter("__ge__"),
+    "gt": attrgetter("__gt__"),
+    "isin": attrgetter("isin"),
+    "regex": attrgetter("str.contains"),
+}
 
 
 def _and_or_mask(
@@ -77,15 +89,15 @@ def query_series(series: pd.Series, query_list: list[dict[str, Any]]) -> pd.Seri
     return series.loc[mask] if mask is not None else series
 
 
-def compare(obj: Union[pd.DataFrame, pd.Series, pd.Index], value: Any) -> np.ndarray:
+def compare(obj: Union[pd.Series, pd.Index], value: Any) -> np.ndarray:
     """Return the result of the comparison between obj and value.
 
     Args:
-        obj: a DataFrame, Series, or Index.
+        obj: Series, or Index.
         value: value used for comparison.
             - if scalar, use equality
             - if list-like, use isin
-            - if dict, any supported operator can be specified
+            - if dict, any supported operators can be specified, and they will be AND-ed together
 
     Examples:
         >>> df = pd.DataFrame({"gid": [0, 2, 3, 7, 8]})
@@ -98,28 +110,16 @@ def compare(obj: Union[pd.DataFrame, pd.Series, pd.Index], value: Any) -> np.nda
 
     """
     if isinstance(value, dict):
-        operators = {
-            "eq": "__eq__",
-            "ne": "__ne__",
-            "le": "__le__",
-            "lt": "__lt__",
-            "ge": "__ge__",
-            "gt": "__gt__",
-            "isin": "isin",
-        }
-        masks = []
-        for op, v in value.items():
-            if op in operators:
-                masks.append(getattr(obj, operators[op])(v))
-            else:
-                raise ValueError(f"Unsupported operator: {op}")
-        result = np.all(masks, axis=0) if masks else np.full(len(obj), True)
-    elif is_list_like(value):
-        result = np.asarray(obj.isin(value))
-    else:
-        # more efficient than using isin with a list of one element
-        result = np.asarray(obj == value)
-    return result
+        if not value:
+            raise ValueError("Empty filter")
+        if unsupported := [op for op in value if op not in COMPARISON_OPERATORS]:
+            raise ValueError(f"Unsupported operator(s): {unsupported}")
+        masks = [COMPARISON_OPERATORS[op](obj)(v) for op, v in value.items()]
+        return masks[0] if len(masks) == 1 else np.all(masks, axis=0)
+    if is_list_like(value):
+        return np.asarray(obj.isin(value))
+    # more efficient than using isin with a list of one element
+    return np.asarray(obj == value)
 
 
 def is_subfilter(left: dict, right: dict) -> bool:

@@ -29,7 +29,7 @@ REQUIREMENTS = {
         "orjson",  # faster json decoder used by fastparquet
         "xarray>=0.18.0",
         "bluepy>=2.4",
-        "pydantic>=1.10",
+        "pydantic>=1.10,<2",
         "jsonschema>=4.0",
         "click>=8",
     ],

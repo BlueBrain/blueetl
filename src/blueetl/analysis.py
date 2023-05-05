@@ -3,7 +3,7 @@ import gc
 import logging
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, NamedTuple, Optional, Union
+from typing import Any, NamedTuple, Optional
 
 import numpy as np
 import pandas as pd
@@ -27,12 +27,28 @@ class Analyzer:
     def __init__(
         self,
         analysis_config: SingleAnalysisConfig,
-        simulations_config: Optional[SimulationsConfig] = None,
-        resolver: Optional[Resolver] = None,
-        clear_cache: bool = False,
-        _repo: Optional[Repository] = None,
-        _features: Optional[FeaturesCollection] = None,
+        repo: Repository,
+        features: FeaturesCollection,
     ) -> None:
+        """Initialize the object.
+
+        Args:
+            analysis_config: analysis configuration.
+            repo: Repository instance.
+            features: FeaturesCollection instance.
+        """
+        self._analysis_config = analysis_config
+        self._repo = repo
+        self._features = features
+
+    @classmethod
+    def from_config(
+        cls,
+        analysis_config: SingleAnalysisConfig,
+        simulations_config: SimulationsConfig,
+        resolver: Resolver,
+        clear_cache: bool = False,
+    ) -> "Analyzer":
         """Initialize the Analyzer from the given configuration.
 
         Args:
@@ -40,33 +56,29 @@ class Analyzer:
             simulations_config: simulation campaign configuration.
             resolver: resolver instance.
             clear_cache: if True, remove any existing cache.
-            _repo: if specified, use it instead of creating a new object. Only for internal use.
-            _features: if specified, use it instead of creating a new object. Only for internal use.
         """
-        self._analysis_config = analysis_config
-        if _repo or _features:
-            assert _repo and _features, "Both _repo and _features must be specified."
-            self._repo = _repo
-            self._features = _features
-        else:
-            assert simulations_config is not None
-            cache_manager = CacheManager(
-                analysis_config=analysis_config,
-                simulations_config=simulations_config,
-                clear_cache=clear_cache,
-            )
-            self._repo = Repository(
-                simulations_config=simulations_config,
-                extraction_config=analysis_config.extraction,
-                cache_manager=cache_manager,
-                simulations_filter=self.analysis_config.simulations_filter,
-                resolver=resolver,
-            )
-            self._features = FeaturesCollection(
-                features_configs=analysis_config.features,
-                repo=self.repo,
-                cache_manager=cache_manager,
-            )
+        cache_manager = CacheManager(
+            analysis_config=analysis_config,
+            simulations_config=simulations_config,
+            clear_cache=clear_cache,
+        )
+        repo = Repository(
+            simulations_config=simulations_config,
+            extraction_config=analysis_config.extraction,
+            cache_manager=cache_manager,
+            simulations_filter=analysis_config.simulations_filter,
+            resolver=resolver,
+        )
+        features = FeaturesCollection(
+            features_configs=analysis_config.features,
+            repo=repo,
+            cache_manager=cache_manager,
+        )
+        return cls(
+            analysis_config=analysis_config,
+            repo=repo,
+            features=features,
+        )
 
     def __enter__(self):
         """Initialize the object when used as a context manager."""
@@ -133,7 +145,7 @@ class Analyzer:
             return self
         repo = self.repo.apply_filter(simulations_filter)
         features = self.features.apply_filter(repo)
-        return Analyzer(analysis_config=self.analysis_config, _repo=repo, _features=features)
+        return Analyzer(analysis_config=self.analysis_config, repo=repo, features=features)
 
     def show(self):
         """Print all the DataFrames."""
@@ -162,42 +174,49 @@ class MultiAnalyzer:
 
     def __init__(
         self,
-        global_config: Union[dict, MultiAnalysisConfig],
-        base_path: StrOrPath = ".",
-        clear_cache: Optional[bool] = None,
-        _analyzers: Optional[dict[str, Analyzer]] = None,
+        global_config: MultiAnalysisConfig,
+        analyzers: Optional[dict[str, Analyzer]] = None,
     ) -> None:
+        """Initialize the object.
+
+        Args:
+            global_config: analysis configuration.
+            analyzers: dict of analyzers, or None to load them from the configuration.
+        """
+        assert isinstance(global_config, MultiAnalysisConfig)
+        self._global_config = global_config
+        self._analyzers = self._init_analyzers() if analyzers is None else analyzers
+
+    @classmethod
+    def from_config(
+        cls,
+        global_config: dict,
+        base_path: StrOrPath,
+        clear_cache: Optional[bool] = None,
+    ) -> "MultiAnalyzer":
         """Initialize the MultiAnalyzer from the given configuration.
 
         Args:
             global_config: analysis configuration.
-            base_path: base path used to resolve relative paths. If omitted, the cwd is used.
+            base_path: base path used to resolve relative paths in the configuration.
             clear_cache: if True, remove any existing cache; if False, reuse the existing cache;
                 if None, use the value from the configuration file.
-            _analyzers: if specified, use it instead of creating a new dict of analyzers.
-                Only for internal use.
         """
-        if isinstance(global_config, dict):
-            self._global_config = init_multi_analysis_configuration(global_config, Path(base_path))
-        else:
-            self._global_config = global_config
-        if _analyzers is None:
-            if clear_cache is None:
-                clear_cache = self._global_config.clear_cache
-            self._analyzers = self._init_analyzers(clear_cache=clear_cache)
-        else:
-            self._analyzers = _analyzers
+        global_config = init_multi_analysis_configuration(global_config, Path(base_path))
+        if clear_cache is not None:
+            global_config.clear_cache = clear_cache
+        return cls(global_config=global_config)
 
-    def _init_analyzers(self, clear_cache: bool) -> dict[str, Analyzer]:
+    def _init_analyzers(self) -> dict[str, Analyzer]:
         """Load and return a dict of analyzers."""
-        resolver = AttrResolver(self)
+        resolver = AttrResolver(root=self)
         simulations_config = SimulationsConfig.load(self.global_config.simulation_campaign)
         return {
-            name: Analyzer(
+            name: Analyzer.from_config(
                 analysis_config=analysis_config,
                 simulations_config=simulations_config,
                 resolver=resolver,
-                clear_cache=clear_cache,
+                clear_cache=self.global_config.clear_cache,
             )
             for name, analysis_config in self.global_config.analysis.items()
         }
@@ -205,7 +224,7 @@ class MultiAnalyzer:
     @classmethod
     def from_file(cls, path: StrOrPath, clear_cache: Optional[bool] = None) -> "MultiAnalyzer":
         """Return a new instance loaded using the given configuration file."""
-        return cls(
+        return cls.from_config(
             global_config=load_yaml(path),
             base_path=Path(path).parent,
             clear_cache=clear_cache,
@@ -296,7 +315,7 @@ class MultiAnalyzer:
         if not simulations_filter:
             return self
         analyzers = {name: a.apply_filter(simulations_filter) for name, a in self.analyzers.items()}
-        return MultiAnalyzer(global_config=deepcopy(self.global_config), _analyzers=analyzers)
+        return MultiAnalyzer(global_config=deepcopy(self.global_config), analyzers=analyzers)
 
     def show(self):
         """Print all the DataFrames."""

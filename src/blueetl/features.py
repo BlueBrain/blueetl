@@ -132,15 +132,13 @@ class FeaturesConfigKey:
 
 
 class FeaturesCollection:
-    """Features collection class."""
+    """FeaturesCollection class."""
 
     def __init__(
         self,
         features_configs: list[FeaturesConfig],
         repo: Repository,
         cache_manager: CacheManager,
-        _dataframes: Optional[dict[str, pd.DataFrame]] = None,
-        _concatenated_features: Optional[dict[str, ConcatenatedFeatures]] = None,
     ) -> None:
         """Initialize the FeaturesCollection from the given list of configurations.
 
@@ -148,18 +146,12 @@ class FeaturesCollection:
             features_configs: list of features configuration dicts.
             repo: Repository instance.
             cache_manager: CacheManager instance.
-            _dataframes: DataFrames to be automatically loaded, only for internal use.
-            _concatenated_features: ConcatenatedFeatures to be cloned, only for internal use.
         """
         self._features_configs = features_configs
         self._repo = repo
         self._cache_manager = cache_manager
         self._data: dict[str, Feature] = {}
         self._concatenated_features: dict[str, ConcatenatedFeatures] = {}
-        if _dataframes:
-            self._data = self._dataframes_to_features(_dataframes, config=None, cached=True)
-        if _concatenated_features:
-            self._concatenated_features = self._clone_concatenated_features(_concatenated_features)
 
     @property
     def names(self) -> list[str]:
@@ -323,6 +315,15 @@ class FeaturesCollection:
     def _dataframes_to_features(
         self, df_dict: dict[str, pd.DataFrame], config: Optional[FeaturesConfig], cached: bool
     ) -> dict[str, Feature]:
+        """Wrap the given DataFrames with Feature objects, and return the resulting dict.
+
+        The DataFrames are filtered by the simulation_ids contained in the internal repo.
+
+        Args:
+            df_dict: dict of DataFrames to be wrapped.
+            config: config converted to dict and assigned to attrs["config"] for each DataFrame.
+            cached: True if the data is loaded from the cache, False otherwise.
+        """
         query = {SIMULATION_ID: self._repo.simulation_ids}
         result = {}
         for name, df in df_dict.items():
@@ -332,25 +333,35 @@ class FeaturesCollection:
                 result[name].df.attrs["config"] = config.dict()
         return result
 
+    def apply_filter(self, repo: Repository) -> "FeaturesCollection":
+        """Apply a filter based on the extracted simulations and return a new object."""
+        return FilteredFeaturesCollection(parent=self, repo=repo)
+
+
+class FilteredFeaturesCollection(FeaturesCollection):
+    """FilteredFeaturesCollection class."""
+
+    def __init__(self, parent: FeaturesCollection, repo: Repository) -> None:
+        """Init from an existing FeaturesCollection filtered by the simulations ids in repo.
+
+        Filtered dataframes are never written to disk.
+        """
+        super().__init__(
+            features_configs=parent._features_configs,
+            repo=repo,
+            cache_manager=parent.cache_manager.to_readonly(),
+        )
+        dataframes = {name: features.df for name, features in parent._data.items()}
+        self._data = self._dataframes_to_features(dataframes, config=None, cached=True)
+        self._concatenated_features = self._clone_concatenated_features(
+            parent._concatenated_features
+        )
+
     def _clone_concatenated_features(
         self, concatenated_features: dict[str, ConcatenatedFeatures]
     ) -> dict[str, ConcatenatedFeatures]:
-        """Return a clone of the concatenated_features."""
-        return {name: cf.clone(self) for name, cf in concatenated_features.items()}
-
-    def apply_filter(self, repo: Repository) -> "FeaturesCollection":
-        """Apply a filter based on the extracted simulations and return a new object.
-
-        Filtered dataframes are not written to disk.
-        """
-        dataframes = {name: features.df for name, features in self._data.items()}
-        return FeaturesCollection(
-            features_configs=self._features_configs,
-            repo=repo,
-            cache_manager=self.cache_manager.to_readonly(),
-            _dataframes=dataframes,
-            _concatenated_features=self._concatenated_features,
-        )
+        """Return a dict of cloned concatenated_features."""
+        return {name: cf.clone(parent=self) for name, cf in concatenated_features.items()}
 
 
 def _func_wrapper(

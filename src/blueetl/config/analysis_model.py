@@ -113,8 +113,7 @@ class ExtractionConfig(BaseModel):
 class FeaturesConfig(BaseModel):
     """FeaturesConfig Model."""
 
-    # do not consider id in the checksum
-    id: Optional[int] = Field(None, exclude=True)
+    id: Optional[int] = Field(None, exclude=True)  # do not dump or consider in the checksum
     type: str
     name: Optional[str] = None
     groupby: list[str]
@@ -151,7 +150,7 @@ class MultiAnalysisConfig(BaseModel):
     version: int
     simulation_campaign: Path
     output: Path
-    clear_cache: bool = False
+    clear_cache: bool = Field(False, exclude=True)  # do not dump or consider in the checksum
     simulations_filter: dict[str, Any] = {}
     simulations_filter_in_memory: dict[str, Any] = {}
     analysis: dict[str, SingleAnalysisConfig]

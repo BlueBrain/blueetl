@@ -231,7 +231,6 @@ class Repository:
         cache_manager: CacheManager,
         simulations_filter: Optional[dict[str, Any]] = None,
         resolver: Optional[Resolver] = None,
-        _dataframes: Optional[dict[str, pd.DataFrame]] = None,
     ) -> None:
         """Initialize the repository.
 
@@ -241,7 +240,6 @@ class Repository:
             cache_manager: cache manager responsible to load and dump dataframes.
             simulations_filter: optional simulations filter.
             resolver: resolver instance.
-            _dataframes: DataFrames to be automatically loaded, only for internal use.
         """
         self._extraction_config = extraction_config
         self._simulations_config = simulations_config
@@ -263,8 +261,6 @@ class Repository:
             "report": available_reports[report_type],
         }
         self._names = list(self._mapping)
-        if _dataframes:
-            self._assign_from_dataframes(_dataframes)
 
     def __getstate__(self) -> dict:
         """Get the object state when the object is pickled."""
@@ -402,23 +398,31 @@ class Repository:
             print("Extraction:", name)
             print(getattr(self, name).df)
 
+    def apply_filter(self, simulations_filter: dict[str, Any]) -> "Repository":
+        """Apply the given filter and return a new object."""
+        return FilteredRepository(parent=self, simulations_filter=simulations_filter)
+
+
+class FilteredRepository(Repository):
+    """FilteredRepository class."""
+
+    def __init__(self, parent: Repository, simulations_filter: dict[str, Any]) -> None:
+        """Initialize the object using the given dict of DataFrames.
+
+        Filtered dataframes are never written to disk.
+        """
+        super().__init__(
+            simulations_config=parent.simulations_config,
+            extraction_config=parent.extraction_config,
+            cache_manager=parent.cache_manager.to_readonly(),
+            simulations_filter=simulations_filter,
+        )
+        dataframes = {name: getattr(parent, name).df for name in parent.names}
+        self._assign_from_dataframes(dataframes)
+
     def _assign_from_dataframes(self, dicts: dict[str, pd.DataFrame]) -> None:
         """Assign the repository properties from the given dict of DataFrames."""
         for name, df in dicts.items():
             assert name not in self.__dict__
             value = self._mapping[name](self).extract_cached(df)
             setattr(self, name, value)
-
-    def apply_filter(self, simulations_filter: dict[str, Any]) -> "Repository":
-        """Apply the given filter and return a new object.
-
-        Filtered dataframes are not written to disk.
-        """
-        dataframes = {name: getattr(self, name).df for name in self.names}
-        return Repository(
-            simulations_config=self._simulations_config,
-            extraction_config=self._extraction_config,
-            cache_manager=self.cache_manager.to_readonly(),
-            simulations_filter=simulations_filter,
-            _dataframes=dataframes,
-        )

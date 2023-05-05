@@ -1,4 +1,5 @@
 import os
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -10,13 +11,7 @@ from blueetl.analysis import MultiAnalyzer
 from blueetl.constants import CIRCUIT, SIMULATION
 from blueetl.extract.feature import Feature
 from blueetl.features import ConcatenatedFeatures
-from blueetl.utils import load_yaml
-from tests.functional.utils import (
-    EXPECTED_PATH,
-    TEST_DATA_PATH,
-    assertion_error_message,
-    change_directory,
-)
+from tests.functional.utils import EXPECTED_PATH, TEST_DATA_PATH, assertion_error_message
 
 TESTING_LOG_LEVEL = os.getenv("TESTING_LOG_LEVEL", "DEBUG")
 TESTING_MATCH_FILES = os.getenv("TESTING_MATCH_FILES", "*")
@@ -155,9 +150,9 @@ def _update_expected_files(ma, path):
 def test_update_expected_files(analysis_config_path, expected_path, tmp_path, caplog):
     caplog.set_level(TESTING_LOG_LEVEL)
     np.random.seed(0)
-    analysis_config = load_yaml(analysis_config_path)
+    analysis_config_path = shutil.copy(analysis_config_path, tmp_path)
 
-    with change_directory(tmp_path), MultiAnalyzer(analysis_config) as multi_analyzer:
+    with MultiAnalyzer.from_file(analysis_config_path) as multi_analyzer:
         _update_expected_files(multi_analyzer, expected_path)
 
 
@@ -165,16 +160,16 @@ def test_update_expected_files(analysis_config_path, expected_path, tmp_path, ca
 def test_analyzer(analysis_config_path, expected_path, tmp_path, caplog):
     caplog.set_level(TESTING_LOG_LEVEL)
     np.random.seed(0)
-    analysis_config = load_yaml(analysis_config_path)
+    analysis_config_path = shutil.copy(analysis_config_path, tmp_path)
 
     # test without cache
-    with change_directory(tmp_path), MultiAnalyzer(analysis_config) as multi_analyzer:
+    with MultiAnalyzer.from_file(analysis_config_path) as multi_analyzer:
         _test_repo_multi(multi_analyzer, expected_path)
         _test_features_multi(multi_analyzer, expected_path)
         _test_filter_in_memory(multi_analyzer, expected_path)
 
     # test with cache
-    with change_directory(tmp_path), MultiAnalyzer(analysis_config) as multi_analyzer:
+    with MultiAnalyzer.from_file(analysis_config_path) as multi_analyzer:
         _test_repo_multi(multi_analyzer, expected_path)
         _test_features_multi(multi_analyzer, expected_path)
         _test_filter_in_memory(multi_analyzer, expected_path)

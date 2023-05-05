@@ -79,7 +79,7 @@ def run_parallel(
     Args:
         tasks: iterable of callable objects that will be called in separate threads or processes.
             The callable must accept a single parameter ctx, that will contain a TaskContext.
-        jobs: number of jobs. If not specified, use the BLUEETL_PARALLEL_JOBS env variable,
+        jobs: number of jobs. If not specified, use the BLUEETL_JOBLIB_JOBS env variable,
             or use half of the available cpus. Set to 1 to disable parallelization.
         backend: backend passed to joblib. If not specified, use the BLUEETL_JOBLIB_BACKEND env
             variable, or use the joblib default (loky).

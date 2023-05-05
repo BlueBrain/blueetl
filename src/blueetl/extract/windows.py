@@ -140,7 +140,6 @@ class Windows(BaseExtractor):
         Returns:
             Windows: new instance.
         """
-        # pylint: disable=too-many-locals
         results = []
         for _, rec in simulations.df.etl.iter():
             for name, win in windows_config.items():

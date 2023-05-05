@@ -66,8 +66,5 @@ analysis:
         w9: spikes.extraction.windows.w3
     features:
       - type: multi
-        groupby: [ simulation_id, circuit_id, neuron_class, window ]
-        function: blueetl.external.soma.calculate_features.calculate_features_by_simulation_circuit_neuron_class_window
-      - type: multi
         groupby: [ simulation_id, circuit_id ]
         function: blueetl.external.soma.calculate_features.calculate_features_by_simulation_circuit

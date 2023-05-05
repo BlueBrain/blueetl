@@ -17,14 +17,14 @@ VERSION = module.__version__
 REQUIREMENTS = {
     "core": [
         "numpy>=1.19.4",
-        "pandas>=1.3.0,<2",
+        "pandas>=1.3.0",
         "pyyaml>=5.4.1",
         "joblib>=1.1.0",
         "packaging>=21.3",
     ],
     "extra": [
         "tables>=3.6.1",  # needed by pandas to read and write hdf files
-        "pyarrow>=7,<9",  # needed by pandas to read and write feather or parquet files
+        "pyarrow>=7",  # needed by pandas to read and write feather or parquet files
         "fastparquet>=0.8.3,!=2023.1.0",  # needed by pandas to read and write parquet files
         "orjson",  # faster json decoder used by fastparquet
         "xarray>=0.18.0",

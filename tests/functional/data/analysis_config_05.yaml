@@ -27,8 +27,5 @@ analysis:
         w2: { bounds: [ 10, 70 ], initial_offset: 10, t_step: 0.5 }
     features:
       - type: multi
-        groupby: [ simulation_id, circuit_id, neuron_class, window ]
-        function: blueetl.external.soma.calculate_features.calculate_features_by_simulation_circuit_neuron_class_window
-      - type: multi
         groupby: [ simulation_id, circuit_id ]
         function: blueetl.external.soma.calculate_features.calculate_features_by_simulation_circuit

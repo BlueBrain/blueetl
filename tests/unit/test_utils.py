@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from numpy.testing import assert_equal
+from packaging.version import Version
 from pandas.api.types import is_integer_dtype
 
 from blueetl import utils as test_module
@@ -37,10 +38,16 @@ def test_ensure_dtypes(dtypes):
 
     result = test_module.ensure_dtypes(df, desired_dtypes=dtypes)
 
+    # verify the dtypes of the columns
     expected = [*list(DTYPES.values()), np.int64]
     assert_equal(result.dtypes.to_numpy(), expected)
-    # convert any int to int64 in the expected list
-    expected = [np.int64 if is_integer_dtype(item) else item for item in expected]
+
+    # verify the dtypes of the MultiIndex
+    # Changed in version 2.0.0: Index can hold all numpy numeric dtypes (except float16).
+    # Previously only int64/uint64/float64 dtypes were accepted.
+    if Version(pd.__version__) < Version("2"):
+        # convert any int to int64 in the expected list
+        expected = [np.int64 if is_integer_dtype(item) else item for item in expected]
     assert_equal(result.index.dtypes.to_numpy(), expected)
 
 

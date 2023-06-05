@@ -50,7 +50,7 @@ def get_AC(BST):
 
 def get_CPDF(ST, bin_size=20):
     """Get complexity."""
-    CPDF = statistics.complexity_pdf(ST, bin_size=bin_size * ms)
+    CPDF = statistics.Complexity(spiketrains=ST, bin_size=bin_size * ms).pdf()
     return np.asarray(CPDF).reshape(-1)
 
 

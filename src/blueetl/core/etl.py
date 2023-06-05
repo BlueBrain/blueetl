@@ -337,7 +337,10 @@ class ETLDataFrameAccessor(ETLBaseAccessor[pd.DataFrame, DataFrameGroupBy]):
         # Workaround to avoid: FutureWarning: In a future version of pandas, a length 1 tuple will
         # be returned when iterating over a groupby with a grouper equal to a list of length 1.
         # Don't supply a list with a single grouper to avoid this warning.
-        fix_pandas = len(groupby_columns) == 1 and Version(pd.__version__) < Version("2")
+        # See also https://github.com/pandas-dev/pandas/issues/53500
+        fix_pandas = len(groupby_columns) == 1 and (
+            Version(pd.__version__) < Version("2") or selected_columns
+        )
         by = groupby_columns[0] if fix_pandas else groupby_columns
         grouped = self._obj.groupby(by, sort=sort, observed=observed)
         if selected_columns:

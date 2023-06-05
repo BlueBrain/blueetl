@@ -24,6 +24,9 @@ convention = "google"
 addopts = [
     "--import-mode=importlib",
 ]
+filterwarnings = [
+    "ignore::DeprecationWarning:nptyping",
+]
 
 [tool.coverage.paths]
 source = [

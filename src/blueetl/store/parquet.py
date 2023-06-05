@@ -1,6 +1,6 @@
 """Parquet data store."""
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 import pandas as pd
 
@@ -17,18 +17,15 @@ class ParquetStore(BaseStore):
     def __init__(self, basedir: StrOrPath) -> None:
         """Initialize the object."""
         super().__init__(basedir=basedir)
-        self._dump_options = {
+        self._dump_options: dict[str, Any] = {
             "engine": "pyarrow",
             # "engine": "fastparquet",
             # "compression": "snappy",
-            # Ensure that RangeIndex is converted to Int64Index in MultiIndexes with Pandas 1.5.0
-            # See https://issues.apache.org/jira/browse/ARROW-17806
-            # and https://github.com/pandas-dev/pandas/issues/46675
-            "index": True,
+            # "index": None,
             # "partition_cols": None,
             # "storage_options": None,
         }
-        self._load_options = {
+        self._load_options: dict[str, Any] = {
             # pyarrow (8.0.0, 9.0.0) may be affected by a memory leak,
             # and it's slower than fastparquet when reading dataframes with columns
             # containing lists encoded using the Dremel encoding.
@@ -49,8 +46,12 @@ class ParquetStore(BaseStore):
     def dump(self, df: pd.DataFrame, name: str) -> None:
         """Save a dataframe to file, using the given name and the class extension."""
         path = self.path(name)
+        # Unless the parameter "index" is explicitly enforced, ensure that RangeIndex
+        # is converted to Int64Index in MultiIndexes with Pandas >= 1.5.0.
+        # See https://github.com/apache/arrow/issues/33030
+        index = True if isinstance(df.index, pd.MultiIndex) else None
         with timed(L.debug, "Writing %s to %s", name, path):
-            df.to_parquet(path=path, **self._dump_options)
+            df.to_parquet(path=path, **{"index": index, **self._dump_options})
 
     def load(self, name: str) -> Optional[pd.DataFrame]:
         """Load a dataframe from file, using the given name and the class extension."""

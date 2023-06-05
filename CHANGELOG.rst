@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Version 0.2.1
+-------------
+
+Improvements
+~~~~~~~~~~~~
+- Support Pandas 2.0.
+  Changed in Pandas 2.0.0: Index can hold all numpy numeric dtypes (except float16).
+  Previously only int64/uint64/float64 dtypes were accepted.
+
 Version 0.2.0
 -------------
 

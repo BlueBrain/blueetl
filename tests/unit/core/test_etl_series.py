@@ -391,7 +391,7 @@ def test_query(series1, query, expected, as_type):
         raise ValueError(f"Invalid as_type: {as_type}")
 
     # check_index_type=False needed to avoid Attribute "inferred_type" are different
-    assert_series_equal(result, expected, check_index_type=False)
+    assert_series_equal(result, expected, check_index_type=len(expected) != 0)
 
 
 def test_query_with_multiple_dicts(series1):

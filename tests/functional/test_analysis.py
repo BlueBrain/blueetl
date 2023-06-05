@@ -55,11 +55,14 @@ def _dump_all(a, path):
     for container_name in "repo", "features":
         container = getattr(a, container_name)
         for name in getattr(container, "names"):
-            df = _get_subattr(container, [name, "df"])
-            df = df[[col for col in df.columns if col not in [SIMULATION, CIRCUIT]]]
-            filepath = path / container_name / f"{name}.parquet"
-            filepath.parent.mkdir(parents=True, exist_ok=True)
-            _dump_df(df, filepath)
+            obj = getattr(container, name)
+            if not isinstance(obj, ConcatenatedFeatures):
+                # do not dump ConcatenatedFeatures
+                df = obj.df
+                df = df[[col for col in df.columns if col not in [SIMULATION, CIRCUIT]]]
+                filepath = path / container_name / f"{name}.parquet"
+                filepath.parent.mkdir(parents=True, exist_ok=True)
+                _dump_df(df, filepath)
 
 
 def _dump_all_multi(ma, path):
@@ -83,7 +86,8 @@ def _test_repo(a, path):
         df = _get_subattr(a, ["repo", name, "df"])
         df = df[[col for col in df.columns if col not in [SIMULATION, CIRCUIT]]]
         with assertion_error_message(f"Difference in repo {name!r}"):
-            assert_frame_equal(df, expected_df)
+            # check_index_type=False needed to avoid Attribute "inferred_type" are different
+            assert_frame_equal(df, expected_df, check_index_type=len(expected_df) != 0)
 
 
 def _test_features(a, path):
@@ -97,7 +101,8 @@ def _test_features(a, path):
             actual_df = obj.df
             expected_df = _load_df(path / f"{name}.parquet")
             with assertion_error_message(f"Difference in features {name!r}"):
-                assert_frame_equal(actual_df, expected_df)
+                # check_index_type=False needed to avoid Attribute "inferred_type" are different
+                assert_frame_equal(actual_df, expected_df, check_index_type=len(expected_df) != 0)
         elif isinstance(obj, ConcatenatedFeatures):
             assert isinstance(obj.df, pd.DataFrame)
             assert isinstance(obj.params, pd.DataFrame)

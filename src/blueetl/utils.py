@@ -14,7 +14,6 @@ from typing import Any, Callable, Optional, Union
 
 import pandas as pd
 import yaml
-from pydantic import BaseModel
 
 from blueetl.constants import DTYPES
 from blueetl.types import StrOrPath
@@ -51,7 +50,7 @@ def load_yaml(filepath: StrOrPath) -> Any:
 def dump_yaml(filepath: StrOrPath, data: Any, **kwargs) -> None:
     """Dump to YAML file."""
     with open(filepath, "w", encoding="utf-8") as f:
-        # The custom dumper dumps unsupported types (for example Path) as simple strings.
+        # The custom dumper dumps some unsupported types (for example Path) as simple strings.
         yaml.dump(data, stream=f, sort_keys=False, Dumper=_get_internal_yaml_dumper(), **kwargs)
 
 
@@ -142,6 +141,10 @@ def checksum_json(obj: Any) -> str:
 @cache
 def _get_internal_yaml_dumper() -> type[yaml.SafeDumper]:
     """Return the custom internal yaml dumper class."""
+    # pylint: disable=import-outside-toplevel
+    # imported here because optional
+    from pydantic import BaseModel
+
     _representers = {
         Path: str,
         BaseModel: lambda data: data.dict(),

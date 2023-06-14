@@ -1,6 +1,14 @@
 Changelog
 =========
 
+Version 0.2.2
+-------------
+
+Bug Fixes
+~~~~~~~~~
+- Ensure that the package can be installed and used without optional dependencies.
+
+
 Version 0.2.1
 -------------
 

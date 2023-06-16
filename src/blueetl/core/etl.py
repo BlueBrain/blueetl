@@ -122,7 +122,8 @@ class ETLBaseAccessor(ABC, Generic[PandasT, PandasGroupByT]):
         values = ensure_list(values)
         if len(conditions) != len(values):
             raise ValueError("Conditions and values must have the same length")
-        result = pd.concat([self._obj], axis="index", keys=[tuple(values)], names=conditions)
+        # when concatenating a single item, copy=False is more efficient
+        result = pd.concat([self._obj], axis=0, keys=[tuple(values)], names=conditions, copy=False)
         if dtypes:
             dtypes = ensure_list(dtypes)
             if len(conditions) != len(dtypes):

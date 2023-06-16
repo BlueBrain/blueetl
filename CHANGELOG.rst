@@ -1,6 +1,14 @@
 Changelog
 =========
 
+Version 0.2.3
+-------------
+
+Improvements
+~~~~~~~~~~~~
+- Improve performance of etl.add_conditions.
+
+
 Version 0.2.2
 -------------
 

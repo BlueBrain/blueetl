@@ -31,7 +31,7 @@ def test_merge_groupby():
                 {
                     "ca": 1.1,
                     "seed": 1,
-                    "simulation_path": "/path/to/0/BlueConfig",
+                    "simulation_path": "/path/to/0",
                     "simulation_id": 0,
                     "circuit_id": 0,
                     "simulation": Mock(),
@@ -40,7 +40,7 @@ def test_merge_groupby():
                 {
                     "ca": 1.2,
                     "seed": 1,
-                    "simulation_path": "/path/to/1/BlueConfig",
+                    "simulation_path": "/path/to/1",
                     "simulation_id": 1,
                     "circuit_id": 0,
                     "simulation": Mock(),
@@ -49,7 +49,7 @@ def test_merge_groupby():
                 {
                     "ca": 1.1,
                     "seed": 1,
-                    "simulation_path": "/path/to/2/BlueConfig",
+                    "simulation_path": "/path/to/2",
                     "simulation_id": 2,
                     "circuit_id": 1,
                     "simulation": Mock(),
@@ -58,7 +58,7 @@ def test_merge_groupby():
                 {
                     "ca": 1.2,
                     "seed": 1,
-                    "simulation_path": "/path/to/3/BlueConfig",
+                    "simulation_path": "/path/to/3",
                     "simulation_id": 3,
                     "circuit_id": 1,
                     "simulation": Mock(),
@@ -115,7 +115,7 @@ def test_call_by_simulation(how):
             {
                 "ca": 1.1,
                 "seed": 1,
-                "simulation_path": "/path/to/0/BlueConfig",
+                "simulation_path": "/path/to/0",
                 "simulation_id": 0,
                 "circuit_id": 0,
                 "simulation": Mock(),
@@ -124,7 +124,7 @@ def test_call_by_simulation(how):
             {
                 "ca": 1.2,
                 "seed": 1,
-                "simulation_path": "/path/to/1/BlueConfig",
+                "simulation_path": "/path/to/1",
                 "simulation_id": 1,
                 "circuit_id": 0,
                 "simulation": Mock(),
@@ -133,7 +133,7 @@ def test_call_by_simulation(how):
             {
                 "ca": 1.1,
                 "seed": 1,
-                "simulation_path": "/path/to/2/BlueConfig",
+                "simulation_path": "/path/to/2",
                 "simulation_id": 2,
                 "circuit_id": 1,
                 "simulation": Mock(),
@@ -142,7 +142,7 @@ def test_call_by_simulation(how):
             {
                 "ca": 1.2,
                 "seed": 1,
-                "simulation_path": "/path/to/3/BlueConfig",
+                "simulation_path": "/path/to/3",
                 "simulation_id": 3,
                 "circuit_id": 1,
                 "simulation": Mock(),

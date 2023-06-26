@@ -27,10 +27,13 @@ def test_neuron_classes_from_neurons():
     )
     result = NeuronClasses.from_neurons(
         mock_neurons,
-        target="hex0",
         neuron_classes={
-            "L23_EXC": NeuronClassConfig(**{"layer": [2, 3], "synapse_class": ["EXC"]}),
-            "L4_INH": NeuronClassConfig(**{"layer": [4], "synapse_class": ["INH"]}),
+            "L23_EXC": NeuronClassConfig(
+                **{"$population": "thalamus_neurons", "layer": [2, 3], "synapse_class": ["EXC"]}
+            ),
+            "L4_INH": NeuronClassConfig(
+                **{"$population": "thalamus_neurons", "layer": [4], "synapse_class": ["INH"]}
+            ),
         },
     )
     assert mock_neurons.count_by_neuron_class.call_count == 1
@@ -42,7 +45,8 @@ def test_neuron_classes_from_neurons():
                 NEURON_CLASS: "L23_EXC",
                 COUNT: 123,
                 "limit": None,
-                "target": "hex0",
+                "population": "thalamus_neurons",
+                "node_set": None,
                 "gids": None,
                 "query": json.dumps({"layer": [2, 3], "synapse_class": ["EXC"]}),
             },
@@ -51,7 +55,8 @@ def test_neuron_classes_from_neurons():
                 NEURON_CLASS: "L4_INH",
                 COUNT: 456,
                 "limit": None,
-                "target": "hex0",
+                "population": "thalamus_neurons",
+                "node_set": None,
                 "gids": None,
                 "query": json.dumps({"layer": [4], "synapse_class": ["INH"]}),
             },
@@ -67,7 +72,8 @@ def test_neuron_classes_from_neurons_without_neurons():
     with pytest.raises(RuntimeError, match="No data extracted to NeuronClasses"):
         NeuronClasses.from_neurons(
             mock_neurons,
-            target="atarget",
-            neuron_classes={"aclass": NeuronClassConfig(**{"region": "any"})},
+            neuron_classes={
+                "aclass": NeuronClassConfig(**{"$population": "thalamus_neurons", "region": "any"})
+            },
         )
     assert mock_neurons.count_by_neuron_class.call_count == 1

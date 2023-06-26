@@ -1,5 +1,5 @@
 import os
-from unittest.mock import Mock, PropertyMock, patch
+from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
 import pandas as pd
 from pandas.testing import assert_frame_equal
@@ -7,11 +7,17 @@ from pandas.testing import assert_frame_equal
 from blueetl.constants import (
     CIRCUIT,
     CIRCUIT_ID,
+    COUNT,
     DURATION,
     GID,
+    GIDS,
+    LIMIT,
     NEURON_CLASS,
     NEURON_CLASS_INDEX,
+    NODE_SET,
     OFFSET,
+    POPULATION,
+    QUERY,
     SIMULATION,
     SIMULATION_ID,
     T_START,
@@ -26,8 +32,8 @@ from blueetl.extract import soma_report as test_module
 from blueetl.utils import ensure_dtypes
 
 
-def _get_soma_report(t_start=None, t_end=None, t_step=None, gids=None):
-    """Return a DataFrame as returned by simulation.reports("soma").get()."""
+def _get_soma_report(group=None, t_start=None, t_stop=None, t_step=None):
+    """Return a DataFrame as returned by simulation.reports["soma"]["pop"].get()."""
     df = pd.DataFrame(
         {
             100: [-72.1, -72.3, -72.5],
@@ -36,15 +42,16 @@ def _get_soma_report(t_start=None, t_end=None, t_step=None, gids=None):
         },
         index=pd.Index([19.5, 20, 20.5], name="time"),
     )
-    df.columns.name = "gid"
-    return df.etl.q(time={"ge": t_start, "lt": t_end})[list(gids)]
+    return df.etl.q(time={"ge": t_start, "lt": t_stop})[list(group)]
 
 
 @patch.dict(os.environ, {BLUEETL_JOBLIB_JOBS: "1"})
 def test_soma_report_from_simulations():
-    mock_circuit = Mock()
-    mock_sim = Mock()
-    mock_sim.report.return_value.get.side_effect = _get_soma_report
+    mock_circuit = MagicMock()
+    mock_sim = MagicMock()
+    _report_by_type = mock_sim.reports.__getitem__.return_value
+    _report_by_pop = _report_by_type.__getitem__.return_value
+    _report_by_pop.get.side_effect = _get_soma_report
     mock_simulations_df = PropertyMock(
         return_value=pd.DataFrame(
             [
@@ -88,8 +95,41 @@ def test_soma_report_from_simulations():
     mock_windows = Mock()
     type(mock_windows).df = mock_windows_df
 
+    mock_neuron_classes_df = PropertyMock(
+        return_value=pd.DataFrame(
+            [
+                {
+                    CIRCUIT_ID: 0,
+                    NEURON_CLASS: "L23_EXC",
+                    COUNT: 2,
+                    LIMIT: None,
+                    POPULATION: "thalamus_neurons",
+                    NODE_SET: None,
+                    GIDS: None,
+                    QUERY: "{}",
+                },
+                {
+                    CIRCUIT_ID: 0,
+                    NEURON_CLASS: "L4_EXC",
+                    COUNT: 1,
+                    LIMIT: None,
+                    POPULATION: "thalamus_neurons",
+                    NODE_SET: None,
+                    GIDS: None,
+                    QUERY: "{}",
+                },
+            ]
+        )
+    )
+    mock_neuron_classes = Mock()
+    type(mock_neuron_classes).df = mock_neuron_classes_df
+
     result = test_module.SomaReport.from_simulations(
-        simulations=mock_simulations, neurons=mock_neurons, windows=mock_windows, name="soma"
+        simulations=mock_simulations,
+        neurons=mock_neurons,
+        windows=mock_windows,
+        neuron_classes=mock_neuron_classes,
+        name="soma",
     )
 
     expected_df = pd.DataFrame(

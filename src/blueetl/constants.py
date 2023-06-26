@@ -27,7 +27,8 @@ BIN = "bin"
 VALUE = "value"
 SECTION = "section"
 LIMIT = "limit"
-TARGET = "target"
+POPULATION = "population"
+NODE_SET = "node_set"
 GIDS = "gids"
 QUERY = "query"
 
@@ -47,4 +48,4 @@ DTYPES = {
 }
 CHECKSUM_SEP = "#"
 LEVEL_SEP = "."
-CONFIG_VERSION = 2
+CONFIG_VERSION = 3

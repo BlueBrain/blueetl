@@ -1,0 +1,30 @@
+---
+# simple configuration with extraction and analysis, using bluecv functions
+version: 3
+simulation_campaign: /gpfs/bbp.cscs.ch/project/proj12/NSE/blueetl/data/sim-campaign-sonata/a04addca-bda3-47d7-ad2d-c41187252a2b/config.json
+output: analysis_output
+analysis:
+  spikes:
+    extraction:
+      report:
+        type: spikes
+      neuron_classes:
+        Rt_EXC: {layer: [Rt], synapse_class: [EXC]}
+        VPL_EXC: {layer: [VPL], synapse_class: [EXC]}
+        Rt_INH: {layer: [Rt], synapse_class: [INH]}
+        VPL_INH: {layer: [VPL], synapse_class: [INH]}
+      limit: 1000
+      population: thalamus_neurons
+      node_set: null
+      windows:
+        w1: {bounds: [20, 90], window_type: spontaneous}
+        w2: {bounds: [10, 70], initial_offset: 10, n_trials: 3, trial_steps_value: 10}
+    features:
+    - type: multi
+      groupby: [simulation_id, circuit_id, neuron_class, window]
+      function: blueetl.external.bluecv.neuron_class.calculate_features_by_neuron_class
+      params:
+        PSD: {}
+        CPDF:
+          params:
+            bin_size: 1

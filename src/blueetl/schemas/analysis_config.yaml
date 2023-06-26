@@ -131,10 +131,17 @@ $defs:
         type:
         - integer
         - "null"
-      target:
-        title: Target
+      population:
+        title: Population
         description: |
-          Optional target used to filter the neurons.
+          Node population used to filter the neurons, overridable in each neuron class.
+        type:
+        - string
+        - "null"
+      node_set:
+        title: NodeSet
+        description: |
+          Optional node_set used to filter the neurons.
         type:
         - string
         - "null"
@@ -196,9 +203,16 @@ $defs:
         - type: array
           items:
             type: object
-      $target:
-        title: $target
-        description: Optional target, specific to the current neuron class.
+      $population:
+        title: $population
+        description: |
+          Optional node population used to filter the neurons, specific to the current neuron class.
+        type:
+        - string
+        - "null"
+      $node_set:
+        title: $node_set
+        description: Optional node_set, specific to the current neuron class.
         type:
         - string
         - "null"
@@ -281,7 +295,7 @@ $defs:
           
           The function should accept the positional parameters:
           
-          * ``spikes``: numpy array of spikes, automatically filtered by ``initial_offset``, ``bounds``, and the global attributes ``target`` and ``limit``.
+          * ``spikes``: numpy array of spikes, automatically filtered by ``initial_offset``, ``bounds``, and the attributes ``population``, ``node_set``, and ``limit``.
           * ``params``: dictionary of parameters defined in this section.
 
           and it should return a dict containing:
@@ -303,6 +317,25 @@ $defs:
         items:
         - type: number
         - type: number
+      population:
+        title: Population
+        description: |
+          Optional node population used to filter the spikes, overriding the global value.
+        type:
+        - string
+        - "null"
+      node_set:
+        title: NodeSet
+        description: Optional node_set used to filter the spikes, overriding the global value.
+        type:
+        - string
+        - "null"
+      limit:
+        title: Limit
+        description: Optional limit to the number of neurons, overriding the global value.
+        type:
+        - integer
+        - "null"
     required:
     - function
     - bounds

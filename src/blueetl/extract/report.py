@@ -5,10 +5,11 @@ from dataclasses import dataclass
 from typing import NamedTuple, Optional, TypeVar
 
 import pandas as pd
-from bluepy import Simulation
+from bluepysnap import Simulation
 
-from blueetl.constants import CIRCUIT_ID, GID, NEURON_CLASS, SIMULATION, SIMULATION_ID
+from blueetl.constants import CIRCUIT_ID, GID, NEURON_CLASS, POPULATION, SIMULATION, SIMULATION_ID
 from blueetl.extract.base import BaseExtractor
+from blueetl.extract.neuron_classes import NeuronClasses
 from blueetl.extract.neurons import Neurons
 from blueetl.extract.simulations import Simulations
 from blueetl.extract.windows import Windows
@@ -52,12 +53,18 @@ class ReportExtractor(BaseExtractor, metaclass=ABCMeta):
     @classmethod
     @abstractmethod
     def _load_values(
-        cls, simulation: Simulation, gids, windows_df: pd.DataFrame, name: str
+        cls,
+        simulation: Simulation,
+        population: Optional[str],
+        gids,
+        windows_df: pd.DataFrame,
+        name: str,
     ) -> pd.DataFrame:
-        """Return a DataFrame for the given simulation, gids, and windows.
+        """Return a DataFrame for the given simulation, population, gids, and windows.
 
         Args:
             simulation: simulation containing the report.
+            population: node population name.
             gids: array of gids to be selected.
             windows_df: windows dataframe.
             name: name of the report in the simulation configuration.
@@ -72,6 +79,7 @@ class ReportExtractor(BaseExtractor, metaclass=ABCMeta):
         simulations: Simulations,
         neurons: Neurons,
         windows: Windows,
+        neuron_classes: NeuronClasses,
         name: str,
     ) -> ReportExtractorT:
         """Return a new instance from the given simulations, neurons, and windows.
@@ -80,6 +88,7 @@ class ReportExtractor(BaseExtractor, metaclass=ABCMeta):
             simulations: Simulations extractor.
             neurons: Neurons extractor.
             windows: Windows extractor.
+            neuron_classes: NeuronClasses extractor.
             name: name of the report in the simulation configuration.
 
         Returns:
@@ -93,8 +102,12 @@ class ReportExtractor(BaseExtractor, metaclass=ABCMeta):
             assert simulation_id == key.simulation_id  # type: ignore[attr-defined]
             df_list = []
             for inner_key, df in neurons_df.etl.groupby_iter([CIRCUIT_ID, NEURON_CLASS]):
+                population = neuron_classes.df.etl.one(
+                    circuit_id=inner_key.circuit_id, neuron_class=inner_key.neuron_class
+                )[POPULATION]
                 result_df = cls._load_values(
                     simulation=simulation,
+                    population=population,
                     gids=df[GID],
                     windows_df=windows_df,
                     name=name,

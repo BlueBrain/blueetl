@@ -117,7 +117,8 @@ def test_migrate_config(tmp_path):
                         "L1_EXC_gids": {"layer": [1], "synapse_class": ["EXC"], "$gids": [1, 2]},
                     },
                     "limit": None,
-                    "target": None,
+                    "population": "default",
+                    "node_set": None,
                     "windows": {"w1": {"bounds": [20, 90], "window_type": "spontaneous"}},
                 },
                 "features": [

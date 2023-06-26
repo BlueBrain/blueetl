@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 from pathlib import Path
 
@@ -11,26 +12,36 @@ from blueetl.analysis import MultiAnalyzer
 from blueetl.constants import CIRCUIT, SIMULATION
 from blueetl.extract.feature import Feature
 from blueetl.features import ConcatenatedFeatures
-from tests.functional.utils import EXPECTED_PATH, TEST_DATA_PATH, assertion_error_message
+from tests.functional.utils import CONFIG_PATH, EXPECTED_PATH, assertion_error_message
 
 TESTING_LOG_LEVEL = os.getenv("TESTING_LOG_LEVEL", "DEBUG")
-TESTING_MATCH_FILES = os.getenv("TESTING_MATCH_FILES", "*")
+TESTING_MATCH_PATTERN = os.getenv("TESTING_MATCH_PATTERN", "")
+TESTING_SKIP_PATTERN = os.getenv("TESTING_SKIP_PATTERN", "")
 TESTING_FORCE_UPDATE = int(os.getenv("TESTING_FORCE_UPDATE", "0"))
+
+
+def _get_marks(path):
+    if TESTING_SKIP_PATTERN and re.match(TESTING_SKIP_PATTERN, path.name):
+        return pytest.mark.skip(reason="File skipped because matching TESTING_SKIP_PATTERN")
+    if TESTING_MATCH_PATTERN and not re.match(TESTING_MATCH_PATTERN, path.name):
+        return pytest.mark.skip(reason="File skipped because not matching TESTING_MATCH_PATTERN")
+    return ()
+
 
 # analysis_config_path, expected_path
 analysis_configs = [
-    (path, EXPECTED_PATH / path.stem.replace("analysis_config_", "analysis_"))
-    for path in sorted(TEST_DATA_PATH.glob("analysis_config_*.yaml"))
-    if path.match(TESTING_MATCH_FILES)
+    pytest.param(
+        path,
+        EXPECTED_PATH / path.stem.replace("analysis_config_", "analysis_"),
+        marks=_get_marks(path),
+    )
+    for path in sorted(CONFIG_PATH.glob("analysis_config_*.yaml"))
 ]
 
 
 def test_analysis_configs_is_valid():
     # ensure that there are config files to test
     assert len(analysis_configs) >= 1
-    for analysis_config_path, expected_path in analysis_configs:
-        assert analysis_config_path.is_file()
-        assert expected_path.is_dir()
 
 
 def _get_subattr(obj, attrs):

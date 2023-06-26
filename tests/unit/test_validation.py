@@ -25,6 +25,7 @@ def test_read_schema():
                 "spikes": {
                     "extraction": {
                         "report": {"type": "spikes"},
+                        "population": "default",
                         "neuron_classes": {},
                         "windows": {},
                     }

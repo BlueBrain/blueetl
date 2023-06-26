@@ -1,8 +1,9 @@
 """Spikes extractor."""
 import logging
+from typing import Optional
 
 import pandas as pd
-from bluepy import Simulation
+from bluepysnap import Simulation
 
 from blueetl.constants import CIRCUIT_ID, GID, NEURON_CLASS, SIMULATION_ID, TIME, TRIAL, WINDOW
 from blueetl.extract.report import ReportExtractor
@@ -27,12 +28,18 @@ class Spikes(ReportExtractor):
 
     @classmethod
     def _load_values(
-        cls, simulation: Simulation, gids, windows_df: pd.DataFrame, name: str
+        cls,
+        simulation: Simulation,
+        population: Optional[str],
+        gids,
+        windows_df: pd.DataFrame,
+        name: str,
     ) -> pd.DataFrame:
         """Filter and aggregate the spikes in bins according to the given windows.
 
         Args:
             simulation: simulation containing the SpikeReport of times and gids.
+            population: node population name.
             gids: array of gids to be selected.
             windows_df: windows dataframe with columns [window, trial, t_start, t_stop]
             name: name of the report in the simulation configuration, ignored.
@@ -40,8 +47,9 @@ class Spikes(ReportExtractor):
         Returns:
             pd.DataFrame: dataframe with columns [window, time, gid]
         """
-        df = simulation.spikes.get(gids).reset_index()
-        df = df.rename(columns={"t": TIME})
+        df = simulation.spikes[population].get(gids).reset_index()
+        # in snap the columns are named `times` and `ids`
+        df.columns.array[0:2] = [TIME, GID]
         df = pd.concat(cls._assign_window(df, rec) for rec in windows_df.itertuples())
         df = df.reset_index(drop=True)
         return df

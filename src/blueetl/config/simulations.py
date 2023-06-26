@@ -48,11 +48,11 @@ class SimulationsConfig:
     def _resolve_paths(self) -> None:
         def _to_absolute(path) -> str:
             full_path = resolve_path(path_prefix, path)
-            if full_path.name != "BlueConfig" and not full_path.is_file():
-                L.debug("Appending BlueConfig to %s", path)
-                full_path = full_path / "BlueConfig"
+            if full_path.is_dir():
+                L.debug("The path %s is a directory", path)
+                full_path = full_path / "simulation_config.json"
             if not full_path.exists():
-                L.warning("%s doesn't exist, proceeding anyway", path)
+                L.warning("%s doesn't exist, proceeding anyway", full_path)
             return str(full_path)
 
         path_prefix = self.attrs.get("path_prefix", "")

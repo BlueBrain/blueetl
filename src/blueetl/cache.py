@@ -300,7 +300,7 @@ class CacheManager:
 
         # check the extraction config for changed keys, and invalidate the affected names
         keys_and_affected_names = [
-            ({"neuron_classes", "limit", "target"}, {"neurons", "neuron_classes"}),
+            ({"neuron_classes"}, {"neurons", "neuron_classes"}),
             ({"windows", "trial_steps"}, {"trial_steps", "windows", "report"}),
             ({"report"}, {"report"}),
         ]

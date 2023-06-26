@@ -2,14 +2,14 @@ Migration
 =========
 
 
-From 0.1.x to 0.2.x
+From 0.2.x to 0.3.x
 -------------------
 
-BlueETL 0.2 introduces some breaking changes to support the analysis of multiple reports.
+BlueETL 0.3.x introduces some breaking changes to support the analysis of SONATA simulation campaigns.
 
-In this document it's described what should be done to adapt the existing configurations and user code.
+It relies on bluepysnap instead of bluepy to open simulations, circuits, and reports.
 
-Note that there aren't breaking changes in the core functionalities.
+In this section it's described what should be done to adapt the existing configurations and user code.
 
 
 Configuration
@@ -24,7 +24,47 @@ You can automatically migrate a configuration file executing in a virtualenv wit
 
     blueetl migrate-config INPUT_CONFIG_FILE OUTPUT_CONFIG_FILE
 
-However, you may need to manually copy any commented lines from the old configuration, or they will be lost.
+However, you may need to manually:
+
+- copy any commented lines from the old configuration, or they will be lost.
+- set the correct node population name in the ``extraction`` section, instead of the ``default`` placeholder.
+- verify the names of the node_sets, because they are copied from the existing target names.
+
+
+Manual migration
+................
+
+If you prefer to migrate the configuration manually instead, follow these steps:
+
+1. The specification ``version: 2`` should be replaced by ``version: 3`` at the top level of the file.
+2. The section ``analysis.spikes.extraction`` should contain the key ``population``, containing the name of the node population to be analyzed.
+3. Any ``target`` should be replaced with ``node_set``, and any ``$target`` with ``$node_set``.
+
+
+You can see an example of configuration in the new format here:
+
+- https://bbpgitlab.epfl.ch/nse/blueetl/-/blob/blueetl-v0.3.0.dev0/tests/functional/data/sonata/config/analysis_config_01.yaml
+
+
+From 0.1.x to 0.2.x
+-------------------
+
+BlueETL 0.2 introduces some breaking changes to support the analysis of multiple reports.
+
+In this section it's described what should be done to adapt the existing configurations and user code.
+
+Note that there aren't breaking changes in the core functionalities.
+
+
+Configuration
+~~~~~~~~~~~~~
+
+Automatic migration
+...................
+
+You can automatically migrate a configuration from 0.1.x or 0.2.x to 0.3.0 using the command line.
+
+See the section above for more details.
 
 
 Manual migration

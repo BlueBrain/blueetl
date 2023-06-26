@@ -11,8 +11,8 @@ def simulations_config():
     return SimulationsConfig(
         data=pd.DataFrame(
             [
-                {"ca": 1.1, "seed": 1, "simulation_path": "/path/to/1/BlueConfig"},
-                {"ca": 1.2, "seed": 1, "simulation_path": "/path/to/2/BlueConfig"},
+                {"ca": 1.1, "seed": 1, "simulation_path": "/path/to/1"},
+                {"ca": 1.2, "seed": 1, "simulation_path": "/path/to/2"},
             ]
         ),
         name="dummy_name",
@@ -30,8 +30,8 @@ def simulations_config_dict():
         "attrs": {"k1": "v1", "k2": "v2"},
         "conditions": ["ca", "seed"],
         "data": [
-            {"ca": 1.1, "seed": 1, "simulation_path": "/path/to/1/BlueConfig"},
-            {"ca": 1.2, "seed": 1, "simulation_path": "/path/to/2/BlueConfig"},
+            {"ca": 1.1, "seed": 1, "simulation_path": "/path/to/1"},
+            {"ca": 1.2, "seed": 1, "simulation_path": "/path/to/2"},
         ],
     }
 
@@ -41,8 +41,8 @@ def simulations_config_dataframe():
     """Return a DataFrame consistent with simulations_config."""
     df = pd.DataFrame(
         [
-            {"ca": 1.1, "seed": 1, "simulation_path": "/path/to/1/BlueConfig"},
-            {"ca": 1.2, "seed": 1, "simulation_path": "/path/to/2/BlueConfig"},
+            {"ca": 1.1, "seed": 1, "simulation_path": "/path/to/1"},
+            {"ca": 1.2, "seed": 1, "simulation_path": "/path/to/2"},
         ]
     )
     df.attrs = {"k1": "v1", "k2": "v2"}
@@ -54,8 +54,8 @@ def simulations_config_xarray():
     """Return a DataArray consistent with simulations_config."""
     return xr.DataArray(
         data=[
-            ["/path/to/1/BlueConfig"],
-            ["/path/to/2/BlueConfig"],
+            ["/path/to/1"],
+            ["/path/to/2"],
         ],
         coords={"ca": [1.1, 1.2], "seed": [1]},
         attrs={"k1": "v1", "k2": "v2"},

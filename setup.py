@@ -28,7 +28,7 @@ REQUIREMENTS = {
         "fastparquet>=0.8.3,!=2023.1.0",  # needed by pandas to read and write parquet files
         "orjson",  # faster json decoder used by fastparquet
         "xarray>=0.18.0",
-        "bluepy>=2.4",
+        "bluepysnap>=1.0.7",
         "pydantic>=1.10,<2",
         "jsonschema>=4.0",
         "click>=8",

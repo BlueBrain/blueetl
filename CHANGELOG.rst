@@ -1,6 +1,19 @@
 Changelog
 =========
 
+Version 0.3.0
+-------------
+
+New Features
+~~~~~~~~~~~~
+- Support SONATA simulation campaigns, circuits, and reports using bluepysnap.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+- Simulation campaigns, circuits, and reports using BlueConfig format aren't supported anymore.
+- The analysis configuration accepts population and node_set, instead of target.
+
+
 Version 0.2.3
 -------------
 

@@ -1,0 +1,35 @@
+---
+# simple configuration with neuron_classes defined as complex queries
+version: 3
+simulation_campaign: /gpfs/bbp.cscs.ch/project/proj12/NSE/blueetl/data/sim-campaign-sonata/a04addca-bda3-47d7-ad2d-c41187252a2b/config.json
+output: analysis_output
+analysis:
+  spikes:
+    extraction:
+      report:
+        type: spikes
+      neuron_classes:
+        Rt_EXC: {layer: [Rt], synapse_class: [EXC]} # usual dict
+        VPL_INH: {layer: [VPL], synapse_class: [INH]} # usual dict
+        Rt_EXC_: # same as Rt_EXC, but using $query
+          $query: {layer: [Rt], synapse_class: [EXC]}
+        Rt_EXC_VPL_INH: # union of Rt_EXC and VPL_INH
+          $query:
+          - {layer: [Rt], synapse_class: [EXC]}
+          - {layer: [VPL], synapse_class: [INH]}
+        Rt_EXC_VPL_INH_: # same as Rt_EXC_VPL_INH, with additional filter on $node_set and $limit
+          $query:
+          - {layer: [Rt], synapse_class: [EXC]}
+          - {layer: [VPL], synapse_class: [INH]}
+          $node_set: All
+          $limit: 100
+      limit: 1000
+      population: thalamus_neurons
+      node_set: null
+      windows:
+        w1: {bounds: [20, 90], window_type: spontaneous}
+    features:
+    - type: multi
+      groupby: [simulation_id, circuit_id, neuron_class, window]
+      function: blueetl.external.bnac.calculate_features.calculate_features_multi
+      params: {export_all_neurons: true}

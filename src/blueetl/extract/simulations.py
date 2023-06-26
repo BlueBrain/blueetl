@@ -5,9 +5,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 import pandas as pd
-from bluepy import Circuit, Simulation
-from bluepy.exceptions import BluePyError
-from bluepy.simulation import PathHelpers
+from bluepysnap import Circuit, Simulation
 
 from blueetl.config.simulations import SimulationsConfig
 from blueetl.constants import CIRCUIT, CIRCUIT_ID, SIMULATION, SIMULATION_ID, SIMULATION_PATH
@@ -26,22 +24,7 @@ def _get_circuit_hash(circuit_config: dict[str, Any]) -> str:
 
     Circuits are considered different in this context if any relevant key is different.
     """
-    # targets cannot be considered, since it may contain TargetFile defined in BlueConfig
-    circuit_config_keys = [
-        "cells",
-        "morphologies",
-        "morphology_type",
-        "emodels",
-        "mecombo_info",
-        "connectome",
-        # "targets",
-        "projections",
-        "projections_metadata",
-        "segment_index",
-        "synapse_index",
-        "atlas",
-    ]
-    return checksum_json({k: circuit_config.get(k) for k in circuit_config_keys})
+    return checksum_json(circuit_config)
 
 
 def _is_simulation_existing(simulation_path: StrOrPath) -> bool:
@@ -57,12 +40,8 @@ def _is_simulation_complete(simulation: Simulation) -> bool:
 
     Used to ignore a simulation before the simulation campaign is complete.
     """
-    try:
-        # check the existence of spikes without loading them, because it can be slow
-        PathHelpers.spike_report_path(simulation.config)
-        return True
-    except BluePyError:
-        return False
+    config = simulation.spikes.config
+    return Path(config.output_dir, config.spikes_file).exists()
 
 
 class SimulationStatus(Enum):

@@ -76,11 +76,16 @@ def migrate_config(input_config_file, output_config_file):
 
     def _process_extraction(extraction):
         """Convert the gid key to $gids, inplace."""
+        if "target" in extraction:
+            extraction["node_set"] = extraction.pop("target")
         for config in extraction["neuron_classes"].values():
             if "gid" in config:
                 if "$gids" in config:
                     raise RuntimeError("neuron_classes already contain '$gids'")
                 config["$gids"] = config.pop("gid")
+            if "$target" in config:
+                config["$node_set"] = config.pop("$target")
+        extraction["population"] = "default"
         return extraction
 
     input_config = load_yaml(input_config_file)

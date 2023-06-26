@@ -353,6 +353,7 @@ def run_from_file(
         setup_logging(loglevel=loglevel, force=True)
     if seed is not None:
         np.random.seed(seed)
+    L.info("MultiAnalyzer configuration: %s", analysis_config_file)
     ma = MultiAnalyzer.from_file(analysis_config_file, clear_cache=clear_cache)
     if extract:
         ma.extract_repo()

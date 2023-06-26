@@ -85,9 +85,7 @@ class NeuronsExtractor(BaseExtractor[Neurons]):
         """Instantiate an object from the configuration."""
         return Neurons.from_simulations(
             simulations=self._repo.simulations,
-            target=self._repo.extraction_config.target,
             neuron_classes=self._repo.extraction_config.neuron_classes,
-            limit=self._repo.extraction_config.limit,
         )
 
     def extract_cached(self, df: pd.DataFrame) -> Neurons:
@@ -105,10 +103,7 @@ class NeuronClassesExtractor(BaseExtractor[NeuronClasses]):
     def extract_new(self) -> NeuronClasses:
         """Instantiate an object from the configuration."""
         return NeuronClasses.from_neurons(
-            neurons=self._repo.neurons,
-            target=self._repo.extraction_config.target,
-            neuron_classes=self._repo.extraction_config.neuron_classes,
-            limit=self._repo.extraction_config.limit,
+            neurons=self._repo.neurons, neuron_classes=self._repo.extraction_config.neuron_classes
         )
 
     def extract_cached(self, df: pd.DataFrame) -> NeuronClasses:
@@ -128,8 +123,6 @@ class TrialStepsExtractor(BaseExtractor[TrialSteps]):
         return TrialSteps.from_simulations(
             simulations=self._repo.simulations,
             trial_steps_config=self._repo.extraction_config.trial_steps,
-            target=self._repo.extraction_config.target,
-            limit=self._repo.extraction_config.limit,
         )
 
     def extract_cached(self, df: pd.DataFrame) -> TrialSteps:
@@ -170,6 +163,7 @@ class SpikesExtractor(BaseExtractor[Spikes]):
             simulations=self._repo.simulations,
             neurons=self._repo.neurons,
             windows=self._repo.windows,
+            neuron_classes=self._repo.neuron_classes,
             name=self._repo.extraction_config.report.name,
         )
 
@@ -190,6 +184,7 @@ class SomaReportExtractor(BaseExtractor[SomaReport]):
             simulations=self._repo.simulations,
             neurons=self._repo.neurons,
             windows=self._repo.windows,
+            neuron_classes=self._repo.neuron_classes,
             name=self._repo.extraction_config.report.name,
         )
 
@@ -210,6 +205,7 @@ class CompartmentReportExtractor(BaseExtractor[CompartmentReport]):
             simulations=self._repo.simulations,
             neurons=self._repo.neurons,
             windows=self._repo.windows,
+            neuron_classes=self._repo.neuron_classes,
             name=self._repo.extraction_config.report.name,
         )
 

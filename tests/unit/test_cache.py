@@ -12,7 +12,7 @@ def _get_analysis_config(path):
     """Return an empty config dict."""
     return SingleAnalysisConfig(
         output=Path(path),
-        extraction={"report": {"type": "spikes"}},
+        extraction={"report": {"type": "spikes"}, "population": "root__neurons"},
         features=[],
     )
 
@@ -21,8 +21,8 @@ def _get_simulations_config():
     return SimulationsConfig(
         data=pd.DataFrame(
             [
-                {"ca": 1.1, "seed": 1, "simulation_path": "/path/to/1/BlueConfig"},
-                {"ca": 1.2, "seed": 1, "simulation_path": "/path/to/2/BlueConfig"},
+                {"ca": 1.1, "seed": 1, "simulation_path": "/path/to/1"},
+                {"ca": 1.2, "seed": 1, "simulation_path": "/path/to/2"},
             ]
         ),
         name="dummy_name",

@@ -1,8 +1,9 @@
 """Soma Potentials extractor."""
 import logging
+from typing import Optional
 
 import pandas as pd
-from bluepy import Section, Simulation
+from bluepysnap import Simulation
 
 from blueetl.constants import (
     CIRCUIT_ID,
@@ -26,15 +27,23 @@ class CompartmentReport(ReportExtractor):
 
     @classmethod
     def _load_values(
-        cls, simulation: Simulation, gids, windows_df: pd.DataFrame, name: str
+        cls,
+        simulation: Simulation,
+        population: Optional[str],
+        gids,
+        windows_df: pd.DataFrame,
+        name: str,
     ) -> pd.DataFrame:
-        """Return a DataFrame for the given simulation, gids, and windows."""
+        """Return a DataFrame for the given simulation, population, gids, and windows."""
         df_list = []
-        report = simulation.report(name)
+        report = simulation.reports[name][population]
         for rec in windows_df.itertuples():
             win = cls.calculate_window_slice(rec)
-            df = report.get(t_start=win.t_start, t_end=win.t_stop, t_step=win.t_step, gids=gids)
-            df = df.unstack().reset_index().rename(columns={Section.ID: SECTION, 0: VALUE})
+            df = report.get(group=gids, t_start=win.t_start, t_stop=win.t_stop, t_step=win.t_step)
+            df.index.rename(TIME, inplace=True)
+            df.columns.rename([GID, SECTION], inplace=True)
+            df = df.unstack().reset_index()
+            df.rename(columns={0: VALUE}, inplace=True)
             df[WINDOW] = win.name
             df_list.append(df)
-        return pd.concat(df_list)
+        return df_list[0] if len(df_list) == 1 else pd.concat(df_list)

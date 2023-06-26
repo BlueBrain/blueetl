@@ -1,4 +1,4 @@
-from unittest.mock import Mock, PropertyMock
+from unittest.mock import MagicMock, Mock, PropertyMock
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,7 @@ from blueetl.utils import ensure_dtypes
 
 
 def _get_cells():
-    """Return a DataFrame as returned by circuit.cells.get()."""
+    """Return a DataFrame as returned by circuit.nodes[population].get()."""
     return pd.DataFrame(
         [
             {
@@ -46,7 +46,7 @@ def _get_cells():
                 "z": -2143.9,
             },
         ],
-        index=[100, 200, 300],
+        index=pd.Index([100, 200, 300], name="node_ids"),
     )
 
 
@@ -54,7 +54,8 @@ def test_neurons_from_simulations():
     # set the seed because the neurons may be chosen randomly
     np.random.seed(0)
     mock_circuit = Mock()
-    mock_circuit.cells.get.return_value = _get_cells()
+    mock_circuit = MagicMock()
+    mock_circuit.nodes.__getitem__.return_value.get.return_value = _get_cells()
     mock_simulations_df = PropertyMock(
         return_value=pd.DataFrame(
             [
@@ -66,13 +67,18 @@ def test_neurons_from_simulations():
     mock_simulations = Mock()
     type(mock_simulations).df = mock_simulations_df
     neuron_classes = {
-        "L1_INH": NeuronClassConfig(**{"layer": [1], "synapse_class": ["INH"]}),
-        "MY_GIDS": NeuronClassConfig(**{"$gids": [200, 300]}),
-        "EMPTY": NeuronClassConfig(**{"layer": [999]}),
-        "LIMITED": NeuronClassConfig(**{"synapse_class": ["INH"], "$limit": 1}),
+        "L1_INH": NeuronClassConfig(
+            **{"$population": "thalamus_neurons", "layer": [1], "synapse_class": ["INH"]}
+        ),
+        "MY_GIDS": NeuronClassConfig(**{"$population": "thalamus_neurons", "$gids": [200, 300]}),
+        "EMPTY": NeuronClassConfig(**{"$population": "thalamus_neurons", "layer": [999]}),
+        "LIMITED": NeuronClassConfig(
+            **{"$population": "thalamus_neurons", "synapse_class": ["INH"], "$limit": 1}
+        ),
     }
     result = Neurons.from_simulations(
-        simulations=mock_simulations, target="hex0", neuron_classes=neuron_classes, limit=None
+        simulations=mock_simulations,
+        neuron_classes=neuron_classes,
     )
     expected_df = pd.DataFrame(
         [
@@ -106,13 +112,13 @@ def test_neurons_from_simulations():
     expected_df = ensure_dtypes(expected_df)
     assert isinstance(result, Neurons)
     assert_frame_equal(result.df, expected_df)
-    assert mock_circuit.cells.get.call_count == 1
+    assert mock_circuit.nodes.__getitem__.return_value.get.call_count == 1
     assert mock_simulations_df.call_count == 1
 
 
 def test_neurons_from_simulations_without_neurons():
-    mock_circuit = Mock()
-    mock_circuit.cells.get.return_value = _get_cells()
+    mock_circuit = MagicMock()
+    mock_circuit.nodes.__getitem__.return_value.get.return_value = _get_cells()
     mock_simulations_df = PropertyMock(
         return_value=pd.DataFrame(
             [
@@ -124,14 +130,12 @@ def test_neurons_from_simulations_without_neurons():
     mock_simulations = Mock()
     type(mock_simulations).df = mock_simulations_df
     neuron_classes = {
-        "EMPTY": NeuronClassConfig(**{"layer": [999]}),
+        "EMPTY": NeuronClassConfig(**{"$population": "thalamus_neurons", "layer": [999]}),
     }
 
     with pytest.raises(RuntimeError, match="No data extracted to Neurons"):
-        Neurons.from_simulations(
-            simulations=mock_simulations, target="hex0", neuron_classes=neuron_classes, limit=None
-        )
-    assert mock_circuit.cells.get.call_count == 1
+        Neurons.from_simulations(simulations=mock_simulations, neuron_classes=neuron_classes)
+    assert mock_circuit.nodes.__getitem__.return_value.get.call_count == 1
     assert mock_simulations_df.call_count == 1
 
 

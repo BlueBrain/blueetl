@@ -75,13 +75,17 @@ class TrialStepsConfig(BaseModel):
     function: str
     initial_offset: float = 0.0
     bounds: tuple[float, float]
+    population: str
+    node_set: Optional[str] = None
+    limit: Optional[int] = None
 
 
 class NeuronClassConfig(BaseModel):
     """NeuronClassConfig Model."""
 
     query: Union[dict[str, Any], list[dict[str, Any]]] = Field(..., alias="$query")
-    target: Optional[str] = Field(None, alias="$target")
+    population: str = Field(..., alias="$population")
+    node_set: Optional[str] = Field(None, alias="$node_set")
     limit: Optional[int] = Field(None, alias="$limit")
     gids: Optional[list[int]] = Field(None, alias="$gids")
 
@@ -104,10 +108,20 @@ class ExtractionConfig(BaseModel):
 
     report: ReportConfig
     neuron_classes: dict[str, NeuronClassConfig] = {}
-    limit: Optional[int] = None
-    target: Optional[str] = None
     windows: dict[str, Union[str, WindowConfig]] = {}
     trial_steps: dict[str, TrialStepsConfig] = {}
+
+    @root_validator(pre=True)
+    def propagate_global_values(cls, values):
+        """Propagate global values to neuron_classes and trial_steps."""
+        for key in ["population", "node_set", "limit"]:
+            if key in values:
+                value = values.pop(key)
+                for inner in values.get("neuron_classes", {}).values():
+                    inner.setdefault(f"${key}", value)
+                for inner in values.get("trial_steps", {}).values():
+                    inner.setdefault(key, value)
+        return values
 
 
 class FeaturesConfig(BaseModel):

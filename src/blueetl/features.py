@@ -12,7 +12,7 @@ import pandas as pd
 from blueetl.cache import CacheManager
 from blueetl.config.analysis_model import FeaturesConfig
 from blueetl.constants import SIMULATION_ID
-from blueetl.core.utils import safe_concat
+from blueetl.core.utils import smart_concat
 from blueetl.extract.feature import Feature
 from blueetl.parallel import merge_filter
 from blueetl.repository import Repository
@@ -87,7 +87,7 @@ class ConcatenatedFeatures:
         # add params_id as a column
         params_df = params_df.reset_index()
         # concatenate all the features together
-        return safe_concat(
+        return smart_concat(
             self._augment_dataframe(self._partial_df(name), params)
             for name, (_, params) in zip(self._configs, params_df.etl.iterdict())
         )
@@ -475,10 +475,10 @@ def calculate_features(
                         feature_group,
                     )
                     partial_result[feature_group].append(tmp_df)
-        # finally, build the dicts of DataFrames in a single pd.concat operation
+        # finally, build the dicts of DataFrames in a single concat operation
         return [
             {
-                feature_group: ensure_dtypes(pd.concat(df_list))
+                feature_group: ensure_dtypes(smart_concat(df_list))
                 for feature_group, df_list in dct.items()
             }
             for dct in tmp_result

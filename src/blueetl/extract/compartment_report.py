@@ -15,6 +15,7 @@ from blueetl.constants import (
     VALUE,
     WINDOW,
 )
+from blueetl.core.utils import smart_concat
 from blueetl.extract.report import ReportExtractor
 
 L = logging.getLogger(__name__)
@@ -46,4 +47,4 @@ class CompartmentReport(ReportExtractor):
             df.rename(columns={0: VALUE}, inplace=True)
             df[WINDOW] = win.name
             df_list.append(df)
-        return df_list[0] if len(df_list) == 1 else pd.concat(df_list)
+        return smart_concat(df_list)

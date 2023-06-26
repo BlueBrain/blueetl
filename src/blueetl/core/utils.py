@@ -1,6 +1,6 @@
 """Core utilities."""
 import operator
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from copy import deepcopy
 from dataclasses import dataclass
 from itertools import chain
@@ -201,22 +201,63 @@ def is_subfilter(left: dict, right: dict) -> bool:
     return True
 
 
-def safe_concat(iterable, *args, **kwargs):
+def smart_concat(iterable, *, keys=None, copy=False, **kwargs):
     """Build and return a Series or a Dataframe from an iterable of objects with the same index.
 
+    This is similar to ``pd.concat``, but the result is consistent when the levels of the indexes
+    are ordered differently, while ``pd.concat`` would blindly concatenate the indexes, ignoring
+    and removing the names of the levels.
+
+    Moreover, it uses ``copy=False`` by default, that's safe only if the original data isn't going
+    to change, but it's more efficient, especially when concatenating a single item.
+
     Args:
-        iterable: iterable of Series or DataFrames.
+        iterable: iterable or mapping of Series or DataFrames.
             All the objects must be of the same type, and they must have the same index,
             or an exception is raised.
-        args: positional arguments to be passed to pd.concat
-        kwargs: key arguments to be passed to pd.concat
+        keys: passed to pd.concat. If multiple levels passed, should contain tuples. Construct
+            hierarchical index using the passed keys as the outermost level.
+        copy: passed to pd.concat. If the original data can be used without making a copy, then
+            it can be set to False.
+        kwargs: other keyword arguments to be passed to pd.concat
 
     Returns:
-        (pd.Series, pd.DataFrame) result of the concatenation, same type of the input elements.
+        (pd.Series|pd.DataFrame) result of the concatenation, same type of the input elements.
+
+    Examples:
+        >>> idx1 = pd.MultiIndex.from_tuples([(10, 11), (20, 21)], names=["i1", "i2"])
+        >>> idx2 = pd.MultiIndex.from_tuples([(11, 10), (31, 30)], names=["i2", "i1"])
+        >>> df1 = pd.DataFrame({"A": [1, 2], "B": [3, 4]}, index=idx1)
+        >>> df2 = pd.DataFrame({"A": [5, 6], "B": [7, 8]}, index=idx2)
+        >>> pd.concat([df1, df2])  # index levels are lost
+               A  B
+        10 11  1  3
+        20 21  2  4
+        11 10  5  7
+        31 30  6  8
+        >>> smart_concat([df1, df2])  # index levels are preserved
+               A  B
+        i1 i2
+        10 11  1  3
+        20 21  2  4
+        10 11  5  7
+        30 31  6  8
+        >>> pd.concat([df1, df2], axis=1)  # index levels are lost
+                 A    B    A    B
+        10 11  1.0  3.0  NaN  NaN
+        20 21  2.0  4.0  NaN  NaN
+        11 10  NaN  NaN  5.0  7.0
+        31 30  NaN  NaN  6.0  8.0
+        >>> smart_concat([df1, df2], axis=1)  # index levels are preserved
+                 A    B    A    B
+        i1 i2
+        10 11  1.0  3.0  5.0  7.0
+        20 21  2.0  4.0  NaN  NaN
+        30 31  NaN  NaN  6.0  8.0
     """
 
     def _reorder_levels(obj, order):
-        # wrap reorder_levels to ensure that some c
+        # wrap reorder_levels to raise an explicit error when needed
         if len(order) != obj.index.nlevels:
             # reorder_levels would raise an AssertionError
             raise RuntimeError(
@@ -235,7 +276,11 @@ def safe_concat(iterable, *args, **kwargs):
         return obj if order == obj.index.names else _reorder_levels(obj, order)
 
     order = None
-    return pd.concat((_ordered(obj) for obj in iterable), *args, **kwargs)
+    if isinstance(iterable, Mapping):
+        mapping = iterable
+        keys = keys if keys is not None else mapping.keys()
+        iterable = (mapping[key] for key in keys)
+    return pd.concat((_ordered(obj) for obj in iterable), keys=keys, copy=copy, **kwargs)
 
 
 def concat_tuples(iterable, *args, **kwargs):
@@ -262,7 +307,7 @@ def concat_tuples(iterable, *args, **kwargs):
         return pd.MultiIndex.from_arrays(arrays, names=names)
 
     iterable = (pd.Series([data], index=_index(conditions)) for data, conditions in iterable)
-    return safe_concat(iterable, *args, **kwargs)
+    return smart_concat(iterable, *args, **kwargs)
 
 
 def longest_match_count(iter1, iter2) -> int:

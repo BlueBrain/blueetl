@@ -141,7 +141,7 @@ def test_is_subfilter(left, right, expected):
     assert result == expected
 
 
-def test_safe_concat_series(series1):
+def test_smart_concat_series(series1):
     obj1 = series1.copy() + 1
     obj2 = series1.copy() + 2
     iterable = [obj1, obj2]
@@ -153,16 +153,40 @@ def test_safe_concat_series(series1):
         name="values",
     )
 
-    result = test_module.safe_concat(iterable)
+    result = test_module.smart_concat(iterable)
+    assert_series_equal(result, expected)
+
+    expected = pd.Series(
+        [1, 2, 3, 4, 2, 3, 4, 5],
+        index=pd.MultiIndex.from_tuples(
+            [
+                ("e", "a", "c"),
+                ("e", "a", "d"),
+                ("e", "b", "c"),
+                ("e", "b", "d"),
+                ("f", "a", "c"),
+                ("f", "a", "d"),
+                ("f", "b", "c"),
+                ("f", "b", "d"),
+            ],
+            names=["i2", "i0", "i1"],
+        ),
+        name="values",
+    )
+    result = test_module.smart_concat(iterable, keys=["e", "f"], names=["i2"])
+    assert_series_equal(result, expected)
+
+    result = test_module.smart_concat({"e": obj1, "f": obj2}, names=["i2"])
     assert_series_equal(result, expected)
 
 
-def test_safe_concat_series_having_indexes_with_different_level_order(series1):
+def test_smart_concat_series_having_indexes_with_different_level_order(series1):
     # test that the result is consistent when the levels of the indexes are ordered differently.
     # plain pd.concat would blindly concatenate the indexes, ignoring the names of the levels.
     obj1 = series1.copy() + 1
     obj2 = series1.copy().reorder_levels(["i1", "i0"]) + 2
     iterable = [obj1, obj2]
+
     expected = pd.Series(
         [1, 2, 3, 4, 2, 3, 4, 5],
         index=pd.MultiIndex.from_tuples(
@@ -170,11 +194,34 @@ def test_safe_concat_series_having_indexes_with_different_level_order(series1):
         ),
         name="values",
     )
-    result = test_module.safe_concat(iterable)
+    result = test_module.smart_concat(iterable)
+    assert_series_equal(result, expected)
+
+    expected = pd.Series(
+        [1, 2, 3, 4, 2, 3, 4, 5],
+        index=pd.MultiIndex.from_tuples(
+            [
+                ("e", "a", "c"),
+                ("e", "a", "d"),
+                ("e", "b", "c"),
+                ("e", "b", "d"),
+                ("f", "a", "c"),
+                ("f", "a", "d"),
+                ("f", "b", "c"),
+                ("f", "b", "d"),
+            ],
+            names=["i2", "i0", "i1"],
+        ),
+        name="values",
+    )
+    result = test_module.smart_concat(iterable, keys=["e", "f"], names=["i2"])
+    assert_series_equal(result, expected)
+
+    result = test_module.smart_concat({"e": obj1, "f": obj2}, names=["i2"])
     assert_series_equal(result, expected)
 
 
-def test_safe_concat_series_having_indexes_with_different_level_name(series1):
+def test_smart_concat_series_having_indexes_with_different_level_name(series1):
     # test that an exception is raised when the levels of the indexes are different.
     # plain pd.concat would blindly concatenate the indexes, ignoring the names of the levels.
     obj1 = series1.copy() + 1
@@ -182,10 +229,12 @@ def test_safe_concat_series_having_indexes_with_different_level_name(series1):
     obj2.index.set_names({"i0": "x0"}, inplace=True)
     iterable = [obj1, obj2]
     with pytest.raises(RuntimeError, match="Levels not found: i0"):
-        test_module.safe_concat(iterable)
+        test_module.smart_concat(iterable)
+    with pytest.raises(RuntimeError, match="Levels not found: i0"):
+        test_module.smart_concat({"e": obj1, "f": obj2})
 
 
-def test_safe_concat_series_having_indexes_with_different_number_of_levels(series1):
+def test_smart_concat_series_having_indexes_with_different_number_of_levels(series1):
     # test that an exception is raised when the levels of the indexes are different.
     # plain pd.concat would blindly concatenate the indexes, ignoring the names of the levels.
     obj1 = series1.copy() + 1
@@ -196,10 +245,12 @@ def test_safe_concat_series_having_indexes_with_different_number_of_levels(serie
     iterable = [obj1, obj2]
     match = re.escape("Length of order must be same as number of levels (3), got 2")
     with pytest.raises(RuntimeError, match=match):
-        test_module.safe_concat(iterable)
+        test_module.smart_concat(iterable)
+    with pytest.raises(RuntimeError, match=match):
+        test_module.smart_concat({"e": obj1, "f": obj2})
 
 
-def test_safe_concat_dataframes(dataframe1):
+def test_smart_concat_dataframes(dataframe1):
     obj1 = dataframe1.copy() + 1
     obj2 = dataframe1.copy() + 2
     iterable = [obj1, obj2]
@@ -209,11 +260,33 @@ def test_safe_concat_dataframes(dataframe1):
             [("a", "c"), ("a", "d"), ("b", "c"), ("b", "d")] * 2, names=["i0", "i1"]
         ),
     )
-    result = test_module.safe_concat(iterable)
+    result = test_module.smart_concat(iterable)
+    assert_frame_equal(result, expected)
+
+    expected = pd.DataFrame(
+        {"v0": [1, 2, 3, 4, 2, 3, 4, 5], "v1": [5, 6, 7, 8, 6, 7, 8, 9]},
+        index=pd.MultiIndex.from_tuples(
+            [
+                ("e", "a", "c"),
+                ("e", "a", "d"),
+                ("e", "b", "c"),
+                ("e", "b", "d"),
+                ("f", "a", "c"),
+                ("f", "a", "d"),
+                ("f", "b", "c"),
+                ("f", "b", "d"),
+            ],
+            names=["i2", "i0", "i1"],
+        ),
+    )
+    result = test_module.smart_concat(iterable, keys=["e", "f"], names=["i2"])
+    assert_frame_equal(result, expected)
+
+    result = test_module.smart_concat({"e": obj1, "f": obj2}, names=["i2"])
     assert_frame_equal(result, expected)
 
 
-def test_safe_concat_dataframes_having_indexes_with_different_level_order(dataframe1):
+def test_smart_concat_dataframes_having_indexes_with_different_level_order(dataframe1):
     # test that the result is consistent when the levels of the indexes are ordered differently.
     # plain pd.concat would blindly concatenate the indexes, ignoring the names of the levels.
     obj1 = dataframe1.copy() + 1
@@ -225,11 +298,33 @@ def test_safe_concat_dataframes_having_indexes_with_different_level_order(datafr
             [("a", "c"), ("a", "d"), ("b", "c"), ("b", "d")] * 2, names=["i0", "i1"]
         ),
     )
-    result = test_module.safe_concat(iterable)
+    result = test_module.smart_concat(iterable)
+    assert_frame_equal(result, expected)
+
+    expected = pd.DataFrame(
+        {"v0": [1, 2, 3, 4, 2, 3, 4, 5], "v1": [5, 6, 7, 8, 6, 7, 8, 9]},
+        index=pd.MultiIndex.from_tuples(
+            [
+                ("e", "a", "c"),
+                ("e", "a", "d"),
+                ("e", "b", "c"),
+                ("e", "b", "d"),
+                ("f", "a", "c"),
+                ("f", "a", "d"),
+                ("f", "b", "c"),
+                ("f", "b", "d"),
+            ],
+            names=["i2", "i0", "i1"],
+        ),
+    )
+    result = test_module.smart_concat(iterable, keys=["e", "f"], names=["i2"])
+    assert_frame_equal(result, expected)
+
+    result = test_module.smart_concat({"e": obj1, "f": obj2}, names=["i2"])
     assert_frame_equal(result, expected)
 
 
-def test_safe_concat_dataframes_having_indexes_with_different_level_name(dataframe1):
+def test_smart_concat_dataframes_having_indexes_with_different_level_name(dataframe1):
     # test that an exception is raised when the levels of the indexes are different.
     # plain pd.concat would blindly concatenate the indexes, ignoring the names of the levels.
     obj1 = dataframe1.copy() + 1
@@ -237,10 +332,12 @@ def test_safe_concat_dataframes_having_indexes_with_different_level_name(datafra
     obj2.index.set_names({"i0": "x0"}, inplace=True)
     iterable = [obj1, obj2]
     with pytest.raises(RuntimeError, match="Levels not found: i0"):
-        test_module.safe_concat(iterable)
+        test_module.smart_concat(iterable)
+    with pytest.raises(RuntimeError, match="Levels not found: i0"):
+        test_module.smart_concat({"e": obj1, "f": obj2})
 
 
-def test_safe_concat_dataframes_having_indexes_with_different_number_of_levels(dataframe1):
+def test_smart_concat_dataframes_having_indexes_with_different_number_of_levels(dataframe1):
     # test that an exception is raised when the levels of the indexes are different.
     # plain pd.concat would blindly concatenate the indexes, ignoring the names of the levels.
     obj1 = dataframe1.copy() + 1
@@ -250,7 +347,9 @@ def test_safe_concat_dataframes_having_indexes_with_different_number_of_levels(d
     iterable = [obj1, obj2]
     match = re.escape("Length of order must be same as number of levels (3), got 2")
     with pytest.raises(RuntimeError, match=match):
-        test_module.safe_concat(iterable)
+        test_module.smart_concat(iterable)
+    with pytest.raises(RuntimeError, match=match):
+        test_module.smart_concat({"e": obj1, "f": obj2})
 
 
 @pytest.mark.parametrize(

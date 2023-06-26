@@ -11,7 +11,7 @@ from pandas.core.groupby import DataFrameGroupBy, SeriesGroupBy
 
 from blueetl.core import L
 from blueetl.core.parallel import Task, run_parallel
-from blueetl.core.utils import query_frame, query_series
+from blueetl.core.utils import query_frame, query_series, smart_concat
 from blueetl.utils import ensure_list
 
 # Naming conventions
@@ -122,8 +122,7 @@ class ETLBaseAccessor(ABC, Generic[PandasT, PandasGroupByT]):
         values = ensure_list(values)
         if len(conditions) != len(values):
             raise ValueError("Conditions and values must have the same length")
-        # when concatenating a single item, copy=False is more efficient
-        result = pd.concat([self._obj], axis=0, keys=[tuple(values)], names=conditions, copy=False)
+        result = smart_concat([self._obj], keys=[tuple(values)], names=conditions)
         if dtypes:
             dtypes = ensure_list(dtypes)
             if len(conditions) != len(dtypes):
@@ -416,7 +415,7 @@ class ETLDataFrameAccessor(ETLBaseAccessor[pd.DataFrame, DataFrameGroupBy]):
             jobs=jobs,
             backend=backend,
         )
-        return pd.concat(results)
+        return smart_concat(results)
 
 
 class ETLIndexAccessor:

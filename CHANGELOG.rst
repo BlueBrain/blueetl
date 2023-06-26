@@ -12,6 +12,12 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 - Simulation campaigns, circuits, and reports using BlueConfig format aren't supported anymore.
 - The analysis configuration accepts population and node_set, instead of target.
+- Rename the function ``blueetl.core.utils.safe_concat`` to ``smart_concat``.
+
+Improvements
+~~~~~~~~~~~~
+- The function ``blueetl.core.utils.smart_concat`` uses ``copy=False`` by default, and accepts dictionaries as ``pd.concat`` does.
+- All the internal calls to ``pd.concat`` are redirected to ``smart_concat``.
 
 
 Version 0.2.3

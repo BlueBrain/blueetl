@@ -6,6 +6,7 @@ import pandas as pd
 from scipy.ndimage import gaussian_filter
 
 from blueetl.constants import BIN, COUNT, GID, NEURON_CLASS_INDEX, TIME, TIMES, TRIAL
+from blueetl.core.utils import smart_concat
 
 L = logging.getLogger(__name__)
 FIRST = "first"
@@ -98,7 +99,7 @@ def calculate_features_multi(repo, key, df, params):
     histogram_features = _get_histogram_features(repo, key, df, params)
 
     # df with (gid) as index, and features as columns
-    by_gid = pd.concat(
+    by_gid = smart_concat(
         [
             spiking_stats["first_spike_time_means_cort_zeroed"],
             spiking_stats["mean_spike_counts"],
@@ -112,7 +113,7 @@ def calculate_features_multi(repo, key, df, params):
         by_gid = by_gid.dropna(how="all")
 
     # df with (trial, gid) as index, and features as columns
-    by_gid_and_trial = pd.concat(
+    by_gid_and_trial = smart_concat(
         [
             spiking_stats["spikes_by_trial"],
         ],

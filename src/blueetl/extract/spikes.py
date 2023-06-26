@@ -6,6 +6,7 @@ import pandas as pd
 from bluepysnap import Simulation
 
 from blueetl.constants import CIRCUIT_ID, GID, NEURON_CLASS, SIMULATION_ID, TIME, TRIAL, WINDOW
+from blueetl.core.utils import smart_concat
 from blueetl.extract.report import ReportExtractor
 
 L = logging.getLogger(__name__)
@@ -50,6 +51,6 @@ class Spikes(ReportExtractor):
         df = simulation.spikes[population].get(gids).reset_index()
         # in snap the columns are named `times` and `ids`
         df.columns.array[0:2] = [TIME, GID]
-        df = pd.concat(cls._assign_window(df, rec) for rec in windows_df.itertuples())
+        df = smart_concat(cls._assign_window(df, rec) for rec in windows_df.itertuples())
         df = df.reset_index(drop=True)
         return df

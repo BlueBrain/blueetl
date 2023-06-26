@@ -8,6 +8,7 @@ import pandas as pd
 from bluepysnap import Simulation
 
 from blueetl.constants import CIRCUIT_ID, GID, NEURON_CLASS, POPULATION, SIMULATION, SIMULATION_ID
+from blueetl.core.utils import smart_concat
 from blueetl.extract.base import BaseExtractor
 from blueetl.extract.neuron_classes import NeuronClasses
 from blueetl.extract.neurons import Neurons
@@ -114,7 +115,7 @@ class ReportExtractor(BaseExtractor, metaclass=ABCMeta):
                 )
                 result_df[[SIMULATION_ID, *inner_key._fields]] = [simulation_id, *inner_key]
                 df_list.append(result_df)
-            return pd.concat(df_list, ignore_index=True, copy=False)
+            return smart_concat(df_list, ignore_index=True)
 
         all_df = merge_filter(
             df_list=[simulations.df, neurons.df, windows.df],
@@ -122,5 +123,5 @@ class ReportExtractor(BaseExtractor, metaclass=ABCMeta):
             func=_func,
             parallel=True,
         )
-        df = pd.concat(all_df, ignore_index=True, copy=False)
+        df = smart_concat(all_df, ignore_index=True)
         return cls(df, cached=False, filtered=False)

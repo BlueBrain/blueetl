@@ -19,7 +19,7 @@ REQUIREMENTS = {
         "numpy>=1.19.4",
         "pandas>=1.3.0",
         "pyyaml>=5.4.1",
-        "joblib>=1.1.0",
+        "joblib>=1.3.1",
         "packaging>=21.3",
     ],
     "extra": [

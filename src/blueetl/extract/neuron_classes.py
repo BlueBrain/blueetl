@@ -63,7 +63,7 @@ class NeuronClasses(BaseExtractor):
                     LIMIT: config.limit,
                     POPULATION: config.population,
                     NODE_SET: config.node_set,
-                    GIDS: json.dumps(config.gids) if config.gids else None,
+                    GIDS: json.dumps(config.node_id) if config.node_id else None,
                     QUERY: json.dumps(config.query),
                 }
             )

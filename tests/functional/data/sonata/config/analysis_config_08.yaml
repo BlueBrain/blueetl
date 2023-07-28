@@ -9,10 +9,10 @@ analysis:
       report:
         type: spikes
       neuron_classes:
-        Rt_EXC: {layer: [Rt], synapse_class: [EXC]}
-        VPL_EXC: {layer: [VPL], synapse_class: [EXC]}
-        Rt_INH: {layer: [Rt], synapse_class: [INH]}
-        VPL_INH: {layer: [VPL], synapse_class: [INH]}
+        Rt_EXC: {query: {layer: [Rt], synapse_class: [EXC]}}
+        VPL_EXC: {query: {layer: [VPL], synapse_class: [EXC]}}
+        Rt_INH: {query: {layer: [Rt], synapse_class: [INH]}}
+        VPL_INH: {query: {layer: [VPL], synapse_class: [INH]}}
       limit: 1000
       population: thalamus_neurons
       node_set: null
@@ -43,10 +43,10 @@ analysis:
         type: soma
         name: soma_report
       neuron_classes:
-        Rt_EXC: {layer: [Rt], synapse_class: [EXC]}
-        VPL_EXC: {layer: [VPL], synapse_class: [EXC]}
-        Rt_INH: {layer: [Rt], synapse_class: [INH]}
-        VPL_INH: {layer: [VPL], synapse_class: [INH]}
+        Rt_EXC: {query: {layer: [Rt], synapse_class: [EXC]}}
+        VPL_EXC: {query: {layer: [VPL], synapse_class: [EXC]}}
+        Rt_INH: {query: {layer: [Rt], synapse_class: [INH]}}
+        VPL_INH: {query: {layer: [VPL], synapse_class: [INH]}}
       limit: 1000
       population: thalamus_neurons
       node_set: null

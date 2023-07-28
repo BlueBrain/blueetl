@@ -29,10 +29,16 @@ def test_neuron_classes_from_neurons():
         mock_neurons,
         neuron_classes={
             "L23_EXC": NeuronClassConfig(
-                **{"$population": "thalamus_neurons", "layer": [2, 3], "synapse_class": ["EXC"]}
+                **{
+                    "population": "thalamus_neurons",
+                    "query": {"layer": [2, 3], "synapse_class": ["EXC"]},
+                }
             ),
             "L4_INH": NeuronClassConfig(
-                **{"$population": "thalamus_neurons", "layer": [4], "synapse_class": ["INH"]}
+                **{
+                    "population": "thalamus_neurons",
+                    "query": {"layer": [4], "synapse_class": ["INH"]},
+                }
             ),
         },
     )
@@ -73,7 +79,9 @@ def test_neuron_classes_from_neurons_without_neurons():
         NeuronClasses.from_neurons(
             mock_neurons,
             neuron_classes={
-                "aclass": NeuronClassConfig(**{"$population": "thalamus_neurons", "region": "any"})
+                "aclass": NeuronClassConfig(
+                    **{"population": "thalamus_neurons", "query": {"region": "any"}}
+                )
             },
         )
     assert mock_neurons.count_by_neuron_class.call_count == 1

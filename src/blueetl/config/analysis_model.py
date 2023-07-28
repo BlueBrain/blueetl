@@ -83,24 +83,11 @@ class TrialStepsConfig(BaseModel):
 class NeuronClassConfig(BaseModel):
     """NeuronClassConfig Model."""
 
-    query: Union[dict[str, Any], list[dict[str, Any]]] = Field(..., alias="$query")
-    population: str = Field(..., alias="$population")
-    node_set: Optional[str] = Field(None, alias="$node_set")
-    limit: Optional[int] = Field(None, alias="$limit")
-    gids: Optional[list[int]] = Field(None, alias="$gids")
-
-    @root_validator(pre=True)
-    def assign_query(cls, values):
-        """Move to $query all the query parameters, if needed."""
-        if "$query" in values:
-            return values
-        new_values = {"$query": {}}
-        for key, val in values.items():
-            if key.startswith("$"):
-                new_values[key] = val
-            else:
-                new_values["$query"][key] = val
-        return new_values
+    query: Union[dict[str, Any], list[dict[str, Any]]] = {}
+    population: str
+    node_set: Optional[str] = None
+    limit: Optional[int] = None
+    node_id: Optional[list[int]] = None
 
 
 class ExtractionConfig(BaseModel):
@@ -113,14 +100,14 @@ class ExtractionConfig(BaseModel):
 
     @root_validator(pre=True)
     def propagate_global_values(cls, values):
-        """Propagate global values to neuron_classes and trial_steps."""
+        """Propagate global values to each dictionary in neuron_classes and trial_steps."""
         for key in ["population", "node_set", "limit"]:
             if key in values:
                 value = values.pop(key)
-                for inner in values.get("neuron_classes", {}).values():
-                    inner.setdefault(f"${key}", value)
-                for inner in values.get("trial_steps", {}).values():
-                    inner.setdefault(key, value)
+                for inner_key in ["neuron_classes", "trial_steps"]:
+                    if inner_key in values:
+                        for inner in values[inner_key].values():
+                            inner.setdefault(key, value)
         return values
 
 

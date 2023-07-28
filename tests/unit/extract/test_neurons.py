@@ -68,12 +68,12 @@ def test_neurons_from_simulations():
     type(mock_simulations).df = mock_simulations_df
     neuron_classes = {
         "L1_INH": NeuronClassConfig(
-            **{"$population": "thalamus_neurons", "layer": [1], "synapse_class": ["INH"]}
+            **{"population": "thalamus_neurons", "query": {"layer": [1], "synapse_class": ["INH"]}}
         ),
-        "MY_GIDS": NeuronClassConfig(**{"$population": "thalamus_neurons", "$gids": [200, 300]}),
-        "EMPTY": NeuronClassConfig(**{"$population": "thalamus_neurons", "layer": [999]}),
+        "MY_GIDS": NeuronClassConfig(**{"population": "thalamus_neurons", "node_id": [200, 300]}),
+        "EMPTY": NeuronClassConfig(**{"population": "thalamus_neurons", "query": {"layer": [999]}}),
         "LIMITED": NeuronClassConfig(
-            **{"$population": "thalamus_neurons", "synapse_class": ["INH"], "$limit": 1}
+            **{"population": "thalamus_neurons", "query": {"synapse_class": ["INH"]}, "limit": 1}
         ),
     }
     result = Neurons.from_simulations(
@@ -130,7 +130,7 @@ def test_neurons_from_simulations_without_neurons():
     mock_simulations = Mock()
     type(mock_simulations).df = mock_simulations_df
     neuron_classes = {
-        "EMPTY": NeuronClassConfig(**{"$population": "thalamus_neurons", "layer": [999]}),
+        "EMPTY": NeuronClassConfig(**{"population": "thalamus_neurons", "query": {"layer": [999]}}),
     }
 
     with pytest.raises(RuntimeError, match="No data extracted to Neurons"):

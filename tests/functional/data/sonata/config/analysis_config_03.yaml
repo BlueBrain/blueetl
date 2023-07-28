@@ -1,5 +1,5 @@
 ---
-# configuration where neuron classes are specified using specific $population and $node_set
+# configuration where neuron classes are specified using specific population and node_set
 version: 3
 simulation_campaign: /gpfs/bbp.cscs.ch/project/proj12/NSE/blueetl/data/sim-campaign-sonata/a04addca-bda3-47d7-ad2d-c41187252a2b/config.json
 output: analysis_output
@@ -9,10 +9,10 @@ analysis:
       report:
         type: spikes
       neuron_classes:
-        Rt_EXC: {layer: [Rt], "$population": thalamus_neurons, "$node_set": Excitatory}
-        VPL_EXC: {layer: [VPL], "$population": thalamus_neurons, "$node_set": Excitatory}
-        Rt_INH: {layer: [Rt], "$population": thalamus_neurons, "$node_set": Inhibitory}
-        VPL_INH: {layer: [VPL], "$population": thalamus_neurons, "$node_set": Inhibitory}
+        Rt_EXC: {query: {layer: [Rt]}, "population": thalamus_neurons, "node_set": Excitatory}
+        VPL_EXC: {query: {layer: [VPL]}, "population": thalamus_neurons, "node_set": Excitatory}
+        Rt_INH: {query: {layer: [Rt]}, "population": thalamus_neurons, "node_set": Inhibitory}
+        VPL_INH: {query: {layer: [VPL]}, "population": thalamus_neurons, "node_set": Inhibitory}
       limit: 1000
       population: null
       node_set: null

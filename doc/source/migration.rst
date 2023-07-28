@@ -18,7 +18,7 @@ Configuration
 Automatic migration
 ...................
 
-You can automatically migrate a configuration file executing in a virtualenv with blueetl installed:
+You can automatically migrate a configuration from 0.2.x to 0.3.x, executing in a virtualenv with blueetl installed:
 
 .. code-block::
 
@@ -37,8 +37,12 @@ Manual migration
 If you prefer to migrate the configuration manually instead, follow these steps:
 
 1. The specification ``version: 2`` should be replaced by ``version: 3`` at the top level of the file.
-2. The section ``analysis.spikes.extraction`` should contain the key ``population``, containing the name of the node population to be analyzed.
-3. Any ``target`` should be replaced with ``node_set``, and any ``$target`` with ``$node_set``.
+2. Any section ``analysis.<name>.extraction`` should contain the key ``population``, containing the name of the node population to be analyzed.
+3. In the ``neuron_classes definition``, the query parameters must be moved to a sub-dictionary under the key ``query``.
+4. Any key ``$query`` must be replaced with ``query``.
+5. Any key ``$target`` or ``target`` must be replaced with ``node_set``.
+6. Any key ``$limit`` must be replaced with ``limit``.
+7. Any key ``$gids`` must be replaced with ``node_id``.
 
 
 You can see an example of configuration in the new format here:
@@ -62,7 +66,7 @@ Configuration
 Automatic migration
 ...................
 
-You can automatically migrate a configuration from 0.1.x or 0.2.x to 0.3.0 using the command line.
+You can automatically migrate a configuration from 0.1.x to 0.3.x using the command line.
 
 See the section above for more details.
 

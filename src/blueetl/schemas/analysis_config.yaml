@@ -159,7 +159,7 @@ $defs:
           - $ref: '#/$defs/WindowConfig'
       trial_steps:
         title: Trial Steps
-        descrption: |
+        description: |
           Dictionary of trial steps referenced by the windows.
         default: "{}"
         type: object
@@ -193,8 +193,8 @@ $defs:
     description: NeuronClassConfig Model.
     type: object
     properties:
-      $query:
-        title: $query
+      query:
+        title: Query
         description: |
           Query dict, or list of query dicts, to be used to filter the neurons using ``etl.q``.
           If this property is not specified, any additional properties will be considered as keys of the query dict.
@@ -203,33 +203,34 @@ $defs:
         - type: array
           items:
             type: object
-      $population:
-        title: $population
+      population:
+        title: Population
         description: |
           Optional node population used to filter the neurons, specific to the current neuron class.
         type:
         - string
         - "null"
-      $node_set:
-        title: $node_set
+      node_set:
+        title: NodeSet
         description: Optional node_set, specific to the current neuron class.
         type:
         - string
         - "null"
-      $limit:
-        title: $limit
+      limit:
+        title: Limit
         description: Optional limit to the number of neurons, specific to the current neuron class.
         type:
         - integer
         - "null"
-      $gids:
-        title: $gids
+      node_id:
+        title: NodeId
         description: |
-          Optional list of numeric gids that will be used to filter the neurons.
+          Optional list of numeric node ids that will be used to filter the neurons.
           It should be avoided if possible, since the ids aren't granted to remain the same in different versions of the libraries.
         type: array
         items:
           type: integer
+    additionalProperties: false
   WindowConfig:
     title: WindowConfig
     description: WindowConfig Model.

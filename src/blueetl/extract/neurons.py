@@ -59,8 +59,8 @@ class Neurons(BaseExtractor):
         def _filter_gids_by_neuron_class(name: str, config: NeuronClassConfig) -> np.ndarray:
             cells = _load_cells(config.population, config.node_set)
             gids = cells.etl.q(config.query).index.to_numpy()
-            if config.gids:
-                gids = np.intersect1d(gids, config.gids)
+            if config.node_id:
+                gids = np.intersect1d(gids, config.node_id)
             neuron_count = len(gids)
             if config.limit and neuron_count > config.limit:
                 gids = np.random.choice(gids, size=config.limit, replace=False)
@@ -75,7 +75,7 @@ class Neurons(BaseExtractor):
                 config.node_set,
             )
             L.debug("Configured query: %s", config.query)
-            L.debug("Configured gids: %s", config.gids)
+            L.debug("Configured node_id: %s", config.node_id)
             return gids
 
         cells_cache: dict[tuple[str, Optional[str]], pd.DataFrame] = {}

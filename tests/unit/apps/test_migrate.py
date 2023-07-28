@@ -42,8 +42,11 @@ def test_migrate_config(tmp_path):
                 "extraction": {
                     "report": {"type": "spikes"},
                     "neuron_classes": {
-                        "L1_EXC": {"layer": [1], "synapse_class": ["EXC"]},
-                        "L1_EXC_gids": {"layer": [1], "synapse_class": ["EXC"], "$gids": [1, 2]},
+                        "L1_EXC": {"query": {"layer": [1], "synapse_class": ["EXC"]}},
+                        "L1_EXC_gids": {
+                            "query": {"layer": [1], "synapse_class": ["EXC"]},
+                            "node_id": [1, 2],
+                        },
                     },
                     "limit": None,
                     "population": "default",
@@ -67,8 +70,8 @@ def test_migrate_config(tmp_path):
     with runner.isolated_filesystem(temp_dir=tmp_path):
         dump_yaml(input_config_file, input_data)
         result = runner.invoke(test_module.migrate_config, [input_config_file, output_config_file])
-        assert result.output.strip() == expected_message
         assert result.exit_code == 0
+        assert result.output.strip() == expected_message
         output_data = load_yaml(output_config_file)
 
     assert output_data == expected_data

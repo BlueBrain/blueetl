@@ -339,7 +339,9 @@ class ETLDataFrameAccessor(ETLBaseAccessor[pd.DataFrame, DataFrameGroupBy]):
         # Don't supply a list with a single grouper to avoid this warning.
         # See also https://github.com/pandas-dev/pandas/issues/53500
         fix_pandas = len(groupby_columns) == 1 and (
-            Version(pd.__version__) < Version("2") or selected_columns
+            Version(pd.__version__) < Version("2")
+            or Version(pd.__version__) < Version("2.1")
+            and selected_columns
         )
         by = groupby_columns[0] if fix_pandas else groupby_columns
         grouped = self._obj.groupby(by, sort=sort, observed=observed)

@@ -1,0 +1,11 @@
+Run Default
+{
+    CircuitPath .
+    nrnPath /path/to/edges
+    MorphologyPath /path/to/morphologies
+    METypePath /path/to/hoc
+    MEComboInfoFile /path/to/mecombo_emodel.tsv
+    CellLibraryFile circuit.mvd3
+    BioName /path/to/bioname
+    Atlas /path/to/atlas
+}

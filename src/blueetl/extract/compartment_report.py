@@ -3,8 +3,8 @@ import logging
 from typing import Optional
 
 import pandas as pd
-from bluepysnap import Simulation
 
+from blueetl.adapters.simulation import SimulationAdapter as Simulation
 from blueetl.constants import (
     CIRCUIT_ID,
     GID,

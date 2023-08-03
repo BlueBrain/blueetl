@@ -1,5 +1,3 @@
-import os
-import re
 import shutil
 from pathlib import Path
 
@@ -12,36 +10,7 @@ from blueetl.analysis import MultiAnalyzer
 from blueetl.constants import CIRCUIT, SIMULATION
 from blueetl.extract.feature import Feature
 from blueetl.features import ConcatenatedFeatures
-from tests.functional.utils import CONFIG_PATH, EXPECTED_PATH, assertion_error_message
-
-TESTING_LOG_LEVEL = os.getenv("TESTING_LOG_LEVEL", "DEBUG")
-TESTING_MATCH_PATTERN = os.getenv("TESTING_MATCH_PATTERN", "")
-TESTING_SKIP_PATTERN = os.getenv("TESTING_SKIP_PATTERN", "")
-TESTING_FORCE_UPDATE = int(os.getenv("TESTING_FORCE_UPDATE", "0"))
-
-
-def _get_marks(path):
-    if TESTING_SKIP_PATTERN and re.match(TESTING_SKIP_PATTERN, path.name):
-        return pytest.mark.skip(reason="File skipped because matching TESTING_SKIP_PATTERN")
-    if TESTING_MATCH_PATTERN and not re.match(TESTING_MATCH_PATTERN, path.name):
-        return pytest.mark.skip(reason="File skipped because not matching TESTING_MATCH_PATTERN")
-    return ()
-
-
-# analysis_config_path, expected_path
-analysis_configs = [
-    pytest.param(
-        path,
-        EXPECTED_PATH / path.stem.replace("analysis_config_", "analysis_"),
-        marks=_get_marks(path),
-    )
-    for path in sorted(CONFIG_PATH.glob("analysis_config_*.yaml"))
-]
-
-
-def test_analysis_configs_is_valid():
-    # ensure that there are config files to test
-    assert len(analysis_configs) >= 1
+from tests.functional.utils import assertion_error_message
 
 
 def _get_subattr(obj, attrs):
@@ -161,10 +130,8 @@ def _update_expected_files(ma, path):
         _dump_all_multi(ma2, path / "_filtered")
 
 
-@pytest.mark.skipif(not TESTING_FORCE_UPDATE, reason="Not overwriting files")
-@pytest.mark.parametrize("analysis_config_path, expected_path", analysis_configs)
-def test_update_expected_files(analysis_config_path, expected_path, tmp_path, caplog):
-    caplog.set_level(TESTING_LOG_LEVEL)
+@pytest.mark.force_update
+def test_update_expected_files(analysis_config_path, expected_path, tmp_path):
     np.random.seed(0)
     analysis_config_path = shutil.copy(analysis_config_path, tmp_path)
 
@@ -172,9 +139,7 @@ def test_update_expected_files(analysis_config_path, expected_path, tmp_path, ca
         _update_expected_files(multi_analyzer, expected_path)
 
 
-@pytest.mark.parametrize("analysis_config_path, expected_path", analysis_configs)
-def test_analyzer(analysis_config_path, expected_path, tmp_path, caplog):
-    caplog.set_level(TESTING_LOG_LEVEL)
+def test_analyzer(analysis_config_path, expected_path, tmp_path):
     np.random.seed(0)
     analysis_config_path = shutil.copy(analysis_config_path, tmp_path)
 

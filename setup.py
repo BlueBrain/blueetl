@@ -28,6 +28,7 @@ REQUIREMENTS = {
         "fastparquet>=0.8.3,!=2023.1.0",  # needed by pandas to read and write parquet files
         "orjson",  # faster json decoder used by fastparquet
         "xarray>=0.18.0",
+        "bluepy>=2.5.2",
         "bluepysnap>=1.0.7",
         "pydantic>=1.10,<2",
         "jsonschema>=4.0",
@@ -39,7 +40,7 @@ REQUIREMENTS = {
         "matplotlib>=3.4.3",
     ],
     "bluecv": [
-        "elephant>=0.10.0",
+        "elephant>=0.10.0,<0.13.0",  # CPDF output changed in 0.13.0
         "quantities>=0.13.0",
     ],
     "docs": [

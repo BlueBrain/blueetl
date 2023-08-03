@@ -4,8 +4,9 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-from bluepysnap import Circuit, Simulation
 
+from blueetl.adapters.circuit import CircuitAdapter as Circuit
+from blueetl.adapters.simulation import SimulationAdapter as Simulation
 from blueetl.config.analysis_model import TrialStepsConfig
 from blueetl.constants import CIRCUIT_ID, SIMULATION_ID, TRIAL_STEPS_LABEL, TRIAL_STEPS_VALUE
 from blueetl.extract.base import BaseExtractor

@@ -5,9 +5,9 @@ Migration
 From 0.2.x to 0.3.x
 -------------------
 
-BlueETL 0.3.x introduces some breaking changes to support the analysis of SONATA simulation campaigns.
+BlueETL 0.3.x introduces some breaking changes to support the analysis of SONATA simulation campaigns, along with BBP simulation campaigns.
 
-It relies on bluepysnap instead of bluepy to open simulations, circuits, and reports.
+It automatically uses Blue Brain SNAP or BluePy to open simulations, circuits, and reports.
 
 In this section it's described what should be done to adapt the existing configurations and user code.
 
@@ -27,7 +27,6 @@ You can automatically migrate a configuration from 0.2.x to 0.3.x, executing in 
 However, you may need to manually:
 
 - copy any commented lines from the old configuration, or they will be lost.
-- set the correct node population name in the ``extraction`` section, instead of the ``default`` placeholder.
 - verify the names of the node_sets, because they are copied from the existing target names.
 
 
@@ -37,10 +36,11 @@ Manual migration
 If you prefer to migrate the configuration manually instead, follow these steps:
 
 1. The specification ``version: 2`` should be replaced by ``version: 3`` at the top level of the file.
-2. Any section ``analysis.<name>.extraction`` should contain the key ``population``, containing the name of the node population to be analyzed.
-3. In the ``neuron_classes definition``, the query parameters must be moved to a sub-dictionary under the key ``query``.
+2. When opening SONATA simulation campaigns, any section ``analysis.<name>.extraction`` should contain the key ``population``, containing the name of the node population to be analyzed.
+3. In the ``neuron_classes definition``, the parameters of the query not starting with ``$`` must be moved into a sub-dictionary under the key ``query``.
 4. Any key ``$query`` must be replaced with ``query``.
-5. Any key ``$target`` or ``target`` must be replaced with ``node_set``.
+5. Any key ``$target`` or ``target`` must be replaced with ``node_set``, regardless of whether it is a SONATA or a BBP simulation campaign.
+   The value of ``node_set`` is treated as ``target`` when opening BlueConfig simulations.
 6. Any key ``$limit`` must be replaced with ``limit``.
 7. Any key ``$gids`` must be replaced with ``node_id``.
 

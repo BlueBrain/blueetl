@@ -7,7 +7,7 @@ import os.path
 import time
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
-from functools import cache
+from functools import cache, cached_property
 from importlib import import_module
 from pathlib import Path
 from typing import Any, Callable, Optional, Union
@@ -17,6 +17,22 @@ import yaml
 
 from blueetl.constants import DTYPES
 from blueetl.types import StrOrPath
+
+
+class CachedPropertyMixIn:
+    """MixIn to be used with classes using cached_property to be skipped when pickled."""
+
+    def __getstate__(self) -> dict:
+        """Get the object state when the object is pickled."""
+        return {
+            key: value
+            for key, value in self.__dict__.items()
+            if not isinstance(getattr(self.__class__, key, None), cached_property)
+        }
+
+    def __setstate__(self, state: dict) -> None:
+        """Set the object state when the object is unpickled."""
+        self.__dict__.update(state)
 
 
 @contextmanager
@@ -111,7 +127,12 @@ def import_by_string(full_name: str) -> Callable:
 
 
 def resolve_path(*paths: StrOrPath, symlinks: bool = False) -> Path:
-    """Make the path absolute and return a new path object."""
+    """Make the path absolute and return a new path object.
+
+    It may be different from calling Path.resolve(), because Path.resolve() always resolve symlinks.
+    It may be different from calling Path.absolute(), because Path.absolute() doesn't remove the
+    relative paths. For example, Path('/tmp/..').absolute() == PosixPath('/tmp/..').
+    """
     if symlinks:
         # resolve any symlinks
         return Path(*paths).resolve()

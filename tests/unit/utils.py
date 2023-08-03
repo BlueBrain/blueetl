@@ -4,7 +4,7 @@ import pandas as pd
 import pydantic
 import xarray as xr
 
-TEST_DATA_PATH = Path(__file__).parent.parent / "data"
+TEST_DATA_PATH = Path(__file__).parent / "data"
 
 
 def assert_frame_equal(actual, expected):

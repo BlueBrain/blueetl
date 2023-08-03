@@ -46,14 +46,19 @@ class SimulationsConfig:
         self._validate()
 
     def _resolve_paths(self) -> None:
-        def _to_absolute(path) -> str:
-            full_path = resolve_path(path_prefix, path)
-            if full_path.is_dir():
-                L.debug("The path %s is a directory", path)
-                full_path = full_path / "simulation_config.json"
-            if not full_path.exists():
-                L.warning("%s doesn't exist, proceeding anyway", full_path)
-            return str(full_path)
+        def _to_absolute(path: str) -> str:
+            """Convert to absolute path, but don't check if it exists."""
+            path = resolve_path(path_prefix, path)
+            if path.is_dir():
+                # use circuit_config to determine the expected config path of the simulations,
+                # because the paths defined in the simulation campaign don't include the filename
+                if not self.attrs or "circuit_config" not in self.attrs:
+                    raise RuntimeError("circuit_config is missing in the simulation campaign")
+                if self.attrs["circuit_config"].endswith(".json"):
+                    path = path / "simulation_config.json"
+                else:
+                    path = path / "BlueConfig"
+            return str(path)
 
         path_prefix = self.attrs.get("path_prefix", "")
         self.data[SIMULATION_PATH] = self.data[SIMULATION_PATH].apply(_to_absolute)

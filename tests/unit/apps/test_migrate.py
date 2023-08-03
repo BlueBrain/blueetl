@@ -49,7 +49,6 @@ def test_migrate_config(tmp_path):
                         },
                     },
                     "limit": None,
-                    "population": "default",
                     "node_set": None,
                     "windows": {"w1": {"bounds": [20, 90], "window_type": "spontaneous"}},
                 },

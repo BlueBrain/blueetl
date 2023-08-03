@@ -1,0 +1,26 @@
+---
+# simple configuration with extraction of compartment report, without features
+version: 3
+simulation_campaign: /gpfs/bbp.cscs.ch/project/proj12/NSE/blueetl/data/sim-campaign-bluepy/11567ba9-57fa-41ec-ac7b-d727ec4e65f3/config.json
+output: analysis_output
+analysis:
+  compartment:
+    extraction:
+      report:
+        type: compartment
+        name: AllCompartments
+      neuron_classes:
+        L1_EXC: {query: {layer: [1], synapse_class: [EXC]}}
+        L23_EXC: {query: {layer: [2, 3], synapse_class: [EXC]}}
+        L4_EXC: {query: {layer: [4], synapse_class: [EXC]}}
+        L5_EXC: {query: {layer: [5], synapse_class: [EXC]}}
+        L6_EXC: {query: {layer: [6], synapse_class: [EXC]}}
+        L1_INH: {query: {layer: [1], synapse_class: [INH]}}
+        L23_INH: {query: {layer: [2, 3], synapse_class: [INH]}}
+        L4_INH: {query: {layer: [4], synapse_class: [INH]}}
+        L5_INH: {query: {layer: [5], synapse_class: [INH]}}
+        L6_INH: {query: {layer: [6], synapse_class: [INH]}}
+      limit: null
+      windows:
+        w1: {bounds: [20, 22], window_type: spontaneous}
+        w2: {bounds: [60, 62], initial_offset: 10, t_step: 0.5}

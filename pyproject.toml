@@ -27,6 +27,8 @@ addopts = [
 filterwarnings = [
     "ignore::DeprecationWarning:nptyping",
 ]
+log_level = "DEBUG"
+
 
 [tool.coverage.paths]
 source = [

@@ -1,0 +1,31 @@
+---
+# simple configuration with neuron_classes defined as complex queries
+version: 3
+simulation_campaign: /gpfs/bbp.cscs.ch/project/proj12/NSE/blueetl/data/sim-campaign-bluepy/11567ba9-57fa-41ec-ac7b-d727ec4e65f3/config.json
+output: analysis_output
+analysis:
+  spikes:
+    extraction:
+      report:
+        type: spikes
+      neuron_classes:
+        L1_INH: {query: {layer: [1], synapse_class: [INH]}}
+        L6_EXC: {query: {layer: [6], synapse_class: [EXC]}}
+        L1_INH_L6_EXC: # union of L1_INH and L6_EXC
+          query:
+          - {layer: [1], synapse_class: [INH]}
+          - {layer: [6], synapse_class: [EXC]}
+        L1_INH_L6_EXC_All: # same as L1_INH_L6_EXC, with additional filter on node_set and limit
+          query:
+          - {layer: [1], synapse_class: [INH]}
+          - {layer: [6], synapse_class: [EXC]}
+          node_set: All
+          limit: 100
+      limit: null
+      windows:
+        w1: {bounds: [20, 90], window_type: spontaneous}
+    features:
+    - type: multi
+      groupby: [simulation_id, circuit_id, neuron_class, window]
+      function: blueetl.external.bnac.calculate_features.calculate_features_multi
+      params: {export_all_neurons: true}

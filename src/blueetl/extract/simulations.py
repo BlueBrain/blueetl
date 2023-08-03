@@ -1,47 +1,20 @@
 """Simulations extractor."""
 import logging
 from enum import Enum
-from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 import pandas as pd
-from bluepysnap import Circuit, Simulation
 
+from blueetl.adapters.circuit import CircuitAdapter as Circuit
+from blueetl.adapters.simulation import SimulationAdapter as Simulation
 from blueetl.config.simulations import SimulationsConfig
 from blueetl.constants import CIRCUIT, CIRCUIT_ID, SIMULATION, SIMULATION_ID, SIMULATION_PATH
 from blueetl.extract.base import BaseExtractor
-from blueetl.types import StrOrPath
-from blueetl.utils import checksum_json
 
 L = logging.getLogger(__name__)
 
 # temporary column in the simulations dataframe
 _STATUS = "_status"
-
-
-def _get_circuit_hash(circuit_config: dict[str, Any]) -> str:
-    """Return a hash of the relevant keys in the circuit configuration.
-
-    Circuits are considered different in this context if any relevant key is different.
-    """
-    return checksum_json(circuit_config)
-
-
-def _is_simulation_existing(simulation_path: StrOrPath) -> bool:
-    """Return True if the simulation exists, False otherwise.
-
-    Used to ignore a simulation because it was manually deleted / has gone missing.
-    """
-    return Path(simulation_path).exists()
-
-
-def _is_simulation_complete(simulation: Simulation) -> bool:
-    """Return True if the spikes can be loaded from the simulation, False otherwise.
-
-    Used to ignore a simulation before the simulation campaign is complete.
-    """
-    config = simulation.spikes.config
-    return Path(config.output_dir, config.spikes_file).exists()
 
 
 class SimulationStatus(Enum):
@@ -78,25 +51,26 @@ class Simulations(BaseExtractor):
         circuit_id = rec.get(CIRCUIT_ID, simulation_id)
         simulation_path = rec[SIMULATION_PATH]
         # use the same Simulation and Circuit objects if available
-        simulation = rec.get(SIMULATION)
-        circuit = rec.get(CIRCUIT)
+        simulation = cast(Optional[Simulation], rec.get(SIMULATION))
+        circuit = cast(Optional[Circuit], rec.get(CIRCUIT))
         assert (
             simulation and circuit or not simulation and not circuit
         ), "Simulation and Circuit must be both initialized, or both not initialized"
         circuit_hash = None
         status = SimulationStatus.MISSING
-        if _is_simulation_existing(simulation_path):
+        simulation = simulation or Simulation(simulation_path)
+        if simulation.exists():
+            # consider the simulation only if it wasn't manually deleted
             status = SimulationStatus.INCOMPLETE
-            simulation = simulation or Simulation(simulation_path)
-            circuit_hash = _get_circuit_hash(simulation.circuit.config)
+            circuit_hash = simulation.circuit.checksum()
             # if circuit_hash is not new, use the previous circuit_id
             circuit_id = circuit_hashes.setdefault(circuit_hash, circuit_id)
             circuit = circuit or circuits.setdefault(circuit_id, simulation.circuit)
             # double-check the circuit config hash in case it was cached
-            if circuit_hash != _get_circuit_hash(circuit.config):
+            if circuit_hash != circuit.checksum():
                 L.error("Inconsistent circuit hash and id, you may need to delete the cache")
                 raise InconsistentSimulations("Inconsistent hash and id")
-            if _is_simulation_complete(simulation):
+            if simulation.is_complete():
                 status = SimulationStatus.COMPLETE
         sim_repr = f"{simulation_id=}, {circuit_id=}, {circuit_hash=}, {simulation_path=}"
         L.debug("Processing simulation: %s", sim_repr)

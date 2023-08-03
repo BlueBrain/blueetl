@@ -9,7 +9,7 @@ Introduction
 
 ``BlueETL`` is a package that can help analyse multiple simulations in a Simulation Campaign.
 
-It relies on `Blue Brain SNAP <https://bluebrainsnap.readthedocs.io/en/stable/>`__ for accessing simulation and circuit data;
+It automatically uses `Blue Brain SNAP <https://bluebrainsnap.readthedocs.io/en/stable/>`__ or `BluePy <https://bbpteam.epfl.ch/documentation/projects/bluepy/latest/>`__ to open simulations, circuits, and reports.
 
 
 Reporting issues

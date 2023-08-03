@@ -75,7 +75,7 @@ class TrialStepsConfig(BaseModel):
     function: str
     initial_offset: float = 0.0
     bounds: tuple[float, float]
-    population: str
+    population: Optional[str]
     node_set: Optional[str] = None
     limit: Optional[int] = None
 
@@ -84,7 +84,7 @@ class NeuronClassConfig(BaseModel):
     """NeuronClassConfig Model."""
 
     query: Union[dict[str, Any], list[dict[str, Any]]] = {}
-    population: str
+    population: Optional[str]
     node_set: Optional[str] = None
     limit: Optional[int] = None
     node_id: Optional[list[int]] = None

@@ -62,7 +62,6 @@ def _migrate_v2_to_v3(input_config):
     output_config["version"] = 3
     for analysis in output_config["analysis"].values():
         extraction = analysis["extraction"]
-        _safe_set(extraction, "population", "default")
         _rename_key(extraction, "target", "node_set")
         for neuron_class in extraction["neuron_classes"].values():
             query = {}

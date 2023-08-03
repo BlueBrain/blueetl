@@ -1,0 +1,38 @@
+# simple configuration with extraction and analysis, and combination of parameters
+version: 3
+simulation_campaign: /gpfs/bbp.cscs.ch/project/proj12/NSE/blueetl/data/sim-campaign-bluepy/11567ba9-57fa-41ec-ac7b-d727ec4e65f3/config.json
+output: analysis_output
+analysis:
+  spikes:
+    extraction:
+      report:
+        type: spikes
+      neuron_classes:
+        L1_EXC: {query: {layer: [1], synapse_class: [EXC]}}
+        L23_EXC: {query: {layer: [2, 3], synapse_class: [EXC]}}
+        L4_EXC: {query: {layer: [4], synapse_class: [EXC]}}
+        L5_EXC: {query: {layer: [5], synapse_class: [EXC]}}
+        L6_EXC: {query: {layer: [6], synapse_class: [EXC]}}
+        L1_INH: {query: {layer: [1], synapse_class: [INH]}}
+        L23_INH: {query: {layer: [2, 3], synapse_class: [INH]}}
+        L4_INH: {query: {layer: [4], synapse_class: [INH]}}
+        L5_INH: {query: {layer: [5], synapse_class: [INH]}}
+        L6_INH: {query: {layer: [6], synapse_class: [INH]}}
+      limit: null
+      windows:
+        w1: {bounds: [20, 90], window_type: spontaneous}
+        w2: {bounds: [10, 70], initial_offset: 10, n_trials: 3, trial_steps_value: 10}
+    features:
+    - type: multi
+      groupby: [simulation_id, circuit_id, neuron_class, window]
+      function: blueetl.external.bnac.calculate_features.calculate_features_multi
+      params:
+        export_all_neurons: true
+      params_product:
+        ratio: [0.25, 0.50, 0.75]
+        nested_example:
+        - params: {bin_size: 1}
+        - params: {bin_size: 2}
+      params_zip:
+        param1: [10, 20]
+        param2: [11, 21]

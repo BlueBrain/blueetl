@@ -11,7 +11,7 @@ from tests.unit.utils import TEST_DATA_PATH, assert_frame_equal, assert_xr_equal
     "config_path, expected_name, expected_attrs, expected_conditions, expected_data",
     [
         pytest.param(
-            TEST_DATA_PATH / "simulations_config_01_blueetl.yaml",
+            "analysis_config/simulations_config_01_blueetl.yaml",
             "dummy_name",
             {"k1": "v1", "k2": "v2"},
             ["ca", "seed"],
@@ -22,7 +22,7 @@ from tests.unit.utils import TEST_DATA_PATH, assert_frame_equal, assert_xr_equal
             id="01_blueetl",
         ),
         pytest.param(
-            TEST_DATA_PATH / "simulations_config_02_bbpwf_simple.json",
+            "analysis_config/simulations_config_02_bbpwf_simple.json",
             "c26abad3-0861-4f7d-863c-a42daffd029f",
             {"path_prefix": "/path/to/simulation/campaign"},
             ["ca", "shotn_mean_pct", "shotn_sd_pct", "seed"],
@@ -59,7 +59,7 @@ from tests.unit.utils import TEST_DATA_PATH, assert_frame_equal, assert_xr_equal
             id="02_bbpwf_simple",
         ),
         pytest.param(
-            TEST_DATA_PATH / "simulations_config_03_bbpwf_coupled.json",
+            "analysis_config/simulations_config_03_bbpwf_coupled.json",
             "881857e0-c7ae-49c1-a6f6-8a34f43c2e26",
             {"path_prefix": "/path/to/simulation/campaign"},
             ["coupled", "ca", "stdev_mean_ratio", "fr_scale", "seed"],
@@ -88,7 +88,7 @@ from tests.unit.utils import TEST_DATA_PATH, assert_frame_equal, assert_xr_equal
 def test_simulations_config_load(
     config_path, expected_name, expected_attrs, expected_conditions, expected_data
 ):
-    result = SimulationsConfig.load(config_path)
+    result = SimulationsConfig.load(TEST_DATA_PATH / config_path)
 
     assert isinstance(result, SimulationsConfig)
     assert result.name == expected_name
@@ -111,13 +111,13 @@ def test_simulations_config_dump(tmp_path, simulations_config, simulations_confi
 @pytest.mark.parametrize(
     "config_path",
     [
-        TEST_DATA_PATH / "simulations_config_01_blueetl.yaml",
-        TEST_DATA_PATH / "simulations_config_02_bbpwf_simple.json",
-        TEST_DATA_PATH / "simulations_config_03_bbpwf_coupled.json",
+        "analysis_config/simulations_config_01_blueetl.yaml",
+        "analysis_config/simulations_config_02_bbpwf_simple.json",
+        "analysis_config/simulations_config_03_bbpwf_coupled.json",
     ],
 )
 def test_simulations_config_load_dump_roundtrip(tmp_path, config_path):
-    simulations_config_1 = SimulationsConfig.load(config_path)
+    simulations_config_1 = SimulationsConfig.load(TEST_DATA_PATH / config_path)
     new_path = tmp_path / "tmp_config.yaml"
     simulations_config_1.dump(new_path)
     simulations_config_2 = SimulationsConfig.load(new_path)

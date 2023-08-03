@@ -1,0 +1,36 @@
+Run Default
+{
+    CircuitPath .
+    nrnPath /path/to/edges
+    MorphologyPath /path/to/morphologies
+    METypePath /path/to/hoc
+    MEComboInfoFile /path/to/mecombo_emodel.tsv
+    CellLibraryFile circuit.mvd3
+    BioName /path/to/bioname
+    Atlas /path/to/atlas
+    OutputRoot reporting
+}
+
+Report soma
+{
+    Target All
+    Type compartment
+    ReportOn v
+    Unit mV
+    Format SONATA
+    Dt 0.1
+    StartTime 0
+    EndTime 100
+}
+
+Report AllCompartments
+{
+    Target LFPCompartments
+    Type Summation
+    ReportOn i_membrane
+    Unit nA
+    Format SONATA
+    Dt 0.5
+    StartTime 0
+    EndTime 100
+}

@@ -8,25 +8,18 @@ from blueetl.extract import simulations as test_module
 from blueetl.utils import ensure_dtypes
 
 
-def _get_mock_simulation(n=0):
+def _get_mock_simulation(n=0, exists=True, is_complete=True):
     mock_circuit = Mock()
-    mock_circuit.config = {
-        "cells": f"/path/to/cells/{n}",
-        "morphologies": f"/path/to/morphologies/{n}",
-        "emodels": f"/path/to/emodels/{n}",
-        "connectome": f"/path/to/connectome/{n}",
-        "projections": {},
-        "atlas": f"/path/to/atlas/{n}",
-    }
+    mock_circuit.checksum.return_value = n
     mock_simulation = Mock()
     mock_simulation.circuit = mock_circuit
+    mock_simulation.exists.return_value = exists
+    mock_simulation.is_complete.return_value = is_complete
     return mock_simulation
 
 
-@patch(f"{test_module.__name__}._is_simulation_existing", return_value=True)
-@patch(f"{test_module.__name__}._is_simulation_complete", return_value=True)
 @patch(f"{test_module.__name__}.Simulation", autospec=True)
-def test_simulations_from_config(mock_simulation_class, mock_is_complete, mock_is_existing):
+def test_simulations_from_config(mock_simulation_class):
     mock_simulation0 = _get_mock_simulation()
     mock_simulation1 = _get_mock_simulation()
     mock_circuit0 = mock_simulation0.circuit
@@ -70,16 +63,14 @@ def test_simulations_from_config(mock_simulation_class, mock_is_complete, mock_i
     assert config.to_pandas.call_count == 1
     assert mock_simulation_class.call_count == 2
     assert mock_circuit0 != mock_circuit1
-    assert mock_is_existing.call_count == 2
-    assert mock_is_complete.call_count == 2
+    assert mock_simulation0.exists.call_count == 1
+    assert mock_simulation1.exists.call_count == 1
+    assert mock_simulation0.is_complete.call_count == 1
+    assert mock_simulation1.is_complete.call_count == 1
 
 
-@patch(f"{test_module.__name__}._is_simulation_existing", return_value=True)
-@patch(f"{test_module.__name__}._is_simulation_complete", return_value=True)
 @patch(f"{test_module.__name__}.Simulation", autospec=True)
-def test_simulations_from_config_filtered_by_simulation_id(
-    mock_simulation_class, mock_is_complete, mock_is_existing
-):
+def test_simulations_from_config_filtered_by_simulation_id(mock_simulation_class):
     mock_simulation0 = _get_mock_simulation()
     mock_simulation1 = _get_mock_simulation()
     mock_circuit0 = mock_simulation0.circuit
@@ -114,18 +105,16 @@ def test_simulations_from_config_filtered_by_simulation_id(
     assert config.to_pandas.call_count == 1
     assert mock_simulation_class.call_count == 2
     assert mock_circuit0 != mock_circuit1
-    assert mock_is_existing.call_count == 2
-    assert mock_is_complete.call_count == 2
+    assert mock_simulation0.exists.call_count == 1
+    assert mock_simulation1.exists.call_count == 1
+    assert mock_simulation0.is_complete.call_count == 1
+    assert mock_simulation1.is_complete.call_count == 1
 
 
-@patch(f"{test_module.__name__}._is_simulation_existing", return_value=True)
-@patch(f"{test_module.__name__}._is_simulation_complete", side_effect=[False, True])
 @patch(f"{test_module.__name__}.Simulation", autospec=True)
-def test_simulations_from_config_without_spikes(
-    mock_simulation_class, mock_is_complete, mock_is_existing
-):
-    mock_simulation0 = _get_mock_simulation()
-    mock_simulation1 = _get_mock_simulation()
+def test_simulations_from_config_without_spikes(mock_simulation_class):
+    mock_simulation0 = _get_mock_simulation(is_complete=False)
+    mock_simulation1 = _get_mock_simulation(is_complete=True)
     mock_circuit0 = mock_simulation0.circuit
     mock_circuit1 = mock_simulation1.circuit
     mock_simulation_class.side_effect = [mock_simulation0, mock_simulation1]
@@ -159,22 +148,19 @@ def test_simulations_from_config_without_spikes(
     assert config.to_pandas.call_count == 1
     assert mock_simulation_class.call_count == 2
     assert mock_circuit0 != mock_circuit1
-    assert mock_is_existing.call_count == 2
-    assert mock_is_complete.call_count == 2
+    assert mock_simulation0.exists.call_count == 1
+    assert mock_simulation1.exists.call_count == 1
+    assert mock_simulation0.is_complete.call_count == 1
+    assert mock_simulation1.is_complete.call_count == 1
 
 
-@patch(f"{test_module.__name__}._is_simulation_existing", side_effect=[False, True])
-@patch(f"{test_module.__name__}._is_simulation_complete", return_value=True)
 @patch(f"{test_module.__name__}.Simulation", autospec=True)
-def test_simulations_from_config_first_nonexistent(
-    mock_simulation_class, mock_is_complete, mock_is_existing
-):
-    mock_simulation0 = _get_mock_simulation()
-    mock_simulation1 = _get_mock_simulation()
+def test_simulations_from_config_first_nonexistent(mock_simulation_class):
+    mock_simulation0 = _get_mock_simulation(exists=False)
+    mock_simulation1 = _get_mock_simulation(exists=True)
     mock_circuit0 = mock_simulation0.circuit
     mock_circuit1 = mock_simulation1.circuit
-    # Simulation is called only once, i.e. when it exists
-    mock_simulation_class.return_value = mock_simulation1
+    mock_simulation_class.side_effect = [mock_simulation0, mock_simulation1]
     config = Mock()
     config.to_pandas.return_value = pd.DataFrame(
         [
@@ -205,18 +191,16 @@ def test_simulations_from_config_first_nonexistent(
     assert_frame_equal(result.df, expected_df)
 
     assert config.to_pandas.call_count == 1
-    assert mock_simulation_class.call_count == 1
+    assert mock_simulation_class.call_count == 2
     assert mock_circuit0 != mock_circuit1
-    assert mock_is_existing.call_count == 2
-    assert mock_is_complete.call_count == 1
+    assert mock_simulation0.exists.call_count == 1
+    assert mock_simulation1.exists.call_count == 1
+    assert mock_simulation0.is_complete.call_count == 0
+    assert mock_simulation1.is_complete.call_count == 1
 
 
-@patch(f"{test_module.__name__}._is_simulation_existing", return_value=True)
-@patch(f"{test_module.__name__}._is_simulation_complete", return_value=True)
 @patch(f"{test_module.__name__}.Simulation", autospec=True)
-def test_simulations_from_pandas_load_complete_campaign(
-    mock_simulation_class, mock_is_complete, mock_is_existing
-):
+def test_simulations_from_pandas_load_complete_campaign(mock_simulation_class):
     mock_simulation0 = _get_mock_simulation()
     mock_simulation1 = _get_mock_simulation()
     mock_circuit0 = mock_simulation0.circuit
@@ -269,16 +253,14 @@ def test_simulations_from_pandas_load_complete_campaign(
 
     assert mock_simulation_class.call_count == 2
     assert mock_circuit0 != mock_circuit1
-    assert mock_is_existing.call_count == 2
-    assert mock_is_complete.call_count == 2
+    assert mock_simulation0.exists.call_count == 1
+    assert mock_simulation1.exists.call_count == 1
+    assert mock_simulation0.is_complete.call_count == 1
+    assert mock_simulation1.is_complete.call_count == 1
 
 
-@patch(f"{test_module.__name__}._is_simulation_existing", return_value=True)
-@patch(f"{test_module.__name__}._is_simulation_complete", return_value=True)
 @patch(f"{test_module.__name__}.Simulation", autospec=True)
-def test_simulations_from_pandas_load_incomplete_campaign(
-    mock_simulation_class, mock_is_complete, mock_is_existing
-):
+def test_simulations_from_pandas_load_incomplete_campaign(mock_simulation_class):
     mock_simulation0 = _get_mock_simulation()
     mock_simulation1 = _get_mock_simulation()
     mock_circuit0 = mock_simulation0.circuit
@@ -331,16 +313,14 @@ def test_simulations_from_pandas_load_incomplete_campaign(
 
     assert mock_simulation_class.call_count == 2
     assert mock_circuit0 != mock_circuit1
-    assert mock_is_existing.call_count == 2
-    assert mock_is_complete.call_count == 2
+    assert mock_simulation0.exists.call_count == 1
+    assert mock_simulation1.exists.call_count == 1
+    assert mock_simulation0.is_complete.call_count == 1
+    assert mock_simulation1.is_complete.call_count == 1
 
 
-@patch(f"{test_module.__name__}._is_simulation_existing", return_value=True)
-@patch(f"{test_module.__name__}._is_simulation_complete", return_value=True)
 @patch(f"{test_module.__name__}.Simulation", autospec=True)
-def test_simulations_from_pandas_load_inconsistent_campaign(
-    mock_simulation_class, mock_is_complete, mock_is_existing
-):
+def test_simulations_from_pandas_load_inconsistent_campaign(mock_simulation_class):
     # the circuits of the mocked simulations have different circuit_hash,
     # while the circuit_ids in the dataframe are the same
     mock_simulation0 = _get_mock_simulation(0)
@@ -371,18 +351,16 @@ def test_simulations_from_pandas_load_inconsistent_campaign(
 
     assert mock_simulation_class.call_count == 2
     assert mock_circuit0 != mock_circuit1
-    assert mock_is_existing.call_count == 2
-    assert mock_is_complete.call_count == 1
+    assert mock_simulation0.exists.call_count == 1
+    assert mock_simulation1.exists.call_count == 1
+    assert mock_simulation0.is_complete.call_count == 1
+    assert mock_simulation1.is_complete.call_count == 0
 
 
-@patch(f"{test_module.__name__}._is_simulation_existing", side_effect=[False, True])
-@patch(f"{test_module.__name__}._is_simulation_complete", return_value=True)
 @patch(f"{test_module.__name__}.Simulation", autospec=True)
-def test_simulations_from_pandas_first_nonexistent(
-    mock_simulation_class, mock_is_complete, mock_is_existing
-):
-    mock_simulation0 = _get_mock_simulation()
-    mock_simulation1 = _get_mock_simulation()
+def test_simulations_from_pandas_first_nonexistent(mock_simulation_class):
+    mock_simulation0 = _get_mock_simulation(exists=False)
+    mock_simulation1 = _get_mock_simulation(exists=True)
     mock_circuit0 = mock_simulation0.circuit
     mock_circuit1 = mock_simulation1.circuit
     mock_simulation_class.side_effect = [mock_simulation0, mock_simulation1]
@@ -407,18 +385,16 @@ def test_simulations_from_pandas_first_nonexistent(
     with pytest.raises(test_module.InconsistentSimulations, match="Inconsistent cache"):
         test_module.Simulations.from_pandas(df)
 
-    assert mock_simulation_class.call_count == 1
+    assert mock_simulation_class.call_count == 2
     assert mock_circuit0 != mock_circuit1
-    assert mock_is_existing.call_count == 2
-    assert mock_is_complete.call_count == 1
+    assert mock_simulation0.exists.call_count == 1
+    assert mock_simulation1.exists.call_count == 1
+    assert mock_simulation0.is_complete.call_count == 0
+    assert mock_simulation1.is_complete.call_count == 1
 
 
-@patch(f"{test_module.__name__}._is_simulation_existing", return_value=True)
-@patch(f"{test_module.__name__}._is_simulation_complete", return_value=True)
 @patch(f"{test_module.__name__}.Simulation", autospec=True)
-def test_simulations_from_pandas_filtered_by_simulation_id(
-    mock_simulation_class, mock_is_complete, mock_is_existing
-):
+def test_simulations_from_pandas_filtered_by_simulation_id(mock_simulation_class):
     mock_simulation0 = _get_mock_simulation()
     mock_simulation1 = _get_mock_simulation()
     mock_circuit0 = mock_simulation0.circuit
@@ -464,8 +440,10 @@ def test_simulations_from_pandas_filtered_by_simulation_id(
 
     assert mock_simulation_class.call_count == 2
     assert mock_circuit0 != mock_circuit1
-    assert mock_is_existing.call_count == 2
-    assert mock_is_complete.call_count == 2
+    assert mock_simulation0.exists.call_count == 1
+    assert mock_simulation1.exists.call_count == 1
+    assert mock_simulation0.is_complete.call_count == 1
+    assert mock_simulation1.is_complete.call_count == 1
 
 
 def test_simulations_to_pandas():

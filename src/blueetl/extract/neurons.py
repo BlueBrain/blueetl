@@ -4,8 +4,8 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-from bluepysnap import Circuit
 
+from blueetl.adapters.circuit import CircuitAdapter as Circuit
 from blueetl.config.analysis_model import NeuronClassConfig
 from blueetl.constants import CIRCUIT, CIRCUIT_ID, GID, NEURON_CLASS, NEURON_CLASS_INDEX
 from blueetl.extract.base import BaseExtractor

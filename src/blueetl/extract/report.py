@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from typing import NamedTuple, Optional, TypeVar
 
 import pandas as pd
-from bluepysnap import Simulation
 
+from blueetl.adapters.simulation import SimulationAdapter as Simulation
 from blueetl.constants import CIRCUIT_ID, GID, NEURON_CLASS, POPULATION, SIMULATION, SIMULATION_ID
 from blueetl.core.utils import smart_concat
 from blueetl.extract.base import BaseExtractor

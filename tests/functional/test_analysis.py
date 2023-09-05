@@ -81,8 +81,9 @@ def _test_features(a, path):
             actual_df = obj.df
             expected_df = _load_df(path / f"{name}.parquet")
             with assertion_error_message(f"Difference in features {name!r}"):
-                # check_index_type=False needed to avoid Attribute "inferred_type" are different
-                assert_frame_equal(actual_df, expected_df, check_index_type=len(expected_df) != 0)
+                # in case of error: Attribute "inferred_type" are different
+                # consider setting check_index_type=False with empty DataFrames
+                assert_frame_equal(actual_df, expected_df)
         elif isinstance(obj, ConcatenatedFeatures):
             assert isinstance(obj.df, pd.DataFrame)
             assert isinstance(obj.params, pd.DataFrame)

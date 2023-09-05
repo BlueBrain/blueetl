@@ -36,13 +36,14 @@ Manual migration
 If you prefer to migrate the configuration manually instead, follow these steps:
 
 1. The specification ``version: 2`` should be replaced by ``version: 3`` at the top level of the file.
-2. When opening SONATA simulation campaigns, any section ``analysis.<name>.extraction`` should contain the key ``population``, containing the name of the node population to be analyzed.
+2. Only when opening SONATA simulation campaigns, the key ``population``, containing the name of the node population to be analyzed, must be present in any section ``analysis.<name>.extraction``.
 3. In the ``neuron_classes definition``, the parameters of the query not starting with ``$`` must be moved into a sub-dictionary under the key ``query``.
-4. Any key ``$query`` must be replaced with ``query``.
-5. Any key ``$target`` or ``target`` must be replaced with ``node_set``, regardless of whether it is a SONATA or a BBP simulation campaign.
+4. If present, any key ``$query`` must be replaced with ``query``.
+5. If present, any key ``$target`` or ``target`` must be replaced with ``node_set``, regardless of whether it is a SONATA or a BBP simulation campaign.
    The value of ``node_set`` is treated as ``target`` when opening BlueConfig simulations.
-6. Any key ``$limit`` must be replaced with ``limit``.
-7. Any key ``$gids`` must be replaced with ``node_id``.
+   Pleas ensure that the specified name exists as a node_set (in case of SONATA simulations), or target (in case of BlueConfig simulations).
+6. If present, any key ``$limit`` must be replaced with ``limit``.
+7. If present, any key ``$gids`` must be replaced with ``node_id``.
 
 
 You can see an example of configuration in the new format here:

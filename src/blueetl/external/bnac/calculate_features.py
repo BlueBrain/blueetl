@@ -3,10 +3,10 @@ import logging
 
 import numpy as np
 import pandas as pd
+from blueetl_core.utils import smart_concat
 from scipy.ndimage import gaussian_filter
 
 from blueetl.constants import BIN, COUNT, GID, NEURON_CLASS_INDEX, TIME, TIMES, TRIAL
-from blueetl.core.utils import smart_concat
 
 L = logging.getLogger(__name__)
 FIRST = "first"

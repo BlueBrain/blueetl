@@ -7,11 +7,11 @@ from unittest.mock import Mock, patch
 
 import pandas as pd
 import pytest
+from blueetl_core.constants import BLUEETL_JOBLIB_JOBS
 from numpy.testing import assert_array_equal
 from pandas.testing import assert_frame_equal
 
 from blueetl import parallel as test_module
-from blueetl.core.constants import BLUEETL_JOBLIB_JOBS
 
 
 def merge_groupby_classic(

@@ -1,6 +1,6 @@
 """BlueETL initialization and registration of Pandas accessors."""
 
-from blueetl.core.etl import register_accessors
-from blueetl.version import __version__  # noqa
+# register Pandas accessors
+import blueetl_core  # noqa
 
-register_accessors()
+from blueetl.version import __version__  # noqa

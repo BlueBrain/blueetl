@@ -8,11 +8,11 @@ from functools import cached_property
 from typing import Any, NamedTuple, Optional, Union
 
 import pandas as pd
+from blueetl_core.utils import smart_concat
 
 from blueetl.cache import CacheManager
 from blueetl.config.analysis_model import FeaturesConfig
 from blueetl.constants import SIMULATION_ID
-from blueetl.core.utils import smart_concat
 from blueetl.extract.feature import Feature
 from blueetl.parallel import merge_filter
 from blueetl.repository import Repository

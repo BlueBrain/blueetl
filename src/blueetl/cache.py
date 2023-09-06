@@ -10,10 +10,10 @@ from pathlib import Path
 from typing import Generic, Optional, TypeVar
 
 import pandas as pd
+from blueetl_core.utils import is_subfilter
 
 from blueetl.config.analysis_model import FeaturesConfig, SingleAnalysisConfig
 from blueetl.config.simulations import SimulationsConfig
-from blueetl.core.utils import is_subfilter
 from blueetl.store.base import BaseStore
 from blueetl.store.parquet import ParquetStore
 from blueetl.utils import dump_yaml, load_yaml

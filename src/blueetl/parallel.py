@@ -7,10 +7,10 @@ from types import SimpleNamespace
 from typing import Any, NamedTuple
 
 import pandas as pd
+from blueetl_core.parallel import Task, run_parallel
+from blueetl_core.utils import CachedDataFrame
 
 from blueetl.constants import CIRCUIT_ID, SIMULATION_ID
-from blueetl.core.parallel import Task, run_parallel
-from blueetl.core.utils import CachedDataFrame
 
 L = logging.getLogger(__name__)
 

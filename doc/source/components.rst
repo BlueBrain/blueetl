@@ -11,7 +11,7 @@ These helper functions can be accessed using the ``etl`` namespace.
 
 For example, if ``df`` is the variable containing a DataFrame, you can use ``df.etl.q()`` to call the ``q`` method, that provides an alternative way to query and filter the DataFrame.
 
-The list of available methods can be found in the API documentation for ``blueetl.core.etl``.
+The list of available methods can be found in the API documentation for ``blueetl-core``.
 
 For more information about Pandas custom accessors, see the `official documentation <https://pandas.pydata.org/pandas-docs/stable/development/extending.html#registering-custom-accessors>`__.
 

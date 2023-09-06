@@ -14,6 +14,7 @@ Breaking changes
 - The analysis configuration accepts ``population`` and ``node_set``, instead of ``target``.
 - In the ``neuron_classes`` definition, the query parameters must be moved to ``query``, ``$limit`` must be renamed to ``limit``, ``$gids`` to ``node_id``.
 - The function ``blueetl.core.utils.safe_concat`` has been renamed to ``smart_concat``.
+- The module ``blueetl.core`` has been moved to a separate package, ``blueetl-core``.
 
 Improvements
 ~~~~~~~~~~~~

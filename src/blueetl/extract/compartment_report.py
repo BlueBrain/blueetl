@@ -3,6 +3,7 @@ import logging
 from typing import Optional
 
 import pandas as pd
+from blueetl_core.utils import smart_concat
 
 from blueetl.adapters.simulation import SimulationAdapter as Simulation
 from blueetl.constants import (
@@ -15,7 +16,6 @@ from blueetl.constants import (
     VALUE,
     WINDOW,
 )
-from blueetl.core.utils import smart_concat
 from blueetl.extract.report import ReportExtractor
 
 L = logging.getLogger(__name__)

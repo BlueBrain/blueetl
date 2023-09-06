@@ -2,6 +2,7 @@ import os
 from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
 import pandas as pd
+from blueetl_core.constants import BLUEETL_JOBLIB_JOBS
 from pandas.testing import assert_frame_equal
 
 from blueetl.constants import (
@@ -27,7 +28,6 @@ from blueetl.constants import (
     WINDOW,
     WINDOW_TYPE,
 )
-from blueetl.core.constants import BLUEETL_JOBLIB_JOBS
 from blueetl.extract import spikes as test_module
 from blueetl.utils import ensure_dtypes
 

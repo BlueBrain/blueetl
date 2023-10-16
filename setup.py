@@ -15,32 +15,33 @@ spec.loader.exec_module(module)
 VERSION = module.__version__
 
 REQUIREMENTS = {
-    "core": [
+    "base": [
+        # requirements for base functionalities
         "blueetl-core>=0.1.0",
+        "bluepysnap>=1.0.7",
+        "click>=8",
+        "jsonschema>=4.0",
         "numpy>=1.19.4",
         "pandas>=1.3.0",
+        "pyarrow>=7",  # needed by pandas to read and write feather or parquet files
+        "pydantic>=2",
         "pyyaml>=5.4.1",
+        "xarray>=0.18.0",
     ],
     "extra": [
-        "tables>=3.6.1",  # needed by pandas to read and write hdf files
-        "pyarrow>=7",  # needed by pandas to read and write feather or parquet files
+        # extra requirements that may be dropped at some point
+        "bluepy>=2.5.2",
         "fastparquet>=0.8.3,!=2023.1.0",  # needed by pandas to read and write parquet files
         "orjson",  # faster json decoder used by fastparquet
-        "xarray>=0.18.0",
-        "bluepy>=2.5.2",
-        "bluepysnap>=1.0.7",
-        "pydantic>=2",
-        "jsonschema>=4.0",
-        "click>=8",
+        "tables>=3.6.1",  # needed by pandas to read and write hdf files
     ],
-    "bnac": [
-        "seaborn>=0.11.2",
-        "scipy>=1.8.0",
+    "external": [
+        # external requirements needed to run custom code in blueetl.external submodule
+        "elephant>=0.10.0",
         "matplotlib>=3.4.3",
-    ],
-    "bluecv": [
-        "elephant>=0.10.0,<0.13.0",  # CPDF output changed in 0.13.0
         "quantities>=0.13.0",
+        "scipy>=1.8.0",
+        "seaborn>=0.11.2",
     ],
     "docs": [
         "sphinx",
@@ -65,7 +66,7 @@ setup(
         "Source": "git@bbpgitlab.epfl.ch:nse/blueetl.git",
     },
     license="BBP-internal-confidential",
-    install_requires=REQUIREMENTS["core"],
+    install_requires=REQUIREMENTS["base"],
     packages=find_namespace_packages(where="src"),
     package_dir={"": "src"},
     include_package_data=True,
@@ -73,9 +74,8 @@ setup(
     extras_require={
         "docs": REQUIREMENTS["docs"],
         "extra": REQUIREMENTS["extra"],
-        "bnac": REQUIREMENTS["extra"] + REQUIREMENTS["bnac"],
-        "bluecv": REQUIREMENTS["extra"] + REQUIREMENTS["bluecv"],
-        "all": REQUIREMENTS["extra"] + REQUIREMENTS["bnac"] + REQUIREMENTS["bluecv"],
+        "external": REQUIREMENTS["external"],
+        "all": REQUIREMENTS["extra"] + REQUIREMENTS["external"],
     },
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",

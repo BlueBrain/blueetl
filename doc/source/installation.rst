@@ -1,12 +1,12 @@
 Installation
 ============
 
-The package including only the core transformations can be installed in an existing python virtual environment with::
+The package can be installed in an existing python virtual environment with::
 
     PIP_INDEX_URL=https://bbpteam.epfl.ch/repository/devpi/simple \
     pip install -U blueetl
 
-Instead, if you need to use the analysis features, you need to install the full package with::
+If you need all the optional dependencies, you can install the full package with::
 
     PIP_INDEX_URL=https://bbpteam.epfl.ch/repository/devpi/simple \
     pip install -U 'blueetl[all]'
@@ -23,4 +23,4 @@ or::
 
 where ``@main`` can be omitted when requesting the default branch, or can be replaced with the desired git branch.
 
-.. warning:: When installing from git, it's necessary to first uninstall any pre-existing version running: ``pip uninstall blueetl``.
+.. warning:: When installing from a git repository, it's necessary to first uninstall any pre-existing version running: ``pip uninstall blueetl``.

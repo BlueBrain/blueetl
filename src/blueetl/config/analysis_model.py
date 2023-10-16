@@ -1,9 +1,11 @@
 """Analysis Configuration Models."""
+import json
 from pathlib import Path
-from typing import Any, Optional, TypeVar, Union
+from typing import Annotated, Any, Optional, TypeVar, Union
 
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Extra, Field, root_validator, validator
+from pydantic import Field
+from pydantic.functional_validators import field_validator, model_validator
 
 from blueetl.constants import CONFIG_VERSION
 from blueetl.utils import checksum_str, dump_yaml, load_yaml
@@ -14,22 +16,20 @@ BaseModelT = TypeVar("BaseModelT", bound="BaseModel")
 class BaseModel(PydanticBaseModel):
     """Custom BaseModel."""
 
-    class Config:
-        """Custom Model Config."""
-
-        extra = Extra.forbid
-        allow_mutation = True
-        allow_inf_nan = False
-        validate_assignment = True
-        smart_union = True
+    model_config = {
+        "extra": "forbid",
+        "allow_inf_nan": False,
+        "validate_assignment": True,
+    }
 
     def dict(self, *args, by_alias=True, **kwargs):
         """Generate a dictionary representation of the model, using by_alias=True by default."""
-        return super().dict(*args, by_alias=by_alias, **kwargs)
+        return super().model_dump(*args, by_alias=by_alias, **kwargs)
 
-    def json(self, *args, by_alias=True, **kwargs):
+    def json(self, *args, sort_keys=False, **kwargs):
         """Generate a JSON representation of the model, using by_alias=True by default."""
-        return super().json(*args, by_alias=by_alias, **kwargs)
+        # use json.dumps because model_dump_json in pydantic v2 doesn't support sort_keys
+        return json.dumps(self.dict(*args, **kwargs), sort_keys=sort_keys)
 
     def dump(self, path: Path) -> None:
         """Dump the model to file in yaml format."""
@@ -38,7 +38,7 @@ class BaseModel(PydanticBaseModel):
     @classmethod
     def load(cls: type[BaseModelT], path: Path) -> BaseModelT:
         """Load the model from file in yaml format."""
-        return cls.parse_obj(load_yaml(path))
+        return cls.model_validate(load_yaml(path))
 
     def checksum(self):
         """Calculate the checksum of the model."""
@@ -67,15 +67,14 @@ class WindowConfig(BaseModel):
 class TrialStepsConfig(BaseModel):
     """TrialStepsConfig Model."""
 
-    class Config(BaseModel.Config):
-        """Custom Model Config."""
-
-        extra = Extra.allow
-
+    model_config = {
+        **BaseModel.model_config,
+        "extra": "allow",
+    }
     function: str
     initial_offset: float = 0.0
     bounds: tuple[float, float]
-    population: Optional[str]
+    population: Optional[str] = None
     node_set: Optional[str] = None
     limit: Optional[int] = None
 
@@ -84,7 +83,7 @@ class NeuronClassConfig(BaseModel):
     """NeuronClassConfig Model."""
 
     query: Union[dict[str, Any], list[dict[str, Any]]] = {}
-    population: Optional[str]
+    population: Optional[str] = None
     node_set: Optional[str] = None
     limit: Optional[int] = None
     node_id: Optional[list[int]] = None
@@ -98,7 +97,7 @@ class ExtractionConfig(BaseModel):
     windows: dict[str, Union[str, WindowConfig]] = {}
     trial_steps: dict[str, TrialStepsConfig] = {}
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
     def propagate_global_values(cls, values):
         """Propagate global values to each dictionary in neuron_classes and trial_steps."""
         for key in ["population", "node_set", "limit"]:
@@ -114,7 +113,7 @@ class ExtractionConfig(BaseModel):
 class FeaturesConfig(BaseModel):
     """FeaturesConfig Model."""
 
-    id: Optional[int] = Field(None, exclude=True)  # do not dump or consider in the checksum
+    id: Annotated[Optional[int], Field(exclude=True)] = None  # do not consider in the checksum
     type: str
     name: Optional[str] = None
     groupby: list[str]
@@ -137,7 +136,7 @@ class SingleAnalysisConfig(BaseModel):
     features: list[FeaturesConfig] = []
     custom: dict[str, Any] = {}
 
-    @validator("features")
+    @field_validator("features")
     def assign_features_config_id(cls, lst):
         """Assign an incremental id to each FeaturesConfig."""
         for i, item in enumerate(lst):
@@ -151,13 +150,13 @@ class MultiAnalysisConfig(BaseModel):
     version: int
     simulation_campaign: Path
     output: Path
-    clear_cache: bool = Field(False, exclude=True)  # do not dump or consider in the checksum
+    clear_cache: Annotated[bool, Field(exclude=True)] = False  # do not consider in the checksum
     simulations_filter: dict[str, Any] = {}
     simulations_filter_in_memory: dict[str, Any] = {}
     analysis: dict[str, SingleAnalysisConfig]
     custom: dict[str, Any] = {}
 
-    @validator("version")
+    @field_validator("version")
     def version_match(cls, version):
         """Verify that the config version is supported."""
         if version != CONFIG_VERSION:
@@ -170,4 +169,4 @@ if __name__ == "__main__":
 
     # print the json schema of the model in yaml format,
     # to be used only to update the current schema
-    print(yaml.safe_dump(MultiAnalysisConfig.schema(), sort_keys=False))
+    print(yaml.safe_dump(MultiAnalysisConfig.model_json_schema(), sort_keys=False))

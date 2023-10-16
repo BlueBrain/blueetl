@@ -29,7 +29,7 @@ REQUIREMENTS = {
         "xarray>=0.18.0",
         "bluepy>=2.5.2",
         "bluepysnap>=1.0.7",
-        "pydantic>=1.10,<2",
+        "pydantic>=2",
         "jsonschema>=4.0",
         "click>=8",
     ],

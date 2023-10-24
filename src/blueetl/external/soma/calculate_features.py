@@ -9,7 +9,7 @@ def calculate_features_by_simulation_circuit(repo, key, df, params):
     # pylint: disable=unused-argument
     assert key._fields == ("simulation_id", "circuit_id")
     groupby = ["neuron_class", "window"]
-    by_neuron_class = df.groupby(groupby)["value"].agg(["mean", "std"]).reset_index()
+    by_neuron_class = df.groupby(groupby, observed=True)["value"].agg(["mean", "std"]).reset_index()
     return {
         "by_neuron_class": by_neuron_class,
     }

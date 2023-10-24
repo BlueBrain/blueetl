@@ -49,11 +49,13 @@ class Windows(BaseExtractor):
     def _validate(cls, df: pd.DataFrame) -> None:
         super()._validate(df)
         # check that all the trials in the same window have the same t_start, t_stop, duration
-        if not np.all(df.groupby(WINDOW)[[T_START, T_STOP, DURATION]].nunique() == 1):
+        if not np.all(
+            df.groupby(WINDOW, observed=True)[[T_START, T_STOP, DURATION]].nunique() == 1
+        ):
             raise ValueError("Inconsistent window t_start, t_stop, or duration in some trial(s)")
         # check that the trials numbers are unique and starting from 0
         if not np.all(
-            df.groupby([SIMULATION_ID, WINDOW])[TRIAL].agg(
+            df.groupby([SIMULATION_ID, WINDOW], observed=True)[TRIAL].agg(
                 lambda x: sorted(x) == list(range(len(x)))
             )
         ):

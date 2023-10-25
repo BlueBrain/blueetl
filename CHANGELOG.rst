@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Version 0.4.0
+-------------
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Rename SimulationsConfig to SimulationCampaignConfig
+
+
 Version 0.3.0
 -------------
 

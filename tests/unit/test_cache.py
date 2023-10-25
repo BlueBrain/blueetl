@@ -5,7 +5,7 @@ import pytest
 
 from blueetl import cache as test_module
 from blueetl.config.analysis_model import SingleAnalysisConfig
-from blueetl.config.simulations import SimulationsConfig
+from blueetl.campaign.config import SimulationCampaignConfig
 
 
 def _get_analysis_config(path):
@@ -18,7 +18,7 @@ def _get_analysis_config(path):
 
 
 def _get_simulations_config():
-    return SimulationsConfig(
+    return SimulationCampaignConfig(
         data=pd.DataFrame(
             [
                 {"ca": 1.1, "seed": 1, "simulation_path": "/path/to/1"},

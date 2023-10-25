@@ -2,13 +2,13 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from blueetl.config.simulations import SimulationsConfig
+from blueetl.campaign.config import SimulationCampaignConfig
 
 
 @pytest.fixture
 def simulations_config():
-    """Return a SimulationsConfig instance."""
-    return SimulationsConfig(
+    """Return a SimulationCampaignConfig instance."""
+    return SimulationCampaignConfig(
         data=pd.DataFrame(
             [
                 {"ca": 1.1, "seed": 1, "simulation_path": "/path/to/1"},

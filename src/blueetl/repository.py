@@ -8,8 +8,8 @@ from typing import Any, Generic, Optional
 import pandas as pd
 
 from blueetl.cache import CacheManager
+from blueetl.campaign.config import SimulationCampaignConfig
 from blueetl.config.analysis_model import ExtractionConfig
-from blueetl.config.simulations import SimulationsConfig
 from blueetl.constants import CIRCUIT_ID, SIMULATION_ID, SIMULATION_PATH
 from blueetl.extract.base import ExtractorT
 from blueetl.extract.compartment_report import CompartmentReport
@@ -222,7 +222,7 @@ class Repository:
 
     def __init__(
         self,
-        simulations_config: SimulationsConfig,
+        simulations_config: SimulationCampaignConfig,
         extraction_config: ExtractionConfig,
         cache_manager: CacheManager,
         simulations_filter: Optional[dict[str, Any]] = None,
@@ -279,7 +279,7 @@ class Repository:
         return self._extraction_config
 
     @property
-    def simulations_config(self) -> SimulationsConfig:
+    def simulations_config(self) -> SimulationCampaignConfig:
         """Access to the simulation campaign configuration."""
         return self._simulations_config
 

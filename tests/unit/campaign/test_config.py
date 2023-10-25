@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from blueetl.config.simulations import SimulationsConfig
+from blueetl.campaign.config import SimulationCampaignConfig
 from blueetl.utils import load_yaml
 from tests.unit.utils import TEST_DATA_PATH, assert_frame_equal, assert_xr_equal
 
@@ -88,9 +88,9 @@ from tests.unit.utils import TEST_DATA_PATH, assert_frame_equal, assert_xr_equal
 def test_simulations_config_load(
     config_path, expected_name, expected_attrs, expected_conditions, expected_data
 ):
-    result = SimulationsConfig.load(TEST_DATA_PATH / config_path)
+    result = SimulationCampaignConfig.load(TEST_DATA_PATH / config_path)
 
-    assert isinstance(result, SimulationsConfig)
+    assert isinstance(result, SimulationCampaignConfig)
     assert result.name == expected_name
     assert result.attrs == expected_attrs
     assert result.conditions == expected_conditions
@@ -117,10 +117,10 @@ def test_simulations_config_dump(tmp_path, simulations_config, simulations_confi
     ],
 )
 def test_simulations_config_load_dump_roundtrip(tmp_path, config_path):
-    simulations_config_1 = SimulationsConfig.load(TEST_DATA_PATH / config_path)
+    simulations_config_1 = SimulationCampaignConfig.load(TEST_DATA_PATH / config_path)
     new_path = tmp_path / "tmp_config.yaml"
     simulations_config_1.dump(new_path)
-    simulations_config_2 = SimulationsConfig.load(new_path)
+    simulations_config_2 = SimulationCampaignConfig.load(new_path)
 
     assert simulations_config_1.name == simulations_config_2.name
     assert simulations_config_1.attrs == simulations_config_2.attrs
@@ -130,9 +130,9 @@ def test_simulations_config_load_dump_roundtrip(tmp_path, config_path):
 
 def test_simulations_config_from_dict(simulations_config_dict, simulations_config_dataframe):
     d = simulations_config_dict
-    result = SimulationsConfig.from_dict(d)
+    result = SimulationCampaignConfig.from_dict(d)
 
-    assert isinstance(result, SimulationsConfig)
+    assert isinstance(result, SimulationCampaignConfig)
     assert result.name == d["name"]
     assert result.attrs == d["attrs"]
     assert result.conditions == d["conditions"]
@@ -141,9 +141,9 @@ def test_simulations_config_from_dict(simulations_config_dict, simulations_confi
 
 def test_simulations_config_from_xarray(simulations_config_xarray, simulations_config_dataframe):
     da = simulations_config_xarray
-    result = SimulationsConfig.from_xarray(da)
+    result = SimulationCampaignConfig.from_xarray(da)
 
-    assert isinstance(result, SimulationsConfig)
+    assert isinstance(result, SimulationCampaignConfig)
     assert result.name == da.name
     assert result.attrs == da.attrs
     assert_frame_equal(result.data, simulations_config_dataframe)

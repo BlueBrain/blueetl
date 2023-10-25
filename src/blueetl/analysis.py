@@ -9,9 +9,9 @@ import numpy as np
 import pandas as pd
 
 from blueetl.cache import CacheManager
+from blueetl.campaign.config import SimulationCampaignConfig
 from blueetl.config.analysis import init_multi_analysis_configuration
 from blueetl.config.analysis_model import MultiAnalysisConfig, SingleAnalysisConfig
-from blueetl.config.simulations import SimulationsConfig
 from blueetl.features import FeaturesCollection
 from blueetl.repository import Repository
 from blueetl.resolver import AttrResolver, Resolver
@@ -45,7 +45,7 @@ class Analyzer:
     def from_config(
         cls,
         analysis_config: SingleAnalysisConfig,
-        simulations_config: SimulationsConfig,
+        simulations_config: SimulationCampaignConfig,
         resolver: Resolver,
         clear_cache: bool = False,
     ) -> "Analyzer":
@@ -210,7 +210,7 @@ class MultiAnalyzer:
     def _init_analyzers(self) -> dict[str, Analyzer]:
         """Load and return a dict of analyzers."""
         resolver = AttrResolver(root=self)
-        simulations_config = SimulationsConfig.load(self.global_config.simulation_campaign)
+        simulations_config = SimulationCampaignConfig.load(self.global_config.simulation_campaign)
         return {
             name: Analyzer.from_config(
                 analysis_config=analysis_config,

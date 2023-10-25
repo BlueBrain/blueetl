@@ -13,7 +13,7 @@ from blueetl.utils import dump_yaml, load_yaml, resolve_path
 L = logging.getLogger(__name__)
 
 
-class SimulationsConfig:
+class SimulationCampaignConfig:
     """Result of a Simulation Campaign."""
 
     def __init__(
@@ -71,7 +71,7 @@ class SimulationsConfig:
 
     def __eq__(self, other: object) -> bool:
         """Return True if the objects are considered equal, False otherwise."""
-        if not isinstance(other, SimulationsConfig):
+        if not isinstance(other, SimulationCampaignConfig):
             # https://docs.python.org/3/library/constants.html#NotImplemented
             return NotImplemented
         return (
@@ -112,7 +112,7 @@ class SimulationsConfig:
         return self.data.copy()
 
     @classmethod
-    def load(cls, path: StrOrPath) -> "SimulationsConfig":
+    def load(cls, path: StrOrPath) -> "SimulationCampaignConfig":
         """Load the configuration from file.
 
         Different file formats are supported:
@@ -124,7 +124,7 @@ class SimulationsConfig:
             path: path to the configuration file.
 
         Returns:
-            SimulationsConfig: new instance.
+            SimulationCampaignConfig: new instance.
         """
         config = load_yaml(path)
         if config.get("format") == "blueetl":
@@ -141,7 +141,7 @@ class SimulationsConfig:
         dump_yaml(path, data=self.to_dict())
 
     @classmethod
-    def from_dict(cls, d: dict) -> "SimulationsConfig":
+    def from_dict(cls, d: dict) -> "SimulationCampaignConfig":
         """Load the configuration from dict."""
         data = pd.DataFrame.from_dict(d["data"])
         return cls(data=data, name=d["name"], attrs=d["attrs"], conditions=d["conditions"])
@@ -158,7 +158,7 @@ class SimulationsConfig:
         }
 
     @classmethod
-    def from_xarray(cls, da: xr.DataArray) -> "SimulationsConfig":
+    def from_xarray(cls, da: xr.DataArray) -> "SimulationCampaignConfig":
         """Load the configuration from xarray.DataArray."""
         data = da.rename(SIMULATION_PATH).to_dataframe().reset_index()
         return cls(data=data, name=str(da.name), attrs=da.attrs)

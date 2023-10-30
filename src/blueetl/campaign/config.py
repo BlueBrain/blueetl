@@ -151,10 +151,6 @@ class SimulationCampaign:
             raise RuntimeError("circuit_config is missing in the simulation campaign")
         return circuit_config.endswith(".json")
 
-    def to_pandas(self) -> pd.DataFrame:
-        """Return a copy of the internal dataframe containing absolute simulation paths."""
-        return self._data.copy()
-
     @classmethod
     def load(cls, path: StrOrPath) -> "SimulationCampaign":
         """Load the configuration from file.
@@ -283,7 +279,7 @@ class SimulationCampaign:
 
         See ``etl.q`` for the filter syntax.
         """
-        return self._data.etl.q(*args, **kwargs)
+        return self._data.copy().etl.q(*args, **kwargs)
 
     def ids(self, *args, **kwargs) -> np.ndarray:
         """Return a numpy array with the ids of the selected simulations.

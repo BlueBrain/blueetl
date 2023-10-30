@@ -157,7 +157,7 @@ class Simulations(BaseExtractor):
     @classmethod
     def from_config(cls, config: SimulationCampaign, query: Optional[dict] = None) -> "Simulations":
         """Extract simulations from the given simulation campaign."""
-        df = config.to_pandas()
+        df = config.get()
         original_len = len(df)
         df = cls._from_paths(df)
         df = cls._filter_simulations_df(df, query)

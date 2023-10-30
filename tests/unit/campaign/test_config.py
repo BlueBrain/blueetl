@@ -181,8 +181,8 @@ def test_simulations_config_to_xarray_dict(input_obj, expected_dict):
         ),
     ],
 )
-def test_simulations_config_to_pandas(input_obj, expected_df):
-    result = input_obj.to_pandas()
+def test_simulations_config_get_all(input_obj, expected_df):
+    result = input_obj.get()
 
     assert isinstance(result, pd.DataFrame)
     assert_frame_equal(result, expected_df)

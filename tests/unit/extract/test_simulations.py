@@ -1,9 +1,10 @@
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pandas as pd
 import pytest
 from pandas.testing import assert_frame_equal
 
+from blueetl.campaign.config import SimulationCampaign
 from blueetl.extract import simulations as test_module
 from blueetl.utils import ensure_dtypes
 
@@ -25,8 +26,8 @@ def test_simulations_from_config(mock_simulation_class):
     mock_circuit0 = mock_simulation0.circuit
     mock_circuit1 = mock_simulation1.circuit
     mock_simulation_class.side_effect = [mock_simulation0, mock_simulation1]
-    config = Mock()
-    config.to_pandas.return_value = pd.DataFrame(
+    config = MagicMock(SimulationCampaign)
+    config.get.return_value = pd.DataFrame(
         [
             {"simulation_path": "path1", "seed": 10, "Grating Orientation (degrees)": 0},
             {"simulation_path": "path2", "seed": 11, "Grating Orientation (degrees)": 45},
@@ -60,7 +61,7 @@ def test_simulations_from_config(mock_simulation_class):
     assert isinstance(result, test_module.Simulations)
     assert_frame_equal(result.df, expected_df)
 
-    assert config.to_pandas.call_count == 1
+    assert config.get.call_count == 1
     assert mock_simulation_class.call_count == 2
     assert mock_circuit0 != mock_circuit1
     assert mock_simulation0.exists.call_count == 1
@@ -76,8 +77,8 @@ def test_simulations_from_config_filtered_by_simulation_id(mock_simulation_class
     mock_circuit0 = mock_simulation0.circuit
     mock_circuit1 = mock_simulation1.circuit
     mock_simulation_class.side_effect = [mock_simulation0, mock_simulation1]
-    config = Mock()
-    config.to_pandas.return_value = pd.DataFrame(
+    config = MagicMock(SimulationCampaign)
+    config.get.return_value = pd.DataFrame(
         [
             {"simulation_path": "path1", "seed": 10, "Grating Orientation (degrees)": 0},
             {"simulation_path": "path2", "seed": 11, "Grating Orientation (degrees)": 45},
@@ -102,7 +103,7 @@ def test_simulations_from_config_filtered_by_simulation_id(mock_simulation_class
     assert isinstance(result, test_module.Simulations)
     assert_frame_equal(result.df, expected_df)
 
-    assert config.to_pandas.call_count == 1
+    assert config.get.call_count == 1
     assert mock_simulation_class.call_count == 2
     assert mock_circuit0 != mock_circuit1
     assert mock_simulation0.exists.call_count == 1
@@ -118,8 +119,8 @@ def test_simulations_from_config_without_spikes(mock_simulation_class):
     mock_circuit0 = mock_simulation0.circuit
     mock_circuit1 = mock_simulation1.circuit
     mock_simulation_class.side_effect = [mock_simulation0, mock_simulation1]
-    config = Mock()
-    config.to_pandas.return_value = pd.DataFrame(
+    config = MagicMock(SimulationCampaign)
+    config.get.return_value = pd.DataFrame(
         [
             {"simulation_path": "path1", "seed": 10, "Grating Orientation (degrees)": 0},
             {"simulation_path": "path2", "seed": 11, "Grating Orientation (degrees)": 45},
@@ -145,7 +146,7 @@ def test_simulations_from_config_without_spikes(mock_simulation_class):
     assert isinstance(result, test_module.Simulations)
     assert_frame_equal(result.df, expected_df)
 
-    assert config.to_pandas.call_count == 1
+    assert config.get.call_count == 1
     assert mock_simulation_class.call_count == 2
     assert mock_circuit0 != mock_circuit1
     assert mock_simulation0.exists.call_count == 1
@@ -161,8 +162,8 @@ def test_simulations_from_config_first_nonexistent(mock_simulation_class):
     mock_circuit0 = mock_simulation0.circuit
     mock_circuit1 = mock_simulation1.circuit
     mock_simulation_class.side_effect = [mock_simulation0, mock_simulation1]
-    config = Mock()
-    config.to_pandas.return_value = pd.DataFrame(
+    config = MagicMock(SimulationCampaign)
+    config.get.return_value = pd.DataFrame(
         [
             {"simulation_path": "path1", "seed": 10, "Grating Orientation (degrees)": 0},
             {"simulation_path": "path2", "seed": 11, "Grating Orientation (degrees)": 45},
@@ -190,7 +191,7 @@ def test_simulations_from_config_first_nonexistent(mock_simulation_class):
     assert isinstance(result, test_module.Simulations)
     assert_frame_equal(result.df, expected_df)
 
-    assert config.to_pandas.call_count == 1
+    assert config.get.call_count == 1
     assert mock_simulation_class.call_count == 2
     assert mock_circuit0 != mock_circuit1
     assert mock_simulation0.exists.call_count == 1

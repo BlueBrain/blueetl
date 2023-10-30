@@ -372,7 +372,7 @@ class Repository:
             pd.DataFrame with simulation_path as columns, simulation conditions as index,
                 and one record for each ignored and missing simulation.
         """
-        all_simulations = self._simulations_config.to_pandas().rename(SIMULATION_PATH)
+        all_simulations = self._simulations_config.get().rename(SIMULATION_PATH)
         extracted_simulations = self.simulations.df[SIMULATION_PATH]
         return (
             pd.merge(

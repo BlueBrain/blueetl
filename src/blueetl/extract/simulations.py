@@ -7,7 +7,7 @@ import pandas as pd
 
 from blueetl.adapters.circuit import CircuitAdapter as Circuit
 from blueetl.adapters.simulation import SimulationAdapter as Simulation
-from blueetl.campaign.config import SimulationCampaignConfig
+from blueetl.campaign.config import SimulationCampaign
 from blueetl.constants import CIRCUIT, CIRCUIT_ID, SIMULATION, SIMULATION_ID, SIMULATION_PATH
 from blueetl.extract.base import BaseExtractor
 
@@ -155,9 +155,7 @@ class Simulations(BaseExtractor):
         return df
 
     @classmethod
-    def from_config(
-        cls, config: SimulationCampaignConfig, query: Optional[dict] = None
-    ) -> "Simulations":
+    def from_config(cls, config: SimulationCampaign, query: Optional[dict] = None) -> "Simulations":
         """Extract simulations from the given simulation campaign."""
         df = config.to_pandas()
         original_len = len(df)

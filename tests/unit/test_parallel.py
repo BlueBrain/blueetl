@@ -1,8 +1,9 @@
 import itertools
 import os
+from collections.abc import Iterator
 from functools import partial
 from types import SimpleNamespace
-from typing import Iterator, NamedTuple
+from typing import NamedTuple
 from unittest.mock import Mock, patch
 
 import pandas as pd

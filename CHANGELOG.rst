@@ -4,10 +4,15 @@ Changelog
 Version 0.4.0
 -------------
 
+New Features
+~~~~~~~~~~~~
+
+- Extend the API of SimulationCampaign (previously SimulationsConfig) to open simulation campaigns.
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- Rename SimulationsConfig to SimulationCampaignConfig
+- Rename SimulationsConfig to SimulationCampaign.
 
 
 Version 0.3.0

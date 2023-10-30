@@ -12,7 +12,7 @@ from typing import Generic, Optional, TypeVar
 import pandas as pd
 from blueetl_core.utils import is_subfilter
 
-from blueetl.campaign.config import SimulationCampaignConfig
+from blueetl.campaign.config import SimulationCampaign
 from blueetl.config.analysis_model import FeaturesConfig, SingleAnalysisConfig
 from blueetl.store.base import BaseStore
 from blueetl.store.parquet import ParquetStore
@@ -20,7 +20,7 @@ from blueetl.utils import dump_yaml, load_yaml
 
 L = logging.getLogger(__name__)
 
-ConfigT = TypeVar("ConfigT", SingleAnalysisConfig, SimulationCampaignConfig)
+ConfigT = TypeVar("ConfigT", SingleAnalysisConfig, SimulationCampaign)
 
 
 @dataclass
@@ -100,7 +100,7 @@ class CacheManager:
     def __init__(
         self,
         analysis_config: SingleAnalysisConfig,
-        simulations_config: SimulationCampaignConfig,
+        simulations_config: SimulationCampaign,
         store_class: type[BaseStore] = ParquetStore,
         clear_cache: bool = False,
     ) -> None:
@@ -138,7 +138,7 @@ class CacheManager:
             cached=self._load_cached_analysis_config(),
             actual=analysis_config,
         )
-        self._simulations_configs = CoupledCache[SimulationCampaignConfig](
+        self._simulations_configs = CoupledCache[SimulationCampaign](
             cached=self._load_cached_simulations_config(),
             actual=simulations_config,
         )
@@ -177,10 +177,10 @@ class CacheManager:
         path = self._cached_analysis_config_path
         return SingleAnalysisConfig.load(path) if path.exists() else None
 
-    def _load_cached_simulations_config(self) -> Optional[SimulationCampaignConfig]:
+    def _load_cached_simulations_config(self) -> Optional[SimulationCampaign]:
         """Load the cached simulations config if it exists."""
         path = self._cached_simulations_config_path
-        return SimulationCampaignConfig.load(path) if path.exists() else None
+        return SimulationCampaign.load(path) if path.exists() else None
 
     def _load_cached_checksums(self) -> dict:
         """Load the cached checksums, or return null checksums if the file doesn't exist."""

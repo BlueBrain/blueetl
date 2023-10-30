@@ -1,172 +1,290 @@
+import json
+
 import pandas as pd
 import pytest
-import xarray as xr
+from numpy.testing import assert_array_equal
+from pytest_lazyfixture import lazy_fixture
 
-from blueetl.campaign.config import SimulationCampaignConfig
-from blueetl.utils import load_yaml
-from tests.unit.utils import TEST_DATA_PATH, assert_frame_equal, assert_xr_equal
-
-
-@pytest.mark.parametrize(
-    "config_path, expected_name, expected_attrs, expected_conditions, expected_data",
-    [
-        pytest.param(
-            "analysis_config/simulations_config_01_blueetl.yaml",
-            "dummy_name",
-            {"k1": "v1", "k2": "v2"},
-            ["ca", "seed"],
-            [
-                {"simulation_path": "/path/to/1", "ca": 1.1, "seed": 1},
-                {"simulation_path": "/path/to/2", "ca": 1.2, "seed": 1},
-            ],
-            id="01_blueetl",
-        ),
-        pytest.param(
-            "analysis_config/simulations_config_02_bbpwf_simple.json",
-            "c26abad3-0861-4f7d-863c-a42daffd029f",
-            {"path_prefix": "/path/to/simulation/campaign"},
-            ["ca", "shotn_mean_pct", "shotn_sd_pct", "seed"],
-            [
-                {
-                    "ca": 1.05,
-                    "shotn_mean_pct": 50,
-                    "shotn_sd_pct": 40,
-                    "seed": 628462,
-                    "simulation_path": "/path/to/simulation/campaign/c26abad3-0861-4f7d-863c-a42daffd029f/000",
-                },
-                {
-                    "ca": 1.05,
-                    "shotn_mean_pct": 60,
-                    "shotn_sd_pct": 40,
-                    "seed": 628462,
-                    "simulation_path": "/path/to/simulation/campaign/c26abad3-0861-4f7d-863c-a42daffd029f/001",
-                },
-                {
-                    "ca": 1.15,
-                    "shotn_mean_pct": 50,
-                    "shotn_sd_pct": 40,
-                    "seed": 628462,
-                    "simulation_path": "/path/to/simulation/campaign/c26abad3-0861-4f7d-863c-a42daffd029f/002",
-                },
-                {
-                    "ca": 1.15,
-                    "shotn_mean_pct": 60,
-                    "shotn_sd_pct": 40,
-                    "seed": 628462,
-                    "simulation_path": "/path/to/simulation/campaign/c26abad3-0861-4f7d-863c-a42daffd029f/003",
-                },
-            ],
-            id="02_bbpwf_simple",
-        ),
-        pytest.param(
-            "analysis_config/simulations_config_03_bbpwf_coupled.json",
-            "881857e0-c7ae-49c1-a6f6-8a34f43c2e26",
-            {"path_prefix": "/path/to/simulation/campaign"},
-            ["coupled", "ca", "stdev_mean_ratio", "fr_scale", "seed"],
-            [
-                {
-                    "coupled": 0,
-                    "ca": 1.0,
-                    "stdev_mean_ratio": 0.9,
-                    "fr_scale": 0.125,
-                    "seed": 628462,
-                    "simulation_path": "/path/to/simulation/campaign/881857e0-c7ae-49c1-a6f6-8a34f43c2e26/000",
-                },
-                {
-                    "coupled": 1,
-                    "ca": 1.15,
-                    "stdev_mean_ratio": 1.1,
-                    "fr_scale": 1.0,
-                    "seed": 628462,
-                    "simulation_path": "/path/to/simulation/campaign/881857e0-c7ae-49c1-a6f6-8a34f43c2e26/001",
-                },
-            ],
-            id="03_bbpwf_coupled",
-        ),
-    ],
-)
-def test_simulations_config_load(
-    config_path, expected_name, expected_attrs, expected_conditions, expected_data
-):
-    result = SimulationCampaignConfig.load(TEST_DATA_PATH / config_path)
-
-    assert isinstance(result, SimulationCampaignConfig)
-    assert result.name == expected_name
-    assert result.attrs == expected_attrs
-    assert result.conditions == expected_conditions
-    expected = pd.DataFrame(expected_data)
-    expected.attrs = expected_attrs
-    assert_frame_equal(result.data, expected)
-
-
-def test_simulations_config_dump(tmp_path, simulations_config, simulations_config_dict):
-    expected = simulations_config_dict
-    path = tmp_path / "tmp_config.yaml"
-    simulations_config.dump(path)
-
-    content = load_yaml(path)
-    assert content == expected
+from blueetl.campaign import config as test_module
+from blueetl.utils import dump_yaml, load_yaml
+from tests.unit.utils import assert_frame_equal
 
 
 @pytest.mark.parametrize(
-    "config_path",
+    "input_dict, expected_obj",
     [
-        "analysis_config/simulations_config_01_blueetl.yaml",
-        "analysis_config/simulations_config_02_bbpwf_simple.json",
-        "analysis_config/simulations_config_03_bbpwf_coupled.json",
+        (
+            lazy_fixture("xarray_config_dict_simple"),
+            lazy_fixture("blueetl_config_obj_simple"),
+        ),
+        (
+            lazy_fixture("xarray_config_dict_coupled"),
+            lazy_fixture("blueetl_config_obj_coupled"),
+        ),
+        (
+            lazy_fixture("blueetl_config_dict_simple"),
+            lazy_fixture("blueetl_config_obj_simple"),
+        ),
+        (
+            lazy_fixture("blueetl_config_dict_coupled"),
+            lazy_fixture("blueetl_config_obj_coupled"),
+        ),
     ],
 )
-def test_simulations_config_load_dump_roundtrip(tmp_path, config_path):
-    simulations_config_1 = SimulationCampaignConfig.load(TEST_DATA_PATH / config_path)
-    new_path = tmp_path / "tmp_config.yaml"
-    simulations_config_1.dump(new_path)
-    simulations_config_2 = SimulationCampaignConfig.load(new_path)
+def test_simulations_config_load(tmp_path, input_dict, expected_obj):
+    config_path = tmp_path / "config.yaml"
+    dump_yaml(config_path, input_dict)
+
+    result = test_module.SimulationCampaign.load(config_path)
+
+    assert isinstance(result, test_module.SimulationCampaign)
+    assert result.name == expected_obj.name
+    assert result.attrs == expected_obj.attrs
+    assert_frame_equal(result._data, expected_obj._data)
+    assert result == expected_obj
+
+
+@pytest.mark.parametrize(
+    "input_obj, expected_dict",
+    [
+        (
+            lazy_fixture("blueetl_config_obj_simple"),
+            lazy_fixture("blueetl_config_dict_simple"),
+        ),
+        (
+            lazy_fixture("blueetl_config_obj_coupled"),
+            lazy_fixture("blueetl_config_dict_coupled"),
+        ),
+    ],
+)
+def test_simulations_config_dump(tmp_path, input_obj, expected_dict):
+    config_path = tmp_path / "config.yaml"
+
+    input_obj.dump(config_path)
+
+    content = load_yaml(config_path)
+    assert content == expected_dict
+
+
+@pytest.mark.parametrize(
+    "input_dict",
+    [
+        lazy_fixture("blueetl_config_dict_simple"),
+        lazy_fixture("blueetl_config_dict_coupled"),
+    ],
+)
+def test_simulations_config_load_dump_roundtrip(tmp_path, input_dict):
+    config_path_1 = tmp_path / "config_1.yaml"
+    config_path_2 = tmp_path / "config_2.yaml"
+    dump_yaml(config_path_1, input_dict)
+    simulations_config_1 = test_module.SimulationCampaign.load(config_path_1)
+    simulations_config_1.dump(config_path_2)
+    simulations_config_2 = test_module.SimulationCampaign.load(config_path_2)
 
     assert simulations_config_1.name == simulations_config_2.name
     assert simulations_config_1.attrs == simulations_config_2.attrs
-    assert simulations_config_1.conditions == simulations_config_2.conditions
-    assert_frame_equal(simulations_config_1.data, simulations_config_2.data)
+    assert_frame_equal(simulations_config_1._data, simulations_config_2._data)
+    assert simulations_config_1 == simulations_config_2
 
 
-def test_simulations_config_from_dict(simulations_config_dict, simulations_config_dataframe):
-    d = simulations_config_dict
-    result = SimulationCampaignConfig.from_dict(d)
+@pytest.mark.parametrize(
+    "input_dict, expected_obj",
+    [
+        (
+            lazy_fixture("blueetl_config_dict_simple"),
+            lazy_fixture("blueetl_config_obj_simple"),
+        ),
+        (
+            lazy_fixture("blueetl_config_dict_coupled"),
+            lazy_fixture("blueetl_config_obj_coupled"),
+        ),
+    ],
+)
+def test_simulations_config_from_dict(input_dict, expected_obj):
+    result = test_module.SimulationCampaign.from_dict(input_dict)
 
-    assert isinstance(result, SimulationCampaignConfig)
-    assert result.name == d["name"]
-    assert result.attrs == d["attrs"]
-    assert result.conditions == d["conditions"]
-    assert_frame_equal(result.data, simulations_config_dataframe)
+    assert isinstance(result, test_module.SimulationCampaign)
+    assert result == expected_obj
 
 
-def test_simulations_config_from_xarray(simulations_config_xarray, simulations_config_dataframe):
-    da = simulations_config_xarray
-    result = SimulationCampaignConfig.from_xarray(da)
+@pytest.mark.parametrize(
+    "input_dict, expected_obj",
+    [
+        (
+            lazy_fixture("xarray_config_dict_simple"),
+            lazy_fixture("blueetl_config_obj_simple"),
+        ),
+        (
+            lazy_fixture("xarray_config_dict_coupled"),
+            lazy_fixture("blueetl_config_obj_coupled"),
+        ),
+    ],
+)
+def test_simulations_config_from_xarray_dict(input_dict, expected_obj):
+    result = test_module.SimulationCampaign.from_xarray_dict(input_dict)
 
-    assert isinstance(result, SimulationCampaignConfig)
-    assert result.name == da.name
-    assert result.attrs == da.attrs
-    assert_frame_equal(result.data, simulations_config_dataframe)
+    assert isinstance(result, test_module.SimulationCampaign)
+    assert result == expected_obj
 
 
-def test_simulations_config_to_dict(simulations_config, simulations_config_dict):
-    result = simulations_config.to_dict()
+@pytest.mark.parametrize(
+    "input_obj, expected_dict",
+    [
+        (
+            lazy_fixture("blueetl_config_obj_simple"),
+            lazy_fixture("blueetl_config_dict_simple"),
+        ),
+        (
+            lazy_fixture("blueetl_config_obj_coupled"),
+            lazy_fixture("blueetl_config_dict_coupled"),
+        ),
+    ],
+)
+def test_simulations_config_to_dict(input_obj, expected_dict):
+    result = input_obj.to_dict()
 
     assert isinstance(result, dict)
-    assert result == simulations_config_dict
+    assert result == expected_dict
 
 
-def test_simulations_config_to_xarray(simulations_config, simulations_config_xarray):
-    expected = simulations_config_xarray
-    result = simulations_config.to_xarray()
+@pytest.mark.parametrize(
+    "input_obj, expected_dict",
+    [
+        (
+            lazy_fixture("blueetl_config_obj_simple"),
+            lazy_fixture("xarray_config_dict_simple"),
+        ),
+        (
+            lazy_fixture("blueetl_config_obj_coupled"),
+            lazy_fixture("xarray_config_dict_coupled"),
+        ),
+    ],
+)
+def test_simulations_config_to_xarray_dict(input_obj, expected_dict):
+    result = input_obj.to_xarray_dict()
 
-    assert isinstance(result, xr.DataArray)
-    assert_xr_equal(result, expected)
+    assert isinstance(result, dict)
+    result = json.loads(json.dumps(result))  # convert tuples to lists
+    assert result == expected_dict
 
 
-def test_simulations_config_to_pandas(simulations_config, simulations_config_dataframe):
-    expected = simulations_config_dataframe
-    result = simulations_config.to_pandas()
+@pytest.mark.parametrize(
+    "input_obj, expected_df",
+    [
+        (
+            lazy_fixture("blueetl_config_obj_simple"),
+            lazy_fixture("blueetl_config_dataframe_simple"),
+        ),
+        (
+            lazy_fixture("blueetl_config_obj_coupled"),
+            lazy_fixture("blueetl_config_dataframe_coupled"),
+        ),
+    ],
+)
+def test_simulations_config_to_pandas(input_obj, expected_df):
+    result = input_obj.to_pandas()
 
     assert isinstance(result, pd.DataFrame)
-    assert_frame_equal(result, expected)
+    assert_frame_equal(result, expected_df)
+    assert result is not input_obj._data
+
+
+@pytest.mark.parametrize(
+    "input_obj",
+    [
+        lazy_fixture("blueetl_config_obj_simple"),
+        lazy_fixture("blueetl_config_obj_coupled"),
+    ],
+)
+@pytest.mark.parametrize(
+    "filename, expected",
+    [
+        ("circuit_sonata.json", True),
+        ("CircuitConfig", False),
+    ],
+)
+def test_simulations_config_is_sonata(input_obj, filename, expected):
+    input_obj.attrs["circuit_config"] = f"/path/to/{filename}"
+    result = input_obj.is_sonata()
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "input_obj",
+    [
+        lazy_fixture("blueetl_config_obj_simple"),
+        lazy_fixture("blueetl_config_obj_coupled"),
+    ],
+)
+def test_simulations_config_is_sonata_raises(input_obj):
+    del input_obj.attrs["circuit_config"]
+    with pytest.raises(RuntimeError, match="circuit_config is missing in the simulation campaign"):
+        input_obj.is_sonata()
+
+
+@pytest.mark.parametrize(
+    "input_obj, expected_len",
+    [
+        (lazy_fixture("blueetl_config_obj_simple"), 4),
+        (lazy_fixture("blueetl_config_obj_coupled"), 2),
+    ],
+)
+def test_simulations_config_len(input_obj, expected_len):
+    result = len(input_obj)
+    assert result == expected_len
+
+
+@pytest.mark.parametrize(
+    "input_obj, expected_len",
+    [
+        (lazy_fixture("blueetl_config_obj_simple"), 4),
+        (lazy_fixture("blueetl_config_obj_coupled"), 2),
+    ],
+)
+def test_simulations_config_iter(input_obj, expected_len):
+    count = 0
+    for sim in input_obj:
+        assert isinstance(sim, test_module.SimulationRow)
+        count += 1
+    assert count == expected_len
+
+
+@pytest.mark.parametrize(
+    "input_obj, expected_len",
+    [
+        (lazy_fixture("blueetl_config_obj_simple"), 4),
+        (lazy_fixture("blueetl_config_obj_coupled"), 2),
+    ],
+)
+def test_simulations_config_getitem(input_obj, expected_len):
+    for i in range(expected_len):
+        sim = input_obj[i]
+        assert isinstance(sim, test_module.SimulationRow)
+
+
+@pytest.mark.parametrize(
+    "input_obj, expected_data, expected_index",
+    [
+        (lazy_fixture("blueetl_config_obj_simple"), [[2.0, 4.0]], [3]),
+        (lazy_fixture("blueetl_config_obj_coupled"), [[2.0, 4.0]], [1]),
+    ],
+)
+def test_simulations_config_get(input_obj, expected_data, expected_index):
+    result = input_obj.get(ca=2.0, depolarization=4.0)
+
+    columns = ["ca", "depolarization"]
+    expected_df = pd.DataFrame(expected_data, columns=columns, index=expected_index)
+    assert_frame_equal(result[columns], expected_df)
+
+
+@pytest.mark.parametrize(
+    "input_obj, expected_ids",
+    [
+        (lazy_fixture("blueetl_config_obj_simple"), [3]),
+        (lazy_fixture("blueetl_config_obj_coupled"), [1]),
+    ],
+)
+def test_simulations_config_ids(input_obj, expected_ids):
+    result = input_obj.ids(ca=2.0, depolarization=4.0)
+
+    assert_array_equal(result, expected_ids)

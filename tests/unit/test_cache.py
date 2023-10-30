@@ -5,7 +5,7 @@ import pytest
 
 from blueetl import cache as test_module
 from blueetl.config.analysis_model import SingleAnalysisConfig
-from blueetl.campaign.config import SimulationCampaignConfig
+from blueetl.campaign.config import SimulationCampaign
 
 
 def _get_analysis_config(path):
@@ -18,15 +18,18 @@ def _get_analysis_config(path):
 
 
 def _get_simulations_config():
-    return SimulationCampaignConfig(
+    return SimulationCampaign(
         data=pd.DataFrame(
             [
-                {"ca": 1.1, "seed": 1, "simulation_path": "/path/to/1"},
-                {"ca": 1.2, "seed": 1, "simulation_path": "/path/to/2"},
+                {"ca": 1.1, "seed": 1, "simulation_path": "uuid/0"},
+                {"ca": 1.2, "seed": 1, "simulation_path": "uuid/1"},
             ]
         ),
-        name="dummy_name",
-        attrs={"k1": "v1", "k2": "v2"},
+        name="uuid",
+        attrs={
+            "path_prefix": "/tmp/path/to/campaign",
+            "circuit_config": "/tmp/path/to/circuit_sonata.json",
+        },
     )
 
 

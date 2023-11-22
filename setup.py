@@ -63,7 +63,7 @@ setup(
     url="https://bbpteam.epfl.ch/documentation/projects/blueetl",
     project_urls={
         "Tracker": "https://bbpteam.epfl.ch/project/issues/projects/NSETM/issues",
-        "Source": "git@bbpgitlab.epfl.ch:nse/blueetl.git",
+        "Source": "https://github.com/BlueBrain/blueetl.git",
     },
     license="BBP-internal-confidential",
     install_requires=REQUIREMENTS["base"],
@@ -85,6 +85,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Topic :: Scientific/Engineering :: Bio-Informatics",
     ],
     entry_points={

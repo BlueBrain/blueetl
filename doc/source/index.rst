@@ -1,4 +1,5 @@
 .. include:: ../../README.rst
+   :end-before: .. local-substitutions
 
 
 .. toctree::
@@ -15,3 +16,5 @@
    notebooks
    api
    changelog
+
+.. |banner| image:: /_images/BlueETL.jpeg

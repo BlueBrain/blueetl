@@ -3,4 +3,4 @@
 # register Pandas accessors
 import blueetl_core  # noqa
 
-from blueetl.version import __version__  # noqa
+from blueetl._version import __version__  # noqa

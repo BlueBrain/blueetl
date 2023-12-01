@@ -1,3 +1,7 @@
+|banner|
+
+|build_status| |license| |coverage| |docs| |DOI|
+
 BlueETL
 =======
 
@@ -12,9 +16,50 @@ Introduction
 It automatically uses `Blue Brain SNAP <https://bluebrainsnap.readthedocs.io/en/stable/>`__ or `BluePy <https://bbpteam.epfl.ch/documentation/projects/bluepy/latest/>`__ to open simulations, circuits, and reports.
 
 
-Reporting issues
-----------------
+Contribution Guidelines
+-----------------------
 
-``BlueETL`` is maintained by the BlueBrain NSE team.
+See `<CONTRIBUTING.rst>`__.
 
-Should you face any issue with using it, please submit a ticket to our `issue tracker <https://bbpteam.epfl.ch/project/issues/browse/NSETM>`__.
+
+Citation
+--------
+
+When you use this software, we kindly ask you to cite the following DOI:
+
+.. image:: https://zenodo.org/badge/xxxxxxxx.svg
+   :target: https://zenodo.org/badge/latestdoi/xxxxxxxx
+
+
+Acknowledgment
+--------------
+
+The development of this software was supported by funding to the Blue Brain Project, a research center of the École polytechnique fédérale de Lausanne (EPFL), from the Swiss government’s ETH Board of the Swiss Federal Institutes of Technology.
+
+For license and authors, see `<LICENSE.txt>`__ and `<AUTHORS.txt>`__ respectively.
+
+Copyright © 2023 Blue Brain Project/EPFL
+
+
+.. |build_status| image:: https://github.com/BlueBrain/blueetl/actions/workflows/run-tox.yml/badge.svg
+   :alt: Build Status
+
+.. |license| image:: https://img.shields.io/pypi/l/blueetl
+   :target: https://github.com/BlueBrain/blueetl/blob/main/LICENSE.txt
+   :alt: License
+
+.. |coverage| image:: https://codecov.io/github/BlueBrain/blueetl/coverage.svg?branch=main
+   :target: https://codecov.io/github/BlueBrain/blueetl?branch=main
+   :alt: codecov.io
+
+.. |docs| image:: https://readthedocs.org/projects/blueetl/badge/?version=latest
+   :target: https://blueetl.readthedocs.io/
+   :alt: documentation status
+
+.. |DOI| image:: https://zenodo.org/badge/DOI/xxx/zenodo.yyy.svg
+   :target: https://doi.org/xxx/zenodo.yyy
+   :alt: DOI
+
+.. local-substitutions
+
+.. |banner| image:: doc/source/_images/BlueETL.jpeg

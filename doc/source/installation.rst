@@ -11,11 +11,11 @@ If you need all the optional dependencies, you can install the full package with
 
 If you want to try the latest code not release yet, you can use respectively::
 
-    pip install 'git+ssh://git@bbpgitlab.epfl.ch/nse/blueetl.git@main#egg=blueetl'
+    pip install 'git+ssh://git@github.com:BlueBrain/blueetl.git@main#egg=blueetl'
 
 or::
 
-    pip install 'blueetl[all] @ git+ssh://git@bbpgitlab.epfl.ch/nse/blueetl.git@main#egg=blueetl'
+    pip install 'blueetl[all] @ git+ssh://git@github.com:BlueBrain/blueetl.git@main#egg=blueetl'
 
 where ``@main`` can be omitted when requesting the default branch, or can be replaced with the desired git branch.
 

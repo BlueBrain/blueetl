@@ -48,7 +48,7 @@ If you prefer to migrate the configuration manually instead, follow these steps:
 
 You can see an example of configuration in the new format here:
 
-- https://bbpgitlab.epfl.ch/nse/blueetl/-/blob/blueetl-v0.3.0.dev3/tests/functional/data/sonata/config/analysis_config_01.yaml
+- https://github.com/BlueBrain/blueetl/blob/blueetl-v0.3.0/tests/functional/data/sonata/config/analysis_config_01.yaml
 
 
 From 0.1.x to 0.2.x
@@ -90,8 +90,8 @@ If you prefer to migrate the configuration manually instead, follow these steps:
 
 You can see an example of configuration in the old and new format here:
 
-- https://bbpgitlab.epfl.ch/nse/blueetl/-/blob/blueetl-v0.1.2/tests/functional/data/analysis_config_01.yaml
-- https://bbpgitlab.epfl.ch/nse/blueetl/-/blob/blueetl-v0.2.0.dev0/tests/functional/data/analysis_config_01.yaml
+- https://github.com/BlueBrain/blueetl/blob/blueetl-v0.1.2/tests/functional/data/analysis_config_01.yaml
+- https://github.com/BlueBrain/blueetl/blob/blueetl-v0.2.0/tests/functional/data/analysis_config_01.yaml
 
 
 Output directory

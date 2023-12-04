@@ -90,12 +90,12 @@ autosummary_generate = True
 nb_execution_show_tb = True
 nb_execution_timeout = 60
 
-# generate the link to the notebooks on GitLab
-_base_url = "https://bbpgitlab.epfl.ch/nse/blueetl"
+# generate the link to the notebooks on GitHub
+_base_url = "https://github.com/BlueBrain/blueetl"
 _git_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
 extlinks = {
     "notebooks_source": (
-        f"{_base_url}/-/blob/{_git_commit}/doc/source/notebooks/%s.ipynb",
+        f"{_base_url}/blob/{_git_commit}/doc/source/notebooks/%s.ipynb",
         "Notebook: %s",
     )
 }

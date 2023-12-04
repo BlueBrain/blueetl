@@ -12,3 +12,4 @@ venv
 .eggs
 .idea
 .ipynb_checkpoints
+_version.py

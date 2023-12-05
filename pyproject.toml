@@ -38,7 +38,7 @@ dynamic = ["version"]
 [project.optional-dependencies]
 extra = [
     # extra requirements that may be dropped at some point
-    "bluepy>=2.5.2",
+#    "bluepy>=2.5.2",
     "fastparquet>=0.8.3,!=2023.1.0", # needed by pandas to read and write parquet files
     "orjson", # faster json decoder used by fastparquet
     "tables>=3.6.1", # needed by pandas to read and write hdf files

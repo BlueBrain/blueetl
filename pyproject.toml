@@ -7,7 +7,7 @@ name = "blueetl"
 description = "Multiple simulations analysis tool"
 readme = "README.rst"
 requires-python = ">=3.9"
-license = { file = "LICENSE.txt" }
+license = { text = "Apache-2.0" }
 authors = [
     { name = "Blue Brain Project, EPFL" },
 ]

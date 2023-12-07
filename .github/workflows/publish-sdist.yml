@@ -1,4 +1,4 @@
-name: Publish sdist tarball to PyPI
+name: PyPI
 
 on:
   push:
@@ -21,12 +21,12 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install build
 
-      - name: Build a source tarball
+      - name: Build distribution packages
         run:
             python -m build
 
-      - name: Publish distribution package to PyPI
+      - name: Publish distribution packages to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
-          password: ${{ secrets.PYPI_PASSWORD }}
+          password: ${{ secrets.PYPI_API_TOKEN }}

@@ -1,5 +1,6 @@
 """Common utilities."""
 import hashlib
+import importlib
 import itertools
 import json
 import logging
@@ -8,7 +9,6 @@ import time
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from functools import cache, cached_property
-from importlib import import_module
 from pathlib import Path
 from typing import Any, Callable, Optional, Union
 
@@ -123,7 +123,7 @@ def import_by_string(full_name: str) -> Callable:
         The imported function.
     """
     module_name, _, func_name = full_name.rpartition(".")
-    return getattr(import_module(module_name), func_name)
+    return getattr(importlib.import_module(module_name), func_name)
 
 
 def resolve_path(*paths: StrOrPath, symlinks: bool = False) -> Path:
@@ -269,3 +269,24 @@ def all_equal(iterable: Iterable) -> bool:
             return False
         prev = item
     return True
+
+
+def import_optional_dependency(name: str) -> Any:
+    """Import an optional dependency.
+
+    If a dependency is missing, an ImportError with a custom message is raised. Based on:
+    https://github.com/pandas-dev/pandas/blob/0d853e77/pandas/compat/_optional.py#L85
+
+    Args:
+        name: The module name.
+
+    Returns:
+        ModuleType: The imported module, if found.
+    """
+    try:
+        module = importlib.import_module(name)
+    except ImportError as ex:
+        msg = f"Missing optional dependency {name!r}. Use pip to install it."
+        raise ImportError(msg) from ex
+
+    return module

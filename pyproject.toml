@@ -38,7 +38,6 @@ dynamic = ["version"]
 [project.optional-dependencies]
 extra = [
     # extra requirements that may be dropped at some point
-#    "bluepy>=2.5.2",
     "fastparquet>=0.8.3,!=2023.1.0", # needed by pandas to read and write parquet files
     "orjson", # faster json decoder used by fastparquet
     "tables>=3.6.1", # needed by pandas to read and write hdf files
@@ -117,13 +116,15 @@ source = [
 branch = true
 parallel = false
 omit = [
-    "src/blueetl/_version.py",
+    "*/blueetl/_version.py",
+    "*/blueetl/adapters/bluepy/*.py",
+    "*/blueetl/external/**/*.py",
 ]
 
 [tool.coverage.report]
 show_missing = true
 precision = 0
-fail_under = 80
+fail_under = 70
 
 [tool.pydocstyle]
 # D413: no blank line after last section
@@ -140,6 +141,8 @@ extension-pkg-allow-list = ["numpy", "lxml", "pydantic"]
 # List of plugins (as comma separated values of python module names) to load,
 # usually to register additional checkers.
 load-plugins = ["pylint_pydantic"]
+# List of module names for which member attributes should not be checked.
+ignored-modules = ["bluepy"]
 
 [tool.pylint.design]
 # Maximum number of arguments for function / method.

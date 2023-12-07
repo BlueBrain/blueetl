@@ -22,13 +22,9 @@ class SimulationAdapter(BaseAdapter[SimulationInterface]):
             return None
         SimulationImpl: type[SimulationInterface]
         if config.endswith(".json"):
-            from bluepysnap import Simulation
-
-            from blueetl.adapters.bluepysnap.simulation import SimulationImpl
+            from blueetl.adapters.bluepysnap.simulation import Simulation, SimulationImpl
         else:
-            from bluepy import Simulation
-
-            from blueetl.adapters.bluepy.simulation import SimulationImpl
+            from blueetl.adapters.bluepy.simulation import Simulation, SimulationImpl
         return SimulationImpl(Simulation(config))
 
     def is_complete(self) -> bool:

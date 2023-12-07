@@ -17,13 +17,9 @@ class CircuitAdapter(BaseAdapter[CircuitInterface]):
             return None
         CircuitImpl: type[CircuitInterface]
         if config.endswith(".json"):
-            from bluepysnap import Circuit
-
-            from blueetl.adapters.bluepysnap.circuit import CircuitImpl
+            from blueetl.adapters.bluepysnap.circuit import Circuit, CircuitImpl
         else:
-            from bluepy import Circuit
-
-            from blueetl.adapters.bluepy.circuit import CircuitImpl
+            from blueetl.adapters.bluepy.circuit import Circuit, CircuitImpl
         return CircuitImpl(Circuit(config))
 
     def checksum(self) -> str:

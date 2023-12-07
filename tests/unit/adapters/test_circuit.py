@@ -1,13 +1,10 @@
 import pickle
 
-import bluepy
-import bluepysnap
 import pytest
-import bluepysnap.nodes
+
 from blueetl.adapters import circuit as test_module
 from blueetl.adapters.base import AdapterError
-from tests.unit.utils import TEST_DATA_PATH
-import bluepy.cells
+from tests.unit.utils import BLUEPY_AVAILABLE, TEST_DATA_PATH, assert_isinstance
 
 
 @pytest.mark.parametrize(
@@ -18,8 +15,8 @@ import bluepy.cells
                 "sonata/circuit_config.json",
                 "default",
                 {
-                    "circuit": bluepysnap.Circuit,
-                    "population": bluepysnap.nodes.NodePopulation,
+                    "circuit": "bluepysnap.Circuit",
+                    "population": "bluepysnap.nodes.NodePopulation",
                 },
                 id="snap",
             )
@@ -29,10 +26,11 @@ import bluepy.cells
                 "bbp/CircuitConfig",
                 None,
                 {
-                    "circuit": bluepy.Circuit,
-                    "population": bluepy.cells.CellCollection,
+                    "circuit": "bluepy.Circuit",
+                    "population": "bluepy.cells.CellCollection",
                 },
                 id="bluepy",
+                marks=pytest.mark.skipif(not BLUEPY_AVAILABLE, reason="bluepy not available"),
             )
         ),
     ],
@@ -42,11 +40,11 @@ def test_circuit_adapter(path, population, expected_classes, monkeypatch):
     # enter the circuit dir to resolve relative paths in bluepy
     monkeypatch.chdir(path.parent)
     obj = test_module.CircuitAdapter(TEST_DATA_PATH / path)
-    assert isinstance(obj.instance, expected_classes["circuit"])
+    assert_isinstance(obj.instance, expected_classes["circuit"])
 
     # access methods and properties
     pop = obj.nodes[population]
-    assert isinstance(pop, expected_classes["population"])
+    assert_isinstance(pop, expected_classes["population"])
 
     checksum = obj.checksum()
     assert isinstance(checksum, str)
@@ -56,7 +54,7 @@ def test_circuit_adapter(path, population, expected_classes, monkeypatch):
     loaded = pickle.loads(dumped)
 
     assert isinstance(loaded, test_module.CircuitAdapter)
-    assert isinstance(loaded.instance, expected_classes["circuit"])
+    assert_isinstance(loaded.instance, expected_classes["circuit"])
     # no cached_properties should be loaded after unpickling
     assert sorted(loaded.__dict__) == ["_impl"]
     assert sorted(loaded._impl.__dict__) == ["_circuit"]

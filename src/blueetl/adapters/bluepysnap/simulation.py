@@ -4,7 +4,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Optional
 
-import bluepysnap
+from bluepysnap import Simulation
 
 from blueetl.adapters.bluepysnap.circuit import CircuitImpl
 from blueetl.adapters.interfaces.circuit import CircuitInterface
@@ -15,7 +15,7 @@ from blueetl.adapters.interfaces.simulation import (
 )
 
 
-class SimulationImpl(SimulationInterface[bluepysnap.Simulation]):
+class SimulationImpl(SimulationInterface[Simulation]):
     """Bluepysnap simulation implementation."""
 
     def is_complete(self) -> bool:

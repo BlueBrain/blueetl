@@ -4,8 +4,8 @@ from collections.abc import Mapping
 from functools import cached_property
 from typing import Optional, Union
 
-import bluepy
 import pandas as pd
+from bluepy import Simulation
 from bluepy.exceptions import BluePyError
 from bluepy.impl.compartment_report import CompartmentReport, SomaReport
 from bluepy.impl.spike_report import SpikeReport
@@ -53,7 +53,7 @@ class PopulationReportImpl(PopulationReportInterface):
 class ReportCollection(UserDict):
     """Collection of reports as: name -> population -> report."""
 
-    def __init__(self, simulation: bluepy.Simulation) -> None:
+    def __init__(self, simulation: Simulation) -> None:
         """Init the report collection with the specified simulation."""
         super().__init__()
         self._simulation = simulation
@@ -68,7 +68,7 @@ class ReportCollection(UserDict):
         return self.data[name]
 
 
-class SimulationImpl(SimulationInterface[bluepy.Simulation]):
+class SimulationImpl(SimulationInterface[Simulation]):
     """Bluepy simulation implementation."""
 
     def is_complete(self) -> bool:

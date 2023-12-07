@@ -1,17 +1,10 @@
 import pickle
 
-import bluepy.cells
-import bluepy.impl.compartment_report
-import bluepy.impl.spike_report
-import bluepysnap.frame_report
-import bluepysnap.nodes
-import bluepysnap.spike_report
 import pytest
 
 from blueetl.adapters import simulation as test_module
 from blueetl.adapters.base import AdapterError
-from blueetl.adapters.bluepy.simulation import PopulationReportImpl, PopulationSpikesReportImpl
-from tests.unit.utils import TEST_DATA_PATH
+from tests.unit.utils import BLUEPY_AVAILABLE, TEST_DATA_PATH, assert_isinstance
 
 
 @pytest.mark.parametrize(
@@ -23,11 +16,11 @@ from tests.unit.utils import TEST_DATA_PATH
                 "default",
                 ["soma_report", "section_report"],
                 {
-                    "simulation": bluepysnap.Simulation,
-                    "population": bluepysnap.nodes.NodePopulation,
-                    "spikes": bluepysnap.spike_report.PopulationSpikeReport,
-                    "soma_report": bluepysnap.frame_report.PopulationSomaReport,
-                    "section_report": bluepysnap.frame_report.PopulationCompartmentReport,
+                    "simulation": "bluepysnap.Simulation",
+                    "population": "bluepysnap.nodes.NodePopulation",
+                    "spikes": "bluepysnap.spike_report.PopulationSpikeReport",
+                    "soma_report": "bluepysnap.frame_report.PopulationSomaReport",
+                    "section_report": "bluepysnap.frame_report.PopulationCompartmentReport",
                 },
                 id="snap",
             )
@@ -38,13 +31,14 @@ from tests.unit.utils import TEST_DATA_PATH
                 None,
                 ["soma", "AllCompartments"],
                 {
-                    "simulation": bluepy.Simulation,
-                    "population": bluepy.cells.CellCollection,
-                    "spikes": PopulationSpikesReportImpl,
-                    "soma": PopulationReportImpl,
-                    "AllCompartments": PopulationReportImpl,
+                    "simulation": "bluepy.Simulation",
+                    "population": "bluepy.cells.CellCollection",
+                    "spikes": "blueetl.adapters.bluepy.simulation.PopulationSpikesReportImpl",
+                    "soma": "blueetl.adapters.bluepy.simulation.PopulationReportImpl",
+                    "AllCompartments": "blueetl.adapters.bluepy.simulation.PopulationReportImpl",
                 },
                 id="bluepy",
+                marks=pytest.mark.skipif(not BLUEPY_AVAILABLE, reason="bluepy not available"),
             )
         ),
     ],
@@ -54,28 +48,28 @@ def test_simulation_adapter(path, population, reports, expected_classes, monkeyp
     # enter the circuit dir to resolve relative paths in bluepy
     monkeypatch.chdir(path.parent)
     obj = test_module.SimulationAdapter(TEST_DATA_PATH / path)
-    assert isinstance(obj.instance, expected_classes["simulation"])
+    assert_isinstance(obj.instance, expected_classes["simulation"])
 
     assert obj.exists() is True
     assert obj.is_complete() is True
 
     # access methods and properties
     pop = obj.circuit.nodes[population]
-    assert isinstance(pop, expected_classes["population"])
+    assert_isinstance(pop, expected_classes["population"])
 
     spikes = obj.spikes[population]
-    assert isinstance(spikes, expected_classes["spikes"])
+    assert_isinstance(spikes, expected_classes["spikes"])
 
     for report_name in reports:
         report = obj.reports[report_name][population]
-        assert isinstance(report, expected_classes[report_name])
+        assert_isinstance(report, expected_classes[report_name])
 
     # test pickle roundtrip
     dumped = pickle.dumps(obj)
     loaded = pickle.loads(dumped)
 
     assert isinstance(loaded, test_module.SimulationAdapter)
-    assert isinstance(loaded.instance, expected_classes["simulation"])
+    assert_isinstance(loaded.instance, expected_classes["simulation"])
     # no cached_properties should be loaded after unpickling
     assert sorted(loaded.__dict__) == ["_impl"]
     assert sorted(loaded._impl.__dict__) == ["_simulation"]

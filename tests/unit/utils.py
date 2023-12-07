@@ -1,8 +1,16 @@
+import importlib
 from pathlib import Path
 
 import pandas as pd
 import pydantic
 import xarray as xr
+
+try:
+    import bluepy
+
+    BLUEPY_AVAILABLE = True
+except ImportError:
+    BLUEPY_AVAILABLE = False
 
 TEST_DATA_PATH = Path(__file__).parent / "data"
 
@@ -34,9 +42,16 @@ def iterallvalues(obj):
 
 
 def assert_not_duplicates(obj):
-    # verify that obj doesn't contain duplicate instances
+    """Verify that obj doesn't contain duplicate instances."""
     ids = set()
     for v in iterallvalues(obj):
         if isinstance(v, (dict, list, tuple)):
             assert id(v) not in ids, f"Duplicate {type(v).__name__}: {v}"
             ids.add(id(v))
+
+
+def assert_isinstance(instance, class_name):
+    """Verify that instance is an instance of class_name (given as string)."""
+    module_name, _, class_name = class_name.rpartition(".")
+    cls = getattr(importlib.import_module(module_name), class_name)
+    assert isinstance(instance, cls)

@@ -2,13 +2,13 @@
 from collections.abc import Mapping
 from typing import Optional
 
-import bluepy
+from bluepy import Circuit
 
 from blueetl.adapters.interfaces.circuit import CircuitInterface, NodePopulationInterface
 from blueetl.utils import checksum_json
 
 
-class CircuitImpl(CircuitInterface[bluepy.Circuit]):
+class CircuitImpl(CircuitInterface[Circuit]):
     """Bluepy circuit implementation."""
 
     def checksum(self) -> str:

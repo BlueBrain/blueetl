@@ -1,6 +1,6 @@
 |banner|
 
-|build_status| |license| |coverage| |docs| |DOI|
+|build_status| |license| |coverage| |docs| |CodeQL| |PyPI| |DOI|
 
 BlueETL
 =======
@@ -27,8 +27,8 @@ Citation
 
 When you use this software, we kindly ask you to cite the following DOI:
 
-.. image:: https://zenodo.org/badge/xxxxxxxx.svg
-   :target: https://zenodo.org/badge/latestdoi/xxxxxxxx
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.xxxxxxxx.svg
+   :target: https://doi.org/10.5281/zenodo.xxxxxxxx
 
 
 Acknowledgment
@@ -56,10 +56,18 @@ Copyright © 2023 Blue Brain Project/EPFL
    :target: https://blueetl.readthedocs.io/
    :alt: documentation status
 
-.. |DOI| image:: https://zenodo.org/badge/DOI/xxx/zenodo.yyy.svg
-   :target: https://doi.org/xxx/zenodo.yyy
+.. |CodeQL| image:: https://github.com/BlueBrain/blueetl/actions/workflows/github-code-scanning/codeql/badge.svg
+   :target: https://github.com/BlueBrain/blueetl/actions/workflows/github-code-scanning/codeql
+   :alt: CodeQL
+
+.. |PyPI| image:: https://github.com/BlueBrain/blueetl/actions/workflows/publish-sdist.yml/badge.svg
+   :target: https://pypi.org/project/blueetl/
+   :alt: PyPI
+
+.. |DOI| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.xxxxxxxx.svg
+   :target: https://doi.org/10.5281/zenodo.xxxxxxxx
    :alt: DOI
 
 .. local-substitutions
 
-.. |banner| image:: doc/source/_images/BlueETL.jpeg
+.. |banner| image:: https://raw.githubusercontent.com/BlueBrain/blueetl/main/doc/source/_images/BlueETL.jpeg

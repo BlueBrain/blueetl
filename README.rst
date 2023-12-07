@@ -27,8 +27,8 @@ Citation
 
 When you use this software, we kindly ask you to cite the following DOI:
 
-.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.xxxxxxxx.svg
-   :target: https://doi.org/10.5281/zenodo.xxxxxxxx
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.10286540.svg
+   :target: https://doi.org/10.5281/zenodo.10286540
 
 
 Acknowledgment
@@ -64,8 +64,8 @@ Copyright © 2023 Blue Brain Project/EPFL
    :target: https://pypi.org/project/blueetl/
    :alt: PyPI
 
-.. |DOI| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.xxxxxxxx.svg
-   :target: https://doi.org/10.5281/zenodo.xxxxxxxx
+.. |DOI| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.10286540.svg
+   :target: https://doi.org/10.5281/zenodo.10286540
    :alt: DOI
 
 .. local-substitutions

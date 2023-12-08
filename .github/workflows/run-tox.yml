@@ -30,6 +30,7 @@ jobs:
         tox
 
     - name: Upload to codecov
+      if: ${{matrix.python-version == '3.11'}}
       uses: codecov/codecov-action@v3
       with:
         fail_ci_if_error: false
@@ -37,3 +38,4 @@ jobs:
         flags: pytest
         env_vars: OS,PYTHON
         verbose: true
+        name: "blueetl-py311"

@@ -83,7 +83,7 @@ def main(analysis_config: dict) -> dict:
     log_folder = "log_test/%j"
     executor = submitit.AutoExecutor(folder=log_folder)
     executor.update_parameters(**slurm_args)
-    L.info("Using SLURM executor.")
+    L.info("Using %s executor.", executor.cluster)
 
     # submit all jobs at once in a Slurm job array
     with executor.batch():

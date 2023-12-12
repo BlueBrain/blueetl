@@ -1,7 +1,7 @@
 annotated-types==0.6.0
 attrs==23.1.0
-blueetl==0.4.0
-blueetl-core==0.1.3
+blueetl==0.4.3
+blueetl-core==0.1.7
 bluepysnap==2.0.2
 cached-property==1.5.2
 click==8.1.7

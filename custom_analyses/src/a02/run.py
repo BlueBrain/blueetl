@@ -6,7 +6,7 @@ from bluepysnap.circuit_ids import CircuitNodeIds
 from bluepysnap.frame_report import FrameReport
 from bluepysnap.simulation import Simulation
 from bluepysnap.spike_report import SpikeReport
-from common.utils import L, run_analysis
+from common.utils import L, clean_slurm_env, run_analysis, wait_for_slurm
 
 from blueetl.campaign.config import SimulationCampaign
 
@@ -79,13 +79,14 @@ def _plot(index: int, path: str, conditions: dict, analysis_config: dict) -> tup
 def main(analysis_config: dict) -> dict:
     campaign = SimulationCampaign.load(analysis_config["simulation_campaign"])
     slurm_args = {**DEFAULT_SLURM_ARGS, **analysis_config.get("slurm_args", {})}
+    clean_slurm_env()
 
     log_folder = "log_test/%j"
     executor = submitit.AutoExecutor(folder=log_folder)
     executor.update_parameters(**slurm_args)
-    L.info("Using %s executor.", executor.cluster)
+    L.info("Using %s executor", executor.cluster)
 
-    # submit all jobs at once in a Slurm job array
+    # submit all the jobs at once in a Slurm job array
     with executor.batch():
         jobs = [
             executor.submit(
@@ -97,9 +98,10 @@ def main(analysis_config: dict) -> dict:
             )
             for sim in campaign
         ]
-    L.info("Number of jobs %s", len(jobs))
+    L.info("Waiting for slurm to be ready...")
+    wait_for_slurm()
 
-    # process the results
+    L.info("Waiting for %s jobs to complete...", len(jobs))
     outputs = []
     for job in jobs:
         sim_index, output_path = job.result()

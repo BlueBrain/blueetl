@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import sys
+import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -49,7 +50,6 @@ def run_analysis(func: Callable[[dict], dict]) -> Callable[..., dict]:
         log_level: str | int = logging.INFO,
     ) -> dict:
         """Call the wrapped function, and write the result to file."""
-        clean_slurm_env()
         setup_logging(log_format=log_format, log_level=log_level)
         result = func(analysis_config)
         if analysis_output:
@@ -78,3 +78,15 @@ def clean_slurm_env():
         if key.startswith(("PMI_", "SLURM_")) and not key.endswith(("_ACCOUNT", "_PARTITION")):
             L.debug("Deleting env variable %s", key)
             del os.environ[key]
+
+
+def wait_for_slurm():
+    """Wait for some time to allow sacct to return the correct status of the submitted jobs.
+
+    This may be needed when the slurm ids have been reset, and re-used.
+
+    See https://github.com/facebookincubator/submitit/issues/1660.
+    """
+    initial_sleep = float(os.getenv("SUBMIT_JOBS_INITIAL_SLEEP", "10"))
+    L.debug("SUBMIT_JOBS_INITIAL_SLEEP=%s", initial_sleep)
+    time.sleep(initial_sleep)

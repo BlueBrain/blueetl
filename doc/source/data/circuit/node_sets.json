@@ -1,0 +1,149 @@
+{
+  "Mosaic": [
+    "All"
+  ],
+  "All": [
+    "thalamus_neurons"
+  ],
+  "thalamus_neurons": {
+    "population": "thalamus_neurons"
+  },
+  "thalamus_neurons": {
+    "population": "thalamus_neurons"
+  },
+  "Excitatory": {
+    "synapse_class": "EXC"
+  },
+  "Inhibitory": {
+    "synapse_class": "INH"
+  },
+  "Rt_RC": {
+    "mtype": "Rt_RC"
+  },
+  "VPL_IN": {
+    "mtype": "VPL_IN"
+  },
+  "VPL_TC": {
+    "mtype": "VPL_TC"
+  },
+  "bAC_IN": {
+    "etype": "bAC_IN"
+  },
+  "cAD_noscltb": {
+    "etype": "cAD_noscltb"
+  },
+  "cNAD_noscltb": {
+    "etype": "cNAD_noscltb"
+  },
+  "dAD_ltb": {
+    "etype": "dAD_ltb"
+  },
+  "dNAD_ltb": {
+    "etype": "dNAD_ltb"
+  },
+  "mc0;Rt": {
+    "region": "mc0;Rt"
+  },
+  "mc0;VPL": {
+    "region": "mc0;VPL"
+  },
+  "mc1;Rt": {
+    "region": "mc1;Rt"
+  },
+  "mc1;VPL": {
+    "region": "mc1;VPL"
+  },
+  "mc2;Rt": {
+    "region": "mc2;Rt"
+  },
+  "mc2;VPL": {
+    "region": "mc2;VPL"
+  },
+  "mc3;Rt": {
+    "region": "mc3;Rt"
+  },
+  "mc3;VPL": {
+    "region": "mc3;VPL"
+  },
+  "mc4;Rt": {
+    "region": "mc4;Rt"
+  },
+  "mc4;VPL": {
+    "region": "mc4;VPL"
+  },
+  "mc5;Rt": {
+    "region": "mc5;Rt"
+  },
+  "mc5;VPL": {
+    "region": "mc5;VPL"
+  },
+  "mc6;Rt": {
+    "region": "mc6;Rt"
+  },
+  "mc6;VPL": {
+    "region": "mc6;VPL"
+  },
+  "IN": {
+    "mtype": {
+      "$regex": ".*IN"
+    },
+    "region": {
+      "$regex": ".*"
+    }
+  },
+  "TC": {
+    "mtype": {
+      "$regex": ".*TC"
+    },
+    "region": {
+      "$regex": ".*"
+    }
+  },
+  "mc0_Column": {
+    "region": {
+      "$regex": "mc0.*"
+    }
+  },
+  "mc1_Column": {
+    "region": {
+      "$regex": "mc1.*"
+    }
+  },
+  "mc2_Column": {
+    "region": {
+      "$regex": "mc2.*"
+    }
+  },
+  "mc3_Column": {
+    "region": {
+      "$regex": "mc3.*"
+    }
+  },
+  "mc4_Column": {
+    "region": {
+      "$regex": "mc4.*"
+    }
+  },
+  "mc5_Column": {
+    "region": {
+      "$regex": "mc5.*"
+    }
+  },
+  "mc6_Column": {
+    "region": {
+      "$regex": "mc6.*"
+    }
+  },
+  "gapjunctions": [
+    "thalamus_neurons"
+  ],
+  "gap-junctions": [
+    "gapjunctions"
+  ],
+  "ML_afferents": {
+    "population": "MedialLemniscus_projections"
+  },
+  "CT_afferents": {
+    "population": "CorticoThalamic_projections"
+  }
+}

@@ -1,0 +1,34 @@
+# simple configuration with extraction and analysis, and combination of parameters
+version: 3
+simulation_campaign: ../simulation-campaign/config.json
+output: analysis_output
+analysis:
+  spikes:
+    extraction:
+      report:
+        type: spikes
+      neuron_classes:
+        Rt_EXC: {query: {layer: [Rt], synapse_class: [EXC]}}
+        VPL_EXC: {query: {layer: [VPL], synapse_class: [EXC]}}
+        Rt_INH: {query: {layer: [Rt], synapse_class: [INH]}}
+        VPL_INH: {query: {layer: [VPL], synapse_class: [INH]}}
+      limit: 1000
+      population: thalamus_neurons
+      node_set: null
+      windows:
+        w1: {bounds: [20, 90], window_type: spontaneous}
+        w2: {bounds: [10, 70], initial_offset: 10, n_trials: 3, trial_steps_value: 10}
+    features:
+    - type: multi
+      groupby: [simulation_id, circuit_id, neuron_class, window]
+      function: blueetl.external.bnac.calculate_features.calculate_features_multi
+      params:
+        export_all_neurons: true
+      params_product:
+        ratio: [0.25, 0.50, 0.75]
+        nested_example:
+        - params: {bin_size: 1}
+        - params: {bin_size: 2}
+      params_zip:
+        param1: [10, 20]
+        param2: [11, 21]

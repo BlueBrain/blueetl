@@ -1,0 +1,44 @@
+{
+  "version": 2,
+  "manifest": {
+    "$BASE_DIR": ".",
+    "$NETWORK_NODES_DIR": "$BASE_DIR/networks/nodes",
+    "$NETWORK_EDGES_DIR": "$BASE_DIR/networks/edges"
+  },
+  "node_sets_file": "$BASE_DIR/node_sets.json",
+  "networks": {
+    "nodes": [
+      {
+        "nodes_file": "$NETWORK_NODES_DIR/thalamus_neurons/nodes.h5",
+        "populations": {
+          "thalamus_neurons": {
+            "type": "biophysical",
+            "biophysical_neuron_models_dir": "emodels_hoc",
+            "alternate_morphologies": {
+              "neurolucida-asc": "morphologies/ASC",
+              "h5v1": "morphologies/h5v1"
+            }
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "edges_file": "$NETWORK_EDGES_DIR/thalamus_neurons__thalamus_neurons__chemical/edges.h5",
+        "populations": {
+          "thalamus_neurons__thalamus_neurons__chemical": {
+            "type": "chemical"
+          }
+        }
+      },
+      {
+        "edges_file": "$NETWORK_EDGES_DIR/thalamus_neurons__thalamus_neurons__electrical_synapse/edges.h5",
+        "populations": {
+          "thalamus_neurons__thalamus_neurons__electrical_synapse": {
+            "type": "electrical"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+format: blueetl
+version: 1
+name: 49b28d57-9b72-4e29-995e-d5494b3c30d3
+attrs:
+  path_prefix: .
+  blue_config_template: simulation_sonata.tmpl
+  tstop: 100
+  circuit_config: ../circuit/circuit_config.json
+data:
+- seed: 334630
+  simulation_path: 0/simulation_config.json
+- seed: 174404
+  simulation_path: 1/simulation_config.json

@@ -44,10 +44,10 @@ from tests.unit.utils import BLUEPY_AVAILABLE, TEST_DATA_PATH, assert_isinstance
     ],
 )
 def test_simulation_adapter(path, population, reports, expected_classes, monkeypatch):
-    path = TEST_DATA_PATH / path
+    path = TEST_DATA_PATH / "simulation" / path
     # enter the circuit dir to resolve relative paths in bluepy
     monkeypatch.chdir(path.parent)
-    obj = test_module.SimulationAdapter(TEST_DATA_PATH / path)
+    obj = test_module.SimulationAdapter(path)
     assert_isinstance(obj.instance, expected_classes["simulation"])
 
     assert obj.exists() is True

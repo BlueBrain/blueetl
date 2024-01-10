@@ -65,21 +65,30 @@ class SimulationCampaign:
     def __init__(
         self,
         data: pd.DataFrame,
-        name: Optional[str] = None,
-        attrs: Optional[dict] = None,
+        name: str,
+        attrs: dict,
+        config_dir: Optional[Path] = None,
     ) -> None:
         """Init the configuration.
 
         Args:
             data: DataFrame of simulation paths, having as columns: simulation_path,
                 and the parameters used for each simulation (for example: seed, ca...).
-            name: optional name of the Simulation Campaign.
-                If not specified, use 'data.name'.
-            attrs: optional dict of custom attributes.
-                If not specified, use 'data.attrs'.
+            name: name of the Simulation Campaign.
+            attrs: dict of custom attributes.
+            config_dir: if specified, it's used to resolve relative paths in attrs.
         """
-        self._name = name or ""
-        self._attrs = attrs or {}
+        self._name = name
+        self._attrs = attrs.copy()
+        if config_dir:
+            if "path_prefix" in self._attrs:
+                self._attrs["path_prefix"] = str(
+                    resolve_path(config_dir, self._attrs["path_prefix"])
+                )
+            if "circuit_config" in self._attrs:
+                self._attrs["circuit_config"] = str(
+                    resolve_path(config_dir, self._attrs["circuit_config"])
+                )
         self._data = data.copy()
         self._data[SIMULATION_PATH] = self._resolve_paths(self._data[SIMULATION_PATH])
 
@@ -169,10 +178,10 @@ class SimulationCampaign:
         config = load_yaml(path)
         if config.get("format") == "blueetl":
             L.debug("Detected blueetl configuration format")
-            return cls.from_dict(config)
+            return cls.from_dict(config, config_dir=Path(path).parent)
         if set(config) == {"name", "attrs", "data", "dims", "coords"}:
             L.debug("Detected xarray configuration format")
-            return cls.from_xarray_dict(config)
+            return cls.from_xarray_dict(config, config_dir=Path(path).parent)
         raise ValueError("Unable to detect the configuration format")
 
     def dump(self, path: StrOrPath) -> None:
@@ -180,10 +189,10 @@ class SimulationCampaign:
         dump_yaml(path, data=self.to_dict())
 
     @classmethod
-    def from_dict(cls, d: dict) -> "SimulationCampaign":
+    def from_dict(cls, d: dict, config_dir: Optional[Path] = None) -> "SimulationCampaign":
         """Load the configuration from dict."""
         data = pd.DataFrame.from_records(d["data"])
-        return cls(data=data, name=d["name"], attrs=d["attrs"])
+        return cls(data=data, name=d["name"], attrs=d["attrs"], config_dir=config_dir)
 
     def to_dict(self) -> dict:
         """Convert the configuration to dict."""
@@ -196,7 +205,9 @@ class SimulationCampaign:
         }
 
     @classmethod
-    def from_xarray(cls, da: xr.DataArray) -> "SimulationCampaign":
+    def from_xarray(
+        cls, da: xr.DataArray, config_dir: Optional[Path] = None
+    ) -> "SimulationCampaign":
         """Load the configuration from xarray.DataArray."""
         df = da.to_dataframe(SIMULATION_PATH)
         # If the campaign is not coupled, the result after calling `to_dataframe()` is like:
@@ -224,7 +235,7 @@ class SimulationCampaign:
             # save the __coupled__ attribute to be able to convert back to xarray
             attrs["__coupled__"] = coupled
         data = df.reset_index(drop=bool(coupled))
-        return cls(data=data, name=str(da.name), attrs=attrs)
+        return cls(data=data, name=str(da.name), attrs=attrs, config_dir=config_dir)
 
     def to_xarray(self) -> xr.DataArray:
         """Convert the configuration to xarray.DataArray."""
@@ -249,10 +260,10 @@ class SimulationCampaign:
         return da
 
     @classmethod
-    def from_xarray_dict(cls, d: dict) -> "SimulationCampaign":
+    def from_xarray_dict(cls, d: dict, config_dir: Optional[Path] = None) -> "SimulationCampaign":
         """Load the configuration from a dict representing xarray.DataArray."""
         da = xr.DataArray.from_dict(d)
-        return cls.from_xarray(da)
+        return cls.from_xarray(da, config_dir=config_dir)
 
     def to_xarray_dict(self) -> dict:
         """Return the configuration as a dict representing xarray.DataArray."""

@@ -290,3 +290,19 @@ def import_optional_dependency(name: str) -> Any:
         raise ImportError(msg) from ex
 
     return module
+
+
+def copy_config(src: StrOrPath, dst: StrOrPath) -> None:
+    """Copy the analysis configuration file to a different location.
+
+    If the simulation_campaign path is relative, then it's resolved
+    relatively to the directory containing the original configuration file.
+
+    The output path, instead, is not resolved even when it's relative.
+
+    Note that any comment present in the original file is not preserved.
+    """
+    src = Path(src)
+    config = load_yaml(src)
+    config["simulation_campaign"] = resolve_path(src.parent, config["simulation_campaign"])
+    dump_yaml(dst, config, default_flow_style=None)

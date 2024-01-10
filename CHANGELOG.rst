@@ -1,6 +1,38 @@
 Changelog
 =========
 
+Version 0.4.4
+-------------
+
+Improvements
+~~~~~~~~~~~~
+
+- Support relative paths in the simulation campaign config.
+
+
+Version 0.4.3
+-------------
+
+Improvements
+~~~~~~~~~~~~
+
+- Update DOI.
+
+Version 0.4.2
+-------------
+
+Improvements
+~~~~~~~~~~~~
+
+- Fix docs build in rtd.
+- Update badges.
+- Conditionally skip tests requiring bluepy.
+
+Version 0.4.1
+-------------
+
+- First public release.
+
 Version 0.4.0
 -------------
 

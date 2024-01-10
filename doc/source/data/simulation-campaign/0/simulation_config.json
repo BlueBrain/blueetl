@@ -16,15 +16,6 @@
     "spikes_file": "spikes.h5"
   },
   "reports": {
-    "soma_report": {
-      "cells": "mc2_Column",
-      "variable_name": "v",
-      "sections": "soma",
-      "type": "compartment",
-      "dt": 0.1,
-      "start_time": 0,
-      "end_time": 4000
-    }
   },
   "inputs": {
     "HoldRt": {

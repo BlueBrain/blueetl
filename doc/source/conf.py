@@ -89,7 +89,7 @@ autosummary_generate = True
 
 nb_execution_show_tb = True
 nb_execution_timeout = 60
-nb_execution_excludepatterns = ["02_features_basics.ipynb", "03_simulation_campaign.ipynb"]
+nb_execution_excludepatterns = []
 
 # generate the link to the notebooks on GitHub
 _base_url = "https://github.com/BlueBrain/blueetl"

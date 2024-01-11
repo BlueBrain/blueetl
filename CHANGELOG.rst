@@ -8,7 +8,7 @@ Improvements
 ~~~~~~~~~~~~
 
 - Support relative paths in the simulation campaign config.
-
+- Add a simple simulation campaign using a subsampled circuit, to run the Jupyter notebooks in the documentation.
 
 Version 0.4.3
 -------------

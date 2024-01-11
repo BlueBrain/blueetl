@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -7,7 +8,7 @@ from pytest_lazyfixture import lazy_fixture
 
 from blueetl.campaign import config as test_module
 from blueetl.utils import dump_yaml, load_yaml
-from tests.unit.utils import assert_frame_equal
+from tests.unit.utils import TEST_DATA_PATH, assert_frame_equal
 
 
 @pytest.mark.parametrize(
@@ -288,3 +289,19 @@ def test_simulations_config_ids(input_obj, expected_ids):
     result = input_obj.ids(ca=2.0, depolarization=4.0)
 
     assert_array_equal(result, expected_ids)
+
+
+@pytest.mark.parametrize(
+    "config_file",
+    [
+        "config_01_relative_bbp_workflow.json",
+        "config_02_relative_blueetl.yaml",
+    ],
+)
+def test_simulations_config_with_relative_paths(config_file):
+    config_file = TEST_DATA_PATH / "simulation_campaign" / config_file
+
+    result = test_module.SimulationCampaign.load(config_file)
+
+    assert Path(result.attrs["path_prefix"]).is_absolute()
+    assert Path(result.attrs["circuit_config"]).is_absolute()

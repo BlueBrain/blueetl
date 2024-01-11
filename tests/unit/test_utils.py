@@ -4,12 +4,14 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
+import yaml
 from numpy.testing import assert_equal
 from packaging.version import Version
 from pandas.api.types import is_integer_dtype
 
 from blueetl import utils as test_module
 from blueetl.constants import DTYPES
+from tests.unit.utils import TEST_DATA_PATH
 
 
 @pytest.mark.parametrize(
@@ -232,3 +234,18 @@ def test_all_equal(iterable, expected):
     # with an iterator
     result = test_module.all_equal(iter(iterable))
     assert result == expected
+
+
+def test_copy_config(tmp_path):
+    src = TEST_DATA_PATH / "analysis" / "analysis_config_01_relative.yaml"
+    dst = tmp_path / "analysis_config.yaml"
+    test_module.copy_config(src, dst)
+
+    assert dst.is_file()
+    src_config = yaml.safe_load(src.read_text())
+    dst_config = yaml.safe_load(dst.read_text())
+    src_sim_campaign_path = Path(src_config["simulation_campaign"])
+    dst_sim_campaign_path = Path(dst_config["simulation_campaign"])
+    assert src_sim_campaign_path.is_absolute() is False
+    assert dst_sim_campaign_path.is_absolute() is True
+    assert (src.parent / src_sim_campaign_path).resolve() == dst_sim_campaign_path.resolve()

@@ -1,4 +1,5 @@
 """Run CLI."""
+
 import logging
 import sys
 

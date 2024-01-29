@@ -1,4 +1,5 @@
 """Parallelization utilities."""
+
 import logging
 from collections import namedtuple
 from collections.abc import Callable, Iterator

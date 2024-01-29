@@ -1,4 +1,5 @@
 """Bluepy simulation implementation."""
+
 from collections import UserDict
 from collections.abc import Mapping
 from functools import cached_property

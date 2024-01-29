@@ -1,4 +1,5 @@
 """Adapters for Circuit."""
+
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Optional

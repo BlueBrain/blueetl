@@ -1,4 +1,5 @@
 """Interfaces for Simulation."""
+
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from typing import Generic, Optional, TypeVar

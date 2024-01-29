@@ -1,4 +1,5 @@
 """Common utils from BlueCV."""
+
 from elephant.conversion import BinnedSpikeTrain
 from neo import SpikeTrain
 from quantities import ms

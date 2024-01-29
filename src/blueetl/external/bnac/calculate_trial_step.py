@@ -1,4 +1,5 @@
 """Trial steps functions adapted from BlueNetworkActivityComparison/bnac/onset.py."""
+
 import numpy as np
 from scipy.ndimage import gaussian_filter
 

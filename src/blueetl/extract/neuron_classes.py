@@ -1,4 +1,5 @@
 """NeuronClasses extractor."""
+
 import json
 import logging
 

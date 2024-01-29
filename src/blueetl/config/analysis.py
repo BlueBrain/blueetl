@@ -1,4 +1,5 @@
 """Analysis Configuration."""
+
 import logging
 from collections.abc import Iterator
 from copy import deepcopy

@@ -1,4 +1,5 @@
 """Migrate CLI."""
+
 import sys
 from copy import deepcopy
 

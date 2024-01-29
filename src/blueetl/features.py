@@ -1,4 +1,5 @@
 """Features collection."""
+
 import logging
 from collections import Counter, defaultdict
 from collections.abc import Iterator
@@ -268,12 +269,10 @@ class FeaturesCollection:
             )
             L.info("Calculated features %s/%s [id=%s]\n%s", n, tot, features_id, msg)
 
-        def _group_features_by_attributes() -> (
-            tuple[
-                list[FeaturesConfig],
-                dict[FeaturesConfigKey, list[FeaturesConfig]],
-            ]
-        ):
+        def _group_features_by_attributes() -> tuple[
+            list[FeaturesConfig],
+            dict[FeaturesConfigKey, list[FeaturesConfig]],
+        ]:
             cached: list[FeaturesConfig] = []
             groups: dict[FeaturesConfigKey, list[FeaturesConfig]] = defaultdict(list)
             tot = len(self._features_configs)

@@ -1,4 +1,5 @@
 """neuron_class features from BlueCV."""
+
 import logging
 from functools import partial
 

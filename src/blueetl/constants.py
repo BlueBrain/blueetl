@@ -1,4 +1,5 @@
 """Common constants."""
+
 import numpy as np
 
 # columns names

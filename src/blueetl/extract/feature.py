@@ -1,4 +1,5 @@
 """Features extractor."""
+
 import logging
 
 import pandas as pd

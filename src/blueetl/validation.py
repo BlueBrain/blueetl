@@ -1,4 +1,5 @@
 """Validation utilities."""
+
 import importlib.resources
 import logging
 

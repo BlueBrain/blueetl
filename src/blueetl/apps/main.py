@@ -1,4 +1,5 @@
 """Main CLI."""
+
 import click
 
 from blueetl import __version__

@@ -1,4 +1,5 @@
 """Parquet data store."""
+
 import logging
 from typing import Any, Optional
 

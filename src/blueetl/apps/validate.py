@@ -1,4 +1,5 @@
 """Validate CLI."""
+
 import sys
 
 import click

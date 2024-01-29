@@ -1,4 +1,5 @@
 """Bluepy circuit implementation."""
+
 from collections.abc import Mapping
 from typing import Optional
 

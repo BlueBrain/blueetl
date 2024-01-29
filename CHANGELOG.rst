@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Version 0.5.1
+-------------
+
+Improvements
+~~~~~~~~~~~~
+
+- Save relative paths and omit filenames when saving simulation paths in the simulation campaign config.
+
+
 Version 0.5.0
 -------------
 

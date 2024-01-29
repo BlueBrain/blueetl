@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -208,38 +207,40 @@ def test_simulations_config_get_all(input_obj, expected_df, lazy_fixture):
 
 
 @pytest.mark.parametrize(
-    "input_obj",
-    [
-        "blueetl_config_obj_simple",
-        "blueetl_config_obj_coupled",
-    ],
-)
-@pytest.mark.parametrize(
     "filename, expected",
     [
         ("circuit_sonata.json", True),
         ("CircuitConfig", False),
     ],
 )
-def test_simulations_config_is_sonata(input_obj, filename, expected, lazy_fixture):
-    input_obj = lazy_fixture(input_obj)
-    input_obj.attrs["circuit_config"] = f"/path/to/{filename}"
-    result = input_obj.is_sonata()
-    assert result == expected
+@pytest.mark.parametrize(
+    "input_dict",
+    [
+        "blueetl_config_dict_simple",
+        "blueetl_config_dict_coupled",
+    ],
+)
+def test_simulations_config_is_sonata(input_dict, filename, expected, lazy_fixture):
+    input_dict = lazy_fixture(input_dict)
+    input_dict["attrs"]["circuit_config"] = f"/path/to/{filename}"
+    obj = test_module.SimulationCampaign.from_dict(input_dict)
+    assert obj.is_sonata() == expected
 
 
 @pytest.mark.parametrize(
-    "input_obj",
+    "input_dict",
     [
-        "blueetl_config_obj_simple",
-        "blueetl_config_obj_coupled",
+        "blueetl_config_dict_simple",
+        "blueetl_config_dict_coupled",
     ],
 )
-def test_simulations_config_is_sonata_raises(input_obj, lazy_fixture):
-    input_obj = lazy_fixture(input_obj)
-    del input_obj.attrs["circuit_config"]
-    with pytest.raises(RuntimeError, match="circuit_config is missing in the simulation campaign"):
-        input_obj.is_sonata()
+def test_simulations_config_raises_when_circuit_config_is_missing(input_dict, lazy_fixture):
+    input_dict = lazy_fixture(input_dict)
+    del input_dict["attrs"]["circuit_config"]
+    with pytest.raises(
+        ValueError, match="circuit_config is missing or empty in the simulation campaign"
+    ):
+        test_module.SimulationCampaign.from_dict(input_dict)
 
 
 @pytest.mark.parametrize(
@@ -329,5 +330,4 @@ def test_simulations_config_with_relative_paths(config_file):
 
     result = test_module.SimulationCampaign.load(config_file)
 
-    assert Path(result.attrs["path_prefix"]).is_absolute()
-    assert Path(result.attrs["circuit_config"]).is_absolute()
+    assert result.path_prefix.is_absolute()

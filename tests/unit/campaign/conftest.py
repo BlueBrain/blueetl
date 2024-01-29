@@ -61,17 +61,17 @@ def blueetl_config_dict_simple():
             {
                 "ca": 1.0,
                 "depolarization": 4.0,
-                "simulation_path": "/tmp/simple/uuid/1/simulation_config.json",
+                "simulation_path": "uuid/1",
             },
             {
                 "ca": 2.0,
                 "depolarization": 3.0,
-                "simulation_path": "/tmp/simple/uuid/2/simulation_config.json",
+                "simulation_path": "uuid/2",
             },
             {
                 "ca": 2.0,
                 "depolarization": 4.0,
-                "simulation_path": "/tmp/simple/uuid/3/simulation_config.json",
+                "simulation_path": "uuid/3",
             },
         ],
     }
@@ -98,7 +98,7 @@ def blueetl_config_dict_coupled():
             {
                 "ca": 2.0,
                 "depolarization": 4.0,
-                "simulation_path": "/tmp/coupled/uuid/1/simulation_config.json",
+                "simulation_path": "uuid/1",
             },
         ],
     }
@@ -117,13 +117,25 @@ def xarray_config_obj_coupled(xarray_config_dict_coupled):
 @pytest.fixture
 def blueetl_config_dataframe_simple(blueetl_config_dict_simple):
     d = blueetl_config_dict_simple
-    return pd.DataFrame.from_records(d["data"])
+    df = pd.DataFrame.from_records(d["data"])
+    df["simulation_path"] = [
+        "",
+        "/tmp/simple/uuid/1/simulation_config.json",
+        "/tmp/simple/uuid/2/simulation_config.json",
+        "/tmp/simple/uuid/3/simulation_config.json",
+    ]
+    return df
 
 
 @pytest.fixture
 def blueetl_config_dataframe_coupled(blueetl_config_dict_coupled):
     d = blueetl_config_dict_coupled
-    return pd.DataFrame.from_records(d["data"])
+    df = pd.DataFrame.from_records(d["data"])
+    df["simulation_path"] = [
+        "",
+        "/tmp/coupled/uuid/1/simulation_config.json",
+    ]
+    return df
 
 
 @pytest.fixture

@@ -20,7 +20,7 @@ from blueetl.utils import setup_logging
 )
 @click.option("-v", "--verbose", count=True, help="-v for INFO, -vv for DEBUG")
 def convert_spikes(input_file, output_dir, node_population, verbose):
-    r"""Convert spikes in CSV format.
+    """Convert spikes in CSV format.
 
     Read INPUT_FILE containing the spikes in CSV format, and write synthetic files to OUTPUT_DIR.
 

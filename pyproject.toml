@@ -94,6 +94,7 @@ select = [
     "F", # pyflakes
     "UP", # pyupgrade
 ]
+ignore = ["D301", "D413"]
 
 [tool.ruff.pydocstyle]
 convention = "google"
@@ -129,8 +130,9 @@ precision = 0
 fail_under = 70
 
 [tool.pydocstyle]
+# D301: Use r""" if any backslashes in a docstring
 # D413: no blank line after last section
-add_ignore = "D413"
+add_ignore = "D301,D413"
 convention = "google"
 
 [tool.pylint.main]

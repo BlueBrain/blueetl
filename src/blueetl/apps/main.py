@@ -3,6 +3,7 @@
 import click
 
 from blueetl import __version__
+from blueetl.apps.convert import convert_spikes
 from blueetl.apps.migrate import migrate_config
 from blueetl.apps.run import run
 from blueetl.apps.validate import validate_config
@@ -25,3 +26,4 @@ def cli():
 cli.add_command(run)
 cli.add_command(migrate_config)
 cli.add_command(validate_config)
+cli.add_command(convert_spikes)

@@ -71,6 +71,28 @@ def dump_yaml(filepath: StrOrPath, data: Any, **kwargs) -> None:
         yaml.dump(data, stream=f, sort_keys=False, Dumper=_get_internal_yaml_dumper(), **kwargs)
 
 
+def load_json(filepath: StrOrPath, *, encoding: str = "utf-8", **kwargs) -> Any:
+    """Load from JSON file."""
+    with open(filepath, encoding=encoding) as f:
+        return json.load(f, **kwargs)
+
+
+def dump_json(
+    filepath: StrOrPath, data: Any, *, encoding: str = "utf-8", indent: int = 2, **kwargs
+) -> None:
+    """Dump to JSON file."""
+    with open(filepath, mode="w", encoding=encoding) as fp:
+        json.dump(data, fp, indent=indent, **kwargs)
+
+
+def relpath(path: StrOrPath, start: StrOrPath) -> Path:
+    """Return a relative filepath to path from the start directory.
+
+    In Python>=3.12 it would be possible to use ``Path.relative_to`` with walk_up=True.
+    """
+    return Path(os.path.relpath(path, start=start))
+
+
 def ensure_list(x: Any) -> list:
     """Always return a list from the given argument."""
     if isinstance(x, list):

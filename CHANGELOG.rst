@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Version 0.5.0
+-------------
+
+New Features
+~~~~~~~~~~~~
+
+- Add CLI to convert and import inferred spikes in CSV format.
+
+
 Version 0.4.4
 -------------
 

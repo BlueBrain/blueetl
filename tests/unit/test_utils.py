@@ -150,6 +150,35 @@ path: /custom/path
     assert loaded_data == expected
 
 
+def test_dump_jaon_load_json_roundtrip(tmp_path):
+    data = {
+        "dict": {"str": "mystr", "int": 123},
+        "list_of_int": [1, 2, 3],
+        "list_of_str": ["1", "2", "3"],
+        "path": "/custom/path",
+    }
+    filepath = tmp_path / "test.json"
+
+    test_module.dump_json(filepath, data, indent=None)
+    loaded_data = test_module.load_json(filepath)
+
+    assert loaded_data == data
+
+
+@pytest.mark.parametrize(
+    "path, start, expected",
+    [
+        ("path/1", "path/2", "../1"),
+        ("/path/1", "/path/2", "../1"),
+        ("/path/to/1", "/path/2", "../to/1"),
+        ("/path/1", "/path/to/2", "../../1"),
+    ],
+)
+def test_relpath(path, start, expected):
+    result = test_module.relpath(path, start=start)
+    assert result == Path(expected)
+
+
 @pytest.mark.parametrize(
     "d, expected",
     [

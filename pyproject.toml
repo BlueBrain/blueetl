@@ -19,6 +19,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
@@ -26,6 +27,7 @@ dependencies = [
     "bluepysnap>=1.0.7",
     "click>=8",
     "jsonschema>=4.0",
+    "libsonata!=0.1.25;platform_system=='Darwin'",
     "numpy>=1.19.4",
     "pandas>=1.3.0",
     "pyarrow>=7", # needed by pandas to read and write feather or parquet files

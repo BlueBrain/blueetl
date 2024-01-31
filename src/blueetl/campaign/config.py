@@ -2,6 +2,7 @@
 
 import logging
 from collections.abc import Iterator
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
@@ -29,20 +30,6 @@ def _resolve_simulation_path(path_prefix: str, path: str, filename: str) -> str:
     if path_obj.name != filename:
         # the paths in the xarray simulation campaign config don't include the filename
         path_obj = path_obj / filename
-    return str(path_obj)
-
-
-def _reduce_simulation_path(path_prefix: str, path: str, filename: str) -> str:
-    """Reduce to shorter path, without path_prefix and filename."""
-    if not path or path.startswith("https://"):
-        # do not convert excluded simulations or nexus urls
-        return path
-    path_obj = Path(path)
-    if path_obj.is_relative_to(path_prefix):
-        path_obj = path_obj.relative_to(path_prefix)
-    if path_obj.name == filename:
-        # the paths in the xarray simulation campaign config don't include the filename
-        path_obj = path_obj.parent
     return str(path_obj)
 
 
@@ -77,21 +64,24 @@ class SimulationCampaign:
                 and the parameters used for each simulation (for example: seed, ca...).
             name: name of the Simulation Campaign.
             attrs: dict of custom attributes.
-            config_dir: if specified, it's used to resolve relative paths in attrs.
+            config_dir: absolute directory used to resolve path_prefix, if relative.
         """
+        self._validate(attrs, config_dir)
         self._name = name
-        self._attrs = attrs.copy()
-        if config_dir:
-            if "path_prefix" in self._attrs:
-                self._attrs["path_prefix"] = str(
-                    resolve_path(config_dir, self._attrs["path_prefix"])
-                )
-            if "circuit_config" in self._attrs:
-                self._attrs["circuit_config"] = str(
-                    resolve_path(config_dir, self._attrs["circuit_config"])
-                )
+        self._attrs = deepcopy(attrs)
+        self._path_prefix = resolve_path(config_dir or "", self._attrs.pop("path_prefix"))
+        self._is_sonata = self._attrs["circuit_config"].endswith(".json")
         self._data = data.copy()
-        self._data[SIMULATION_PATH] = self._resolve_paths(self._data[SIMULATION_PATH])
+        self._data_resolved = data.copy()
+        self._data_resolved[SIMULATION_PATH] = self._resolve_paths(data[SIMULATION_PATH])
+
+    def _validate(self, attrs: dict, config_dir: Optional[Path]) -> None:
+        """Validate the attrs."""
+        for key in "path_prefix", "circuit_config":
+            if not attrs.get(key):
+                raise ValueError(f"{key} is missing or empty in the simulation campaign")
+        if config_dir is None and not Path(attrs["path_prefix"]).is_absolute():
+            raise ValueError("path_prefix must be set to an absolute path when config_dir is None")
 
     def _get_simulation_filename(self) -> str:
         """Return the filename of each simulation in the campaign."""
@@ -101,17 +91,7 @@ class SimulationCampaign:
         """Resolve the simulation paths."""
         return simulation_paths.apply(
             lambda path: _resolve_simulation_path(
-                path_prefix=self.attrs.get("path_prefix", ""),
-                path=path,
-                filename=self._get_simulation_filename(),
-            )
-        )
-
-    def _reduce_paths(self, simulation_paths: pd.Series) -> pd.Series:
-        """Reduce the simulation paths."""
-        return simulation_paths.apply(
-            lambda path: _reduce_simulation_path(
-                path_prefix=self.attrs.get("path_prefix", ""),
+                path_prefix=str(self.path_prefix),
                 path=path,
                 filename=self._get_simulation_filename(),
             )
@@ -126,7 +106,8 @@ class SimulationCampaign:
             (
                 self.name == other.name,
                 self.attrs == other.attrs,
-                self._data.equals(other._data),
+                self.path_prefix == other.path_prefix,
+                self._data_resolved.equals(other._data_resolved),
             )
         )
 
@@ -141,6 +122,11 @@ class SimulationCampaign:
         return self._attrs
 
     @property
+    def path_prefix(self) -> Path:
+        """Return the path prefix, i.e. the absolute path containing the simulations."""
+        return self._path_prefix
+
+    @property
     def condition_names(self) -> list[str]:
         """Return the names of the parameters used to run the simulations."""
         return [c for c in self._data.columns if c != SIMULATION_PATH]
@@ -150,16 +136,13 @@ class SimulationCampaign:
         """Return the DataFrame of the parameters used to run the simulations."""
         return self._data[self.condition_names]
 
-    def is_coupled(self):
+    def is_coupled(self) -> bool:
         """Return True if the coords are coupled, False otherwise."""
         return bool(self.attrs.get("__coupled__"))
 
-    def is_sonata(self):
+    def is_sonata(self) -> bool:
         """Return True if the simulations are in SONATA format, False otherwise."""
-        circuit_config = self.attrs.get("circuit_config", "")
-        if not circuit_config:
-            raise RuntimeError("circuit_config is missing in the simulation campaign")
-        return circuit_config.endswith(".json")
+        return self._is_sonata
 
     @classmethod
     def load(cls, path: StrOrPath) -> "SimulationCampaign":
@@ -201,7 +184,7 @@ class SimulationCampaign:
             "format": "blueetl",
             "version": 1,
             "name": self.name,
-            "attrs": self.attrs,
+            "attrs": {**self.attrs, "path_prefix": str(self.path_prefix)},
             "data": self._data.to_dict(orient="records"),
         }
 
@@ -240,10 +223,12 @@ class SimulationCampaign:
 
     def to_xarray(self) -> xr.DataArray:
         """Convert the configuration to xarray.DataArray."""
-        s = self._data.set_index(self.condition_names)[SIMULATION_PATH]
-        s = self._reduce_paths(s)
+        data = self._data
+        if condition_names := self.condition_names:
+            data = data.set_index(condition_names)
+        s = data[SIMULATION_PATH]
         s.name = self.name
-        attrs = self.attrs.copy()
+        attrs = {**self.attrs, "path_prefix": str(self.path_prefix)}
         coupled = attrs.pop("__coupled__", None)
         if not coupled:
             # generated by GenerateSimulationCampaign
@@ -252,7 +237,7 @@ class SimulationCampaign:
         else:
             # generated by GenerateCoupledCoordsSimulationCampaign
             da = xr.DataArray(
-                list(s),
+                s.to_list(),
                 name=s.name,
                 dims=coupled,
                 coords={coupled: s.index},
@@ -276,13 +261,13 @@ class SimulationCampaign:
 
     def __iter__(self) -> Iterator[SimulationRow]:
         """Iterate over the simulation rows."""
-        for i, (_, sim_dict) in enumerate(self._data.etl.iterdict()):
+        for i, (_, sim_dict) in enumerate(self._data_resolved.etl.iterdict()):
             path = sim_dict.pop(SIMULATION_PATH)
             yield SimulationRow(index=i, path=path, conditions=sim_dict)
 
     def __getitem__(self, index: int) -> SimulationRow:
         """Return a specific simulation row."""
-        sim_dict = self._data.loc[index].to_dict()
+        sim_dict = self._data_resolved.loc[index].to_dict()
         path = sim_dict.pop(SIMULATION_PATH)
         return SimulationRow(index=index, path=path, conditions=sim_dict)
 
@@ -291,7 +276,7 @@ class SimulationCampaign:
 
         See ``etl.q`` for the filter syntax.
         """
-        return self._data.copy().etl.q(*args, **kwargs)
+        return self._data_resolved.copy().etl.q(*args, **kwargs)
 
     def ids(self, *args, **kwargs) -> np.ndarray:
         """Return a numpy array with the ids of the selected simulations.

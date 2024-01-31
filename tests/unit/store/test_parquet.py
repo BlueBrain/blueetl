@@ -1,6 +1,5 @@
 import pytest
 from pandas.testing import assert_frame_equal
-from pytest_lazyfixture import lazy_fixture
 
 from blueetl.store import parquet as test_module
 
@@ -8,13 +7,13 @@ from blueetl.store import parquet as test_module
 @pytest.mark.parametrize(
     "df",
     [
-        lazy_fixture("storable_df_with_unnamed_index"),
-        lazy_fixture("storable_df_with_named_index"),
-        lazy_fixture("storable_df_with_named_multiindex"),
+        "storable_df_with_unnamed_index",
+        "storable_df_with_named_index",
+        "storable_df_with_named_multiindex",
         # fastparquet 0.8.1 fails to write DataFrames with MultiIndexes without names,
         # but probably it's not a good idea to use them anyway. See the code at:
         # https://github.com/dask/fastparquet/blob/34069fe2a41a7491e5b7b1f1b2cae9c41176f7b8/fastparquet/util.py#L140-L144
-        # lazy_fixture("storable_df_with_unnamed_multiindex"),
+        # "storable_df_with_unnamed_multiindex",
     ],
 )
 @pytest.mark.parametrize(
@@ -51,7 +50,8 @@ from blueetl.store import parquet as test_module
         ),
     ],
 )
-def test_dump_load_roundtrip(tmp_path, df, dump_options, load_options):
+def test_dump_load_roundtrip(tmp_path, df, dump_options, load_options, lazy_fixture):
+    df = lazy_fixture(df)
     name = "myname"
     store = test_module.ParquetStore(tmp_path)
     if dump_options is not None:

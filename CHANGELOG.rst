@@ -1,6 +1,16 @@
 Changelog
 =========
 
+Version 0.5.1
+-------------
+
+Improvements
+~~~~~~~~~~~~
+
+- Add tests for Python 3.12.
+- Remove brion dependency in tests.
+
+
 Version 0.5.0
 -------------
 

@@ -1,7 +1,7 @@
 {
   "manifest": {
     "$OUTPUT_DIR": "./reporting",
-    "$INPUT_DIR": "./"
+    "$INPUT_DIR": "../../circuit/sonata"
   },
   "run": {
     "tstop": 1000.0,

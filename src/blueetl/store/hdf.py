@@ -1,4 +1,5 @@
 """HDF data store."""
+
 import logging
 from typing import Optional
 

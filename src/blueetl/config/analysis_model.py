@@ -1,4 +1,5 @@
 """Analysis Configuration Models."""
+
 import json
 from pathlib import Path
 from typing import Annotated, Any, Optional, TypeVar, Union

@@ -28,6 +28,7 @@ def test_help():
       run              Run the analysis.
       migrate-config   Migrate a configuration file.
       validate-config  Validate a configuration file.
+      convert-spikes   Convert spikes in CSV format.
     """
 
     runner = CliRunner()

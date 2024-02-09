@@ -1,4 +1,5 @@
 """Bluepysnap simulation implementation."""
+
 from collections.abc import Mapping
 from functools import cached_property
 from pathlib import Path

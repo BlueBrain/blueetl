@@ -3,6 +3,7 @@
 Originally based on:
 https://bbpgitlab.epfl.ch/nse/bbp-workflow/-/blob/2032ffd6/bbp_workflow/simulation/util.py
 """
+
 from collections.abc import Iterator
 from typing import Any, Optional, Union
 

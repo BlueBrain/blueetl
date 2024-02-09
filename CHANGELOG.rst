@@ -1,6 +1,57 @@
 Changelog
 =========
 
+Version 0.5.1
+-------------
+
+Improvements
+~~~~~~~~~~~~
+
+- Add tests for Python 3.12.
+- Remove brion dependency in tests.
+
+
+Version 0.5.0
+-------------
+
+New Features
+~~~~~~~~~~~~
+
+- Add CLI to convert and import inferred spikes in CSV format.
+
+
+Version 0.4.4
+-------------
+
+Improvements
+~~~~~~~~~~~~
+
+- Support relative paths in the simulation campaign config.
+- Add a simple simulation campaign using a subsampled circuit, to run the Jupyter notebooks in the documentation.
+
+Version 0.4.3
+-------------
+
+Improvements
+~~~~~~~~~~~~
+
+- Update DOI.
+
+Version 0.4.2
+-------------
+
+Improvements
+~~~~~~~~~~~~
+
+- Fix docs build in rtd.
+- Update badges.
+- Conditionally skip tests requiring bluepy.
+
+Version 0.4.1
+-------------
+
+- First public release.
+
 Version 0.4.0
 -------------
 

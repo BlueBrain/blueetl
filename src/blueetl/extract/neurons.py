@@ -1,4 +1,5 @@
 """Neurons extractor."""
+
 import logging
 from typing import Optional
 

@@ -1,4 +1,5 @@
 """Windows extractor."""
+
 import logging
 from typing import Any, Union
 

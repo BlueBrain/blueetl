@@ -1,4 +1,5 @@
 """Analysis functions."""
+
 import gc
 import logging
 from copy import deepcopy

@@ -1,4 +1,5 @@
 """Base extractor."""
+
 import logging
 from abc import ABC
 from typing import Optional, TypeVar

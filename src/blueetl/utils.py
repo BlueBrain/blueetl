@@ -1,4 +1,5 @@
 """Common utilities."""
+
 import hashlib
 import importlib
 import itertools
@@ -68,6 +69,28 @@ def dump_yaml(filepath: StrOrPath, data: Any, **kwargs) -> None:
     with open(filepath, "w", encoding="utf-8") as f:
         # The custom dumper dumps some unsupported types (for example Path) as simple strings.
         yaml.dump(data, stream=f, sort_keys=False, Dumper=_get_internal_yaml_dumper(), **kwargs)
+
+
+def load_json(filepath: StrOrPath, *, encoding: str = "utf-8", **kwargs) -> Any:
+    """Load from JSON file."""
+    with open(filepath, encoding=encoding) as f:
+        return json.load(f, **kwargs)
+
+
+def dump_json(
+    filepath: StrOrPath, data: Any, *, encoding: str = "utf-8", indent: int = 2, **kwargs
+) -> None:
+    """Dump to JSON file."""
+    with open(filepath, mode="w", encoding=encoding) as fp:
+        json.dump(data, fp, indent=indent, **kwargs)
+
+
+def relpath(path: StrOrPath, start: StrOrPath) -> Path:
+    """Return a relative filepath to path from the start directory.
+
+    In Python>=3.12 it would be possible to use ``Path.relative_to`` with walk_up=True.
+    """
+    return Path(os.path.relpath(path, start=start))
 
 
 def ensure_list(x: Any) -> list:
@@ -290,3 +313,19 @@ def import_optional_dependency(name: str) -> Any:
         raise ImportError(msg) from ex
 
     return module
+
+
+def copy_config(src: StrOrPath, dst: StrOrPath) -> None:
+    """Copy the analysis configuration file to a different location.
+
+    If the simulation_campaign path is relative, then it's resolved
+    relatively to the directory containing the original configuration file.
+
+    The output path, instead, is not resolved even when it's relative.
+
+    Note that any comment present in the original file is not preserved.
+    """
+    src = Path(src)
+    config = load_yaml(src)
+    config["simulation_campaign"] = resolve_path(src.parent, config["simulation_campaign"])
+    dump_yaml(dst, config, default_flow_style=None)

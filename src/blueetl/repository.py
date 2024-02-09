@@ -1,4 +1,5 @@
 """Repository."""
+
 import logging
 import warnings
 from abc import ABC, abstractmethod

@@ -5,7 +5,7 @@ Run Default
     MorphologyPath /path/to/morphologies
     METypePath /path/to/hoc
     MEComboInfoFile /path/to/mecombo_emodel.tsv
-    CellLibraryFile circuit.mvd3
+    CellLibraryFile ../../circuit/bbp/circuit.mvd3
     BioName /path/to/bioname
     Atlas /path/to/atlas
     OutputRoot reporting

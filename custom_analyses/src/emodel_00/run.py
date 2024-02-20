@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import neuron
@@ -229,8 +230,8 @@ def _shotnoise_analysis(hoc_file, morph_file, emodel_properties, output_file):
 @run_analysis
 def main(analysis_config: dict) -> dict:
     L.info("analysis_config:\n%s", analysis_config)
+    L.info("BLUECELLULAB_MOD_LIBRARY_PATH=%s", os.getenv("BLUECELLULAB_MOD_LIBRARY_PATH"))
     path = Path(analysis_config["emodel"]["path"])
-    path = path / "nexus_temp/emodel=cSTUT__iteration=2f92aa0"  # FIXME
     output_dir = Path(analysis_config["output"])
     outputs = []
 

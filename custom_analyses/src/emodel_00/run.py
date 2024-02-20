@@ -22,9 +22,9 @@ def _get_one(path, patterns, raise_if_multiple=True):
     for pattern in patterns:
         found.extend(Path(path).glob(pattern))
     if len(found) == 0 and raise_if_multiple:
-        raise FileNotFoundError(f"No matching files found in {path}.")
+        raise FileNotFoundError(f"No matching files found in {path}")
     if len(found) > 1:
-        raise Exception(f"Multiple matching files found in {path}.")
+        raise Exception(f"Multiple matching files found in {path}")
     return found[0]
 
 
@@ -230,6 +230,7 @@ def _shotnoise_analysis(hoc_file, morph_file, emodel_properties, output_file):
 def main(analysis_config: dict) -> dict:
     L.info("analysis_config:\n%s", analysis_config)
     path = Path(analysis_config["emodel"]["path"])
+    path = path / "nexus_temp/emodel=cSTUT__iteration=2f92aa0"  # FIXME
     output_dir = Path(analysis_config["output"])
     outputs = []
 

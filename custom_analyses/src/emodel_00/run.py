@@ -22,10 +22,10 @@ def _get_one(path, patterns, raise_if_multiple=True):
     found = []
     for pattern in patterns:
         found.extend(Path(path).glob(pattern))
-    if len(found) == 0 and raise_if_multiple:
-        raise FileNotFoundError(f"No matching files found in {path}")
-    if len(found) > 1:
-        raise Exception(f"Multiple matching files found in {path}")
+    if len(found) == 0:
+        raise FileNotFoundError(f"No files matching {patterns} found in {path}")
+    if len(found) > 1 and raise_if_multiple:
+        raise Exception(f"Multiple files matching {patterns} found in {path}")
     return found[0]
 
 
@@ -34,7 +34,7 @@ def _get_hoc(path):
 
 
 def _get_morphology(path, file_extensions=(".asc", ".swc")):
-    return _get_one(path, patterns=["*" + ext for ext in file_extensions])
+    return _get_one(path, patterns=["*" + ext for ext in file_extensions], raise_if_multiple=False)
 
 
 def _get_emodel(path):
@@ -155,8 +155,6 @@ def _shotnoise_stimulus(hoc_file, morph_file, emodel_properties, shotnoise_param
     time_vec, stim_vec = cell.add_replay_shotnoise(
         cell.soma, 0.5, shotnoise_stimulus, shotnoise_stim_count=3
     )
-    time_vec = time_vec.to_python()
-    stim_vec = stim_vec.to_python()
     return cell, time_vec, stim_vec
 
 
@@ -189,7 +187,7 @@ def _step_analysis(hoc_file, morph_file, emodel_properties, output_file):
     }
     cell, current = _step_stimulus(hoc_file, morph_file, emodel_properties, step_parameters)
     time, voltage = _run_simulation(cell, max_time=max_time)
-    _step_plot(time, voltage, current)
+    _step_plot(time, voltage, current.to_python())
     _savefig(output_file, title="Step")
 
 
@@ -203,7 +201,7 @@ def _ramp_analysis(hoc_file, morph_file, emodel_properties, output_file):
     }
     cell, current = _ramp_stimulus(hoc_file, morph_file, emodel_properties, ramp_parameters)
     time, voltage = _run_simulation(cell, max_time=max_time)
-    _ramp_plot(time, voltage, current, ramp_parameters)
+    _ramp_plot(time, voltage, current.to_python(), ramp_parameters)
     _savefig(output_file, title="Ramp")
 
 
@@ -223,7 +221,7 @@ def _shotnoise_analysis(hoc_file, morph_file, emodel_properties, output_file):
         hoc_file, morph_file, emodel_properties, shotnoise_parameters
     )
     time, voltage = _run_simulation(cell, max_time=max_time)
-    _shotnoise_plot(time, voltage, time_vec, stim_vec, max_time=max_time)
+    _shotnoise_plot(time, voltage, time_vec.to_python(), stim_vec.to_python(), max_time=max_time)
     _savefig(output_file, title="Shot Noise")
 
 

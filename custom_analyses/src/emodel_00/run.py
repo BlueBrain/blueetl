@@ -1,3 +1,4 @@
+import dataclasses
 import os
 from pathlib import Path
 
@@ -18,45 +19,6 @@ def _savefig(path, title):
     plt.clf()
 
 
-def _get_one(path, patterns, raise_if_multiple=True):
-    found = []
-    for pattern in patterns:
-        found.extend(Path(path).glob(pattern))
-    if len(found) == 0:
-        raise FileNotFoundError(f"No files matching {patterns} found in {path}")
-    if len(found) > 1 and raise_if_multiple:
-        raise Exception(f"Multiple files matching {patterns} found in {path}")
-    return found[0]
-
-
-def _get_hoc(path):
-    return Path(path) / "model.hoc"
-
-
-def _get_morphology(path, file_extensions=(".asc", ".swc")):
-    return _get_one(path, patterns=["*" + ext for ext in file_extensions], raise_if_multiple=False)
-
-
-def _get_emodel(path):
-    return _get_one(path, patterns=["EM_*.json"])
-
-
-def _get_emodel_properties(emodel_data):
-    holding_current = None
-    threshold_current = None
-    for feature in emodel_data["features"]:
-        if "bpo_holding_current" in feature["name"]:
-            holding_current = feature["value"]
-            L.info(feature)
-        elif "bpo_threshold_current" in feature["name"]:
-            threshold_current = feature["value"]
-            L.info(feature)
-    return EmodelProperties(
-        threshold_current=threshold_current,
-        holding_current=holding_current,
-    )
-
-
 def _run_simulation(cell, max_time):
     """Run the simulation."""
     sim = Simulation()
@@ -65,9 +27,14 @@ def _run_simulation(cell, max_time):
     return cell.get_time(), cell.get_soma_voltage()
 
 
-def _step_stimulus(hoc_file, morph_file, emodel_properties, step_parameters):
+def _step_stimulus(accessor, step_parameters):
     """Define stimulus parameters."""
-    cell = Cell(hoc_file, morph_file, template_format="v6", emodel_properties=emodel_properties)
+    cell = Cell(
+        accessor.hoc_file,
+        accessor.morph_file,
+        template_format="v6",
+        emodel_properties=accessor.emodel_properties,
+    )
     icneurodamusobj = cell.add_step(
         start_time=step_parameters["start_time"],
         stop_time=step_parameters["stop_time"],
@@ -99,9 +66,14 @@ def _step_plot(time, voltage, current):
     ax2.grid(True)  # If you want grid on the second plot as well
 
 
-def _ramp_stimulus(hoc_file, morph_file, emodel_properties, ramp_parameters):
+def _ramp_stimulus(accessor, ramp_parameters):
     """Define ramp stimulus parameters."""
-    cell = Cell(hoc_file, morph_file, template_format="v6", emodel_properties=emodel_properties)
+    cell = Cell(
+        accessor.hoc_file,
+        accessor.morph_file,
+        template_format="v6",
+        emodel_properties=accessor.emodel_properties,
+    )
     ramp_obj = cell.add_ramp(
         start_time=ramp_parameters["start_time"],
         stop_time=ramp_parameters["stop_time"],
@@ -148,10 +120,15 @@ def _ramp_plot(time, voltage, current, ramp_parameters):
     ax2.grid(True)
 
 
-def _shotnoise_stimulus(hoc_file, morph_file, emodel_properties, shotnoise_parameters):
+def _shotnoise_stimulus(accessor, shotnoise_parameters):
     """Define stimulus parameters."""
     shotnoise_stimulus = ShotNoise(target="single-cell", **shotnoise_parameters)
-    cell = Cell(hoc_file, morph_file, template_format="v6", emodel_properties=emodel_properties)
+    cell = Cell(
+        accessor.hoc_file,
+        accessor.morph_file,
+        template_format="v6",
+        emodel_properties=accessor.emodel_properties,
+    )
     time_vec, stim_vec = cell.add_replay_shotnoise(
         cell.soma, 0.5, shotnoise_stimulus, shotnoise_stim_count=3
     )
@@ -178,20 +155,20 @@ def _shotnoise_plot(time, voltage, time_vec, stim_vec, max_time):
     ax2.grid(True)
 
 
-def _step_analysis(hoc_file, morph_file, emodel_properties, output_file):
+def _step_analysis(accessor, output_file):
     max_time = 600
     step_parameters = {
         "start_time": 50.0,  # Start time of the stimulus
         "stop_time": 500.0,  # Stop time of the stimulus
         "level": 0.6,  # Current level of the stimulus
     }
-    cell, current = _step_stimulus(hoc_file, morph_file, emodel_properties, step_parameters)
+    cell, current = _step_stimulus(accessor, step_parameters)
     time, voltage = _run_simulation(cell, max_time=max_time)
     _step_plot(time, voltage, current.to_python())
     _savefig(output_file, title="Step")
 
 
-def _ramp_analysis(hoc_file, morph_file, emodel_properties, output_file):
+def _ramp_analysis(accessor, output_file):
     max_time = 200
     ramp_parameters = {
         "start_time": 50.0,  # Start time of the ramp
@@ -199,13 +176,13 @@ def _ramp_analysis(hoc_file, morph_file, emodel_properties, output_file):
         "start_level": 0.0,  # Start level of the ramp
         "stop_level": 2.0,  # Stop level of the ramp
     }
-    cell, current = _ramp_stimulus(hoc_file, morph_file, emodel_properties, ramp_parameters)
+    cell, current = _ramp_stimulus(accessor, ramp_parameters)
     time, voltage = _run_simulation(cell, max_time=max_time)
     _ramp_plot(time, voltage, current.to_python(), ramp_parameters)
     _savefig(output_file, title="Ramp")
 
 
-def _shotnoise_analysis(hoc_file, morph_file, emodel_properties, output_file):
+def _shotnoise_analysis(accessor, output_file):
     max_time = 60
     shotnoise_parameters = {
         "delay": 25,
@@ -217,32 +194,84 @@ def _shotnoise_analysis(hoc_file, morph_file, emodel_properties, output_file):
         "amp_var": 16e-4,
         "seed": 3899663,
     }
-    cell, time_vec, stim_vec = _shotnoise_stimulus(
-        hoc_file, morph_file, emodel_properties, shotnoise_parameters
-    )
+    cell, time_vec, stim_vec = _shotnoise_stimulus(accessor, shotnoise_parameters)
     time, voltage = _run_simulation(cell, max_time=max_time)
     _shotnoise_plot(time, voltage, time_vec.to_python(), stim_vec.to_python(), max_time=max_time)
     _savefig(output_file, title="Shot Noise")
 
 
+def _get_morphology(path, morphology_list, supported_morphologies=(".asc", ".swc")):
+    for morph_name, morph_file in morphology_list:
+        if morph_file.endswith(supported_morphologies):
+            return Path(path, morph_file)
+    raise FileNotFoundError("Not found any supported morphology")
+
+
+def _get_emodel_properties(emodel_data):
+    holding_current = None
+    threshold_current = None
+    for feature in emodel_data["features"]:
+        if "bpo_holding_current" in feature["name"]:
+            holding_current = feature["value"]
+            L.info(feature)
+        elif "bpo_threshold_current" in feature["name"]:
+            threshold_current = feature["value"]
+            L.info(feature)
+    return EmodelProperties(
+        threshold_current=threshold_current,
+        holding_current=holding_current,
+    )
+
+
+@dataclasses.dataclass(kw_only=True)
+class EModelAccessor:
+    """EModelAccessor."""
+
+    emodel: str
+    etype: str
+    iteration: str
+    seed: int
+    recipes_file: Path
+    hoc_file: Path
+    morph_file: Path
+    emodel_properties: EmodelProperties
+
+    @classmethod
+    def from_metadata(cls, metadata):
+        emodel_dir = Path(metadata["path"])
+        hoc_file = emodel_dir / "model.hoc"
+        recipes_file = emodel_dir / "recipes.json"
+        recipes = load_json(recipes_file)[metadata["emodel"]]
+        morphology_file = _get_morphology(emodel_dir / recipes["morph_path"], recipes["morphology"])
+        emodel_properties = _get_emodel_properties(load_json(emodel_dir / recipes["final"]))
+        return cls(
+            emodel=metadata["emodel"],
+            etype=metadata["etype"],
+            iteration=metadata["iteration"],
+            seed=metadata["seed"],
+            recipes_file=recipes_file,
+            hoc_file=hoc_file,
+            morph_file=morphology_file,
+            emodel_properties=emodel_properties,
+        )
+
+
 @run_analysis
 def main(analysis_config: dict) -> dict:
+    """Simple analysis example.
+
+    Analysis based on obp_emodel_localrun.zip found at
+    https://bbpteam.epfl.ch/project/issues/browse/BBPP134-1367#comment-234746
+    """
     L.info("analysis_config:\n%s", analysis_config)
+    L.info("Working directory: %s", os.getcwd())
     L.info("BLUECELLULAB_MOD_LIBRARY_PATH=%s", os.getenv("BLUECELLULAB_MOD_LIBRARY_PATH"))
-    path = Path(analysis_config["emodel"]["path"])
+    accessor = EModelAccessor.from_metadata(analysis_config["emodel"])
     output_dir = Path(analysis_config["output"])
     outputs = []
 
-    # Analysis based on obp_emodel_localrun.zip found at
-    # https://bbpteam.epfl.ch/project/issues/browse/BBPP134-1367#comment-234746
-    hoc_file = _get_hoc(path)
-    morph_file = _get_morphology(path)
-    emodel_file = _get_emodel(path)
-    emodel_data = load_json(emodel_file)
-    emodel_properties = _get_emodel_properties(emodel_data)
-
     output_file = output_dir / "step.pdf"
-    _step_analysis(hoc_file, morph_file, emodel_properties, output_file=output_file)
+    _step_analysis(accessor, output_file=output_file)
     outputs.append(
         {
             "path": str(output_file),
@@ -252,7 +281,7 @@ def main(analysis_config: dict) -> dict:
     )
 
     output_file = output_dir / "ramp.pdf"
-    _ramp_analysis(hoc_file, morph_file, emodel_properties, output_file=output_file)
+    _ramp_analysis(accessor, output_file=output_file)
     outputs.append(
         {
             "path": str(output_file),
@@ -262,7 +291,7 @@ def main(analysis_config: dict) -> dict:
     )
 
     output_file = output_dir / "shotnoise.pdf"
-    _shotnoise_analysis(hoc_file, morph_file, emodel_properties, output_file=output_file)
+    _shotnoise_analysis(accessor, output_file=output_file)
     outputs.append(
         {
             "path": str(output_file),

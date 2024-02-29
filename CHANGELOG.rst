@@ -14,9 +14,6 @@ Bug Fixes
 
 - Temporarily disable ``trial_steps_label`` [NSETM-2281]
 
-Version 0.5.1
--------------
-
 Improvements
 ~~~~~~~~~~~~
 

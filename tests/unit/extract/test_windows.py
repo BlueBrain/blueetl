@@ -81,8 +81,7 @@ def test_windows_from_simulations():
                 "bounds": [0, 200],
                 "initial_offset": 2000,
                 "window_type": "custom_type_2",
-                "n_trials": 2,
-                "trial_steps_label": "ts1",
+                "trial_steps_list": [0, 150],
             }
         ),
         "w4": "soma.extraction.windows.w9#checksum",

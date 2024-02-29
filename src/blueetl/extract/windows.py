@@ -18,7 +18,6 @@ from blueetl.constants import (
     T_STEP,
     T_STOP,
     TRIAL,
-    TRIAL_STEPS_VALUE,
     WINDOW,
     WINDOW_TYPE,
 )
@@ -89,39 +88,29 @@ class Windows(BaseExtractor):
         circuit_id: int,
         trial_steps: TrialSteps,
     ) -> list[dict[str, Any]]:
-        initial_offset = win.initial_offset
+        # pylint: disable=unused-argument
         t_start, t_stop = win.bounds
         t_step = win.t_step
         duration = t_stop - t_start
-        window_type = win.window_type
-        number_of_trials = win.n_trials
-        trial_steps_value = win.trial_steps_value
-        trial_steps_label = win.trial_steps_label
-        if trial_steps_label:
-            trial_steps_value = trial_steps.df.etl.one(
-                simulation_id=simulation_id,
-                circuit_id=circuit_id,
-                trial_steps_label=trial_steps_label,
-            )[TRIAL_STEPS_VALUE]
-            L.info("Using the calculated trial_steps_value=%s", trial_steps_value)
-        elif trial_steps_value:
-            L.info("Using the configured trial_steps_value=%s", trial_steps_value)
-        if number_of_trials > 1 and not trial_steps_value:
-            raise ValueError("trial_steps_value cannot be 0 when n_trials > 1")
+        initial_offset = win.initial_offset
+        if win.trial_steps_list:
+            offsets = [initial_offset + step for step in win.trial_steps_list]
+        else:
+            offsets = [initial_offset + win.trial_steps_value * i for i in range(win.n_trials or 1)]
         return [
             {
                 SIMULATION_ID: simulation_id,
                 CIRCUIT_ID: circuit_id,
                 WINDOW: name,
                 TRIAL: index,
-                OFFSET: initial_offset + trial_steps_value * index,
+                OFFSET: offset,
                 T_START: t_start,
                 T_STOP: t_stop,
                 T_STEP: t_step,
                 DURATION: duration,
-                WINDOW_TYPE: window_type,
+                WINDOW_TYPE: win.window_type,
             }
-            for index in range(number_of_trials)
+            for index, offset in enumerate(offsets)
         ]
 
     @classmethod

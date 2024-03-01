@@ -271,6 +271,13 @@ $defs:
         description: Constant amount of time used to space windows, considered when ``n_trials`` is greater than 1.
         default: 0.0
         type: number
+      trial_steps_list:
+        title: Trial Steps List
+        description: List of trial steps values, to be used as an alternative to ``trial_steps_value`` and ``n_trials```.
+        default: "[]"
+        type: array
+        items:
+          type: number
       trial_steps_label:
         title: Trial Steps Label
         description: Label that should match a section in ``TrialStepsConfig``, considered when ``n_trials`` is greater than 1.
@@ -299,16 +306,8 @@ $defs:
           * ``spikes``: numpy array of spikes, automatically filtered by ``initial_offset``, ``bounds``, and the attributes ``population``, ``node_set``, and ``limit``.
           * ``params``: dictionary of parameters defined in this section.
 
-          and it should return a dict containing:
-          
-          * ``trial_steps_value``: the calculated value that will be used for each trial step.
-          * other optional keys that will be saved to the trial_steps DataFrame, useful for debug or for more information.
+          and it should return a float representing the dynamic offset to be added to the initial offest of the window.
         type: string
-      initial_offset:
-        title: Initial Offset
-        description: Initial offset of the window, used to filter the spikes passed to the function.
-        default: 0.0
-        type: number
       bounds:
         title: Bounds
         description: Lower and upper limits relative to the initial offset, used to filter the spikes passed to the function.

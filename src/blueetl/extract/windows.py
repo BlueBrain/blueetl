@@ -1,12 +1,14 @@
 """Windows extractor."""
 
 import logging
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
 
-from blueetl.config.analysis_model import WindowConfig
+from blueetl.adapters.circuit import CircuitAdapter as Circuit
+from blueetl.adapters.simulation import SimulationAdapter as Simulation
+from blueetl.config.analysis_model import TrialStepsConfig, WindowConfig
 from blueetl.constants import (
     CHECKSUM_SEP,
     CIRCUIT_ID,
@@ -23,10 +25,81 @@ from blueetl.constants import (
 )
 from blueetl.extract.base import BaseExtractor
 from blueetl.extract.simulations import Simulations
-from blueetl.extract.trial_steps import TrialSteps
 from blueetl.resolver import Resolver
+from blueetl.utils import import_by_string, timed
 
 L = logging.getLogger(__name__)
+
+
+def _load_dynamic_gids(
+    circuit: Circuit,
+    population: Optional[str],
+    node_set: Optional[str],
+    limit: Optional[int],
+) -> np.ndarray:
+    """Return the node ids to consider."""
+    with timed(L.info, "Loading cells from circuit"):
+        cells_group = node_set or None
+        gids = circuit.nodes[population].ids(group=cells_group)
+    neuron_count = len(gids)
+    if limit and neuron_count > limit:
+        gids = np.random.choice(gids, size=limit, replace=False)
+    L.info("Selected %s/%s gids", len(gids), neuron_count)
+    return gids
+
+
+def _load_dynamic_spikes(
+    simulation: Simulation,
+    population: Optional[str],
+    gids: np.ndarray,
+    offset: float,
+    t_start: float,
+    t_stop: float,
+) -> np.ndarray:
+    """Return the spikes extracted for the given parameters."""
+    spikes = (
+        simulation.spikes[population]
+        .get(gids, t_start=offset + t_start, t_stop=offset + t_stop)
+        .index.to_numpy()
+    )
+    spikes -= offset
+    L.info("Selected %s spikes", len(spikes))
+    return spikes
+
+
+def _calculate_dynamic_offset(
+    simulation: Simulation,
+    circuit: Circuit,
+    initial_offset: float,
+    step_offsets: list[float],
+    trial_steps_config: TrialStepsConfig,
+) -> float:
+    """Calculate the dynamic offset according to NSETM-2281."""
+    # circuit is passed explicitly instead of loading it from simulation.circuit
+    # to take advantage of any data already loaded and cached
+    gids = _load_dynamic_gids(
+        circuit=circuit,
+        population=trial_steps_config.population,
+        node_set=trial_steps_config.node_set,
+        limit=trial_steps_config.limit,
+    )
+    spikes_list = []
+    t_start, t_stop = trial_steps_config.bounds
+    for step_offset in step_offsets:
+        spikes = _load_dynamic_spikes(
+            simulation=simulation,
+            population=trial_steps_config.population,
+            gids=gids,
+            offset=initial_offset + step_offset,
+            t_start=t_start,
+            t_stop=t_stop,
+        )
+        spikes_list.append(spikes)
+    func = import_by_string(trial_steps_config.function)
+    result = func(spikes_list, trial_steps_config.dict())
+    if not np.issubdtype(type(result), np.number):
+        raise ValueError(f"The function {trial_steps_config.function} must return a number")
+    return result
 
 
 class Windows(BaseExtractor):
@@ -83,50 +156,70 @@ class Windows(BaseExtractor):
     def _load_records_from_config(
         cls,
         name: str,
+        rec: Any,  # row from simulations DataFrame
         win: WindowConfig,
-        simulation_id: int,
-        circuit_id: int,
-        trial_steps: TrialSteps,
+        trial_steps_config: Optional[TrialStepsConfig],
     ) -> list[dict[str, Any]]:
-        # pylint: disable=unused-argument
+        """Load the records from the window configuration."""
         t_start, t_stop = win.bounds
         t_step = win.t_step
         duration = t_stop - t_start
-        initial_offset = win.initial_offset
         if win.trial_steps_list:
-            offsets = [initial_offset + step for step in win.trial_steps_list]
+            step_offsets = win.trial_steps_list
         else:
-            offsets = [initial_offset + win.trial_steps_value * i for i in range(win.n_trials or 1)]
+            step_offsets = [win.trial_steps_value * i for i in range(win.n_trials or 1)]
+        if trial_steps_config:
+            dynamic_offset = _calculate_dynamic_offset(
+                simulation=rec.simulation,
+                circuit=rec.circuit,
+                initial_offset=win.initial_offset,
+                step_offsets=step_offsets,
+                trial_steps_config=trial_steps_config,
+            )
+        else:
+            dynamic_offset = 0.0
+        L.info(
+            "Using window=%s, initial_offset=%s, dynamic_offset=%s, step_offsets=%s, "
+            "t_start=%s, t_stop=%s, t_step=%s, duration=%s",
+            name,
+            win.initial_offset,
+            dynamic_offset,
+            step_offsets,
+            t_start,
+            t_stop,
+            t_step,
+            duration,
+        )
         return [
             {
-                SIMULATION_ID: simulation_id,
-                CIRCUIT_ID: circuit_id,
+                SIMULATION_ID: rec.simulation_id,
+                CIRCUIT_ID: rec.circuit_id,
                 WINDOW: name,
                 TRIAL: index,
-                OFFSET: offset,
+                OFFSET: win.initial_offset + dynamic_offset + step_offset,
                 T_START: t_start,
                 T_STOP: t_stop,
                 T_STEP: t_step,
                 DURATION: duration,
                 WINDOW_TYPE: win.window_type,
             }
-            for index, offset in enumerate(offsets)
+            for index, step_offset in enumerate(step_offsets)
         ]
 
     @classmethod
     def from_simulations(
         cls,
         simulations: Simulations,
-        trial_steps: TrialSteps,
         windows_config: dict[str, Union[str, WindowConfig]],
+        trial_steps_config: dict[str, TrialStepsConfig],
         resolver: Resolver,
     ) -> "Windows":
         """Return a new Windows instance from the given simulations and configuration.
 
         Args:
             simulations: Simulations extractor.
-            trial_steps: TrialSteps extractor.
             windows_config: configuration dict.
+            trial_steps_config: configuration dict.
             resolver: resolver instance.
 
         Returns:
@@ -153,9 +246,12 @@ class Windows(BaseExtractor):
                     partial_results = cls._load_records_from_config(
                         name=name,
                         win=win,
-                        simulation_id=rec.simulation_id,
-                        circuit_id=rec.circuit_id,
-                        trial_steps=trial_steps,
+                        rec=rec,
+                        trial_steps_config=(
+                            trial_steps_config[win.trial_steps_label]
+                            if win.trial_steps_label
+                            else None
+                        ),
                     )
                 results.extend(partial_results)
 

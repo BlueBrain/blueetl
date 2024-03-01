@@ -51,7 +51,6 @@ def _onset_from_histogram(histogram, params):
     )
     if params["fig_paths"]:
         _plot(smoothed_histogram, params, onset_dict)
-    onset_dict["trial_steps_value"] = onset_dict["cortical_onset"]
     return onset_dict
 
 
@@ -82,8 +81,17 @@ def _plot(smoothed_histogram, params, onset_dict):
     plt.close()
 
 
-def onset_from_spikes(spikes, params):
-    """Calculate trial steps from spikes."""
+def onset_from_spikes(spikes_list, params):
+    """Calculate the cortical onset from a list of spikes, one for each trial.
+
+    Args:
+        spikes_list: list of spikes as numpy arrays.
+        params: dictionary of parameters from the trial steps configuration.
+
+    Returns:
+        float representing the dynamic offset to be added to the initial offset of each trial step.
+    """
+    spikes = np.concatenate(spikes_list)
     histogram = _histogram_from_spikes(spikes, params)
     onset_dict = _onset_from_histogram(histogram, params)
-    return onset_dict
+    return onset_dict["cortical_onset"]

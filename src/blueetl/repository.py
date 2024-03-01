@@ -20,7 +20,6 @@ from blueetl.extract.report import ReportExtractor
 from blueetl.extract.simulations import Simulations
 from blueetl.extract.soma_report import SomaReport
 from blueetl.extract.spikes import Spikes
-from blueetl.extract.trial_steps import TrialSteps
 from blueetl.extract.windows import Windows
 from blueetl.resolver import Resolver
 from blueetl.utils import timed
@@ -116,24 +115,6 @@ class NeuronClassesExtractor(BaseExtractor[NeuronClasses]):
         return NeuronClasses.from_pandas(df, query=query)
 
 
-class TrialStepsExtractor(BaseExtractor[TrialSteps]):
-    """TrialStepsExtractor class."""
-
-    def extract_new(self) -> TrialSteps:
-        """Instantiate an object from the configuration."""
-        return TrialSteps.from_simulations(
-            simulations=self._repo.simulations,
-            trial_steps_config=self._repo.extraction_config.trial_steps,
-        )
-
-    def extract_cached(self, df: pd.DataFrame) -> TrialSteps:
-        """Instantiate an object from a cached DataFrame."""
-        query = {}
-        if self._repo.simulations_filter:
-            query = {SIMULATION_ID: self._repo.simulation_ids}
-        return TrialSteps.from_pandas(df, query=query)
-
-
 class WindowsExtractor(BaseExtractor[Windows]):
     """WindowsExtractor class."""
 
@@ -142,8 +123,8 @@ class WindowsExtractor(BaseExtractor[Windows]):
         assert self._repo.resolver is not None
         return Windows.from_simulations(
             simulations=self._repo.simulations,
-            trial_steps=self._repo.trial_steps,
             windows_config=self._repo.extraction_config.windows,
+            trial_steps_config=self._repo.extraction_config.trial_steps,
             resolver=self._repo.resolver,
         )
 
@@ -253,7 +234,6 @@ class Repository:
             "simulations": SimulationsExtractor,
             "neurons": NeuronsExtractor,
             "neuron_classes": NeuronClassesExtractor,
-            "trial_steps": TrialStepsExtractor,
             "windows": WindowsExtractor,
             "report": available_reports[report_type],
         }
@@ -318,11 +298,6 @@ class Repository:
     def neuron_classes(self) -> NeuronClasses:
         """Return the NeuronClasses extraction."""
         return self._mapping["neuron_classes"](self).extract(name="neuron_classes")
-
-    @cached_property
-    def trial_steps(self) -> TrialSteps:
-        """Return the TrialSteps extraction."""
-        return self._mapping["trial_steps"](self).extract(name="trial_steps")
 
     @cached_property
     def windows(self) -> Windows:

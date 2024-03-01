@@ -68,8 +68,6 @@ class WindowConfig(BaseModel):
     @model_validator(mode="after")
     def validate_values(self):
         """Validate the values after loading them."""
-        if self.trial_steps_label:
-            raise ValueError("trial_steps_label cannot be used yet, see NSETM-2281")
         if self.trial_steps_list and (self.n_trials or self.trial_steps_value):
             raise ValueError("trial_steps_list cannot be set with n_trials or trial_steps_value")
         if self.n_trials > 1 and not self.trial_steps_value:
@@ -85,7 +83,6 @@ class TrialStepsConfig(BaseModel):
         "extra": "allow",
     }
     function: str
-    initial_offset: float = 0.0
     bounds: tuple[float, float]
     population: Optional[str] = None
     node_set: Optional[str] = None

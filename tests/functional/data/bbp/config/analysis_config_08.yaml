@@ -27,15 +27,12 @@ analysis:
       trial_steps:
         ts1:
           function: blueetl.external.bnac.calculate_trial_step.onset_from_spikes
-          initial_offset: 50
           bounds: [-50, 25]
-          pre_window: [-50, 0]
-          post_window: [0, 25]
           smoothing_width: 0.1
           histo_bins_per_ms: 5
           threshold_std_multiple: 4
           ms_post_offset: 1
-          fig_paths: []
+          figures_path: "figures"
     features:
     - type: multi
       groupby: [simulation_id, circuit_id, neuron_class, window]

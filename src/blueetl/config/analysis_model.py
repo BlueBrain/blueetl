@@ -82,11 +82,21 @@ class TrialStepsConfig(BaseModel):
         **BaseModel.model_config,
         "extra": "allow",
     }
+    _forbidden_extra_fields: set[str] = {
+        "initial_offset",
+    }
     function: str
     bounds: tuple[float, float]
     population: Optional[str] = None
     node_set: Optional[str] = None
     limit: Optional[int] = None
+
+    @model_validator(mode="after")
+    def forbid_fields(self):
+        """Verify that the forbidden extra fields have not been specified."""
+        if found := self._forbidden_extra_fields.intersection(self.model_extra):
+            raise ValueError(f"Forbidden extra fields: {found}")
+        return self
 
 
 class NeuronClassConfig(BaseModel):

@@ -310,7 +310,7 @@ $defs:
         type: string
       bounds:
         title: Bounds
-        description: Lower and upper limits relative to the initial offset, used to filter the spikes passed to the function.
+        description: Lower and upper limits relative to the initial offset of window, used to filter the spikes passed to the function.
         type: array
         minItems: 2
         maxItems: 2

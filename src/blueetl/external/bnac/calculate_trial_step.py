@@ -56,7 +56,7 @@ def _onset_from_histogram(histogram, params):
     onset_dict["cortical_onset"] = (
         float(cortical_onset_index) / float(params["histo_bins_per_ms"]) + params["ms_post_offset"]
     )
-    if params["figures_path"]:
+    if params.get("figures_path"):
         _plot(smoothed_histogram, params, onset_dict)
     return onset_dict
 
@@ -84,7 +84,10 @@ def _plot(smoothed_histogram, params, onset_dict):
     plt.gca().set_ylabel("Number of spikes")
     plt.gca().spines["right"].set_visible(False)
     plt.gca().spines["top"].set_visible(False)
-    plt.savefig(Path(params["figures_path"]), "plot.pdf")
+    filepath = Path(params["base_path"], params["figures_path"], "plot.pdf")
+    L.info("Figures path: %s", filepath)
+    filepath.parent.mkdir(exist_ok=True)
+    plt.savefig(filepath)
     plt.close()
 
 

@@ -5,7 +5,7 @@ from pathlib import Path
 import neuron
 from bluecellulab import Cell, Simulation
 from bluecellulab.circuit.circuit_access import EmodelProperties
-from bluecellulab.stimuli import ShotNoise
+from bluecellulab.stimulus.circuit_stimulus_definitions import ShotNoise
 from common.utils import L, load_json, run_analysis
 from matplotlib import pyplot as plt
 

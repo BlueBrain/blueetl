@@ -1,3 +1,3 @@
-bluecellulab
+bluecellulab>=2.3.2
 matplotlib
 neuron

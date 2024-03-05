@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from copy import deepcopy
 from itertools import chain
 from pathlib import Path
-from typing import NamedTuple, Optional, Union
+from typing import NamedTuple, Union
 
 from blueetl.config.analysis_model import (
     FeaturesConfig,
@@ -20,11 +20,21 @@ from blueetl.validation import read_schema, validate_config
 L = logging.getLogger(__name__)
 
 
-def _resolve_paths(global_config: MultiAnalysisConfig, base_path: Optional[Path] = None) -> None:
+def _resolve_paths(global_config: MultiAnalysisConfig, base_path: Path) -> None:
     """Resolve any relative path."""
     base_path = base_path or Path()
     global_config.output = base_path / global_config.output
     global_config.simulation_campaign = base_path / global_config.simulation_campaign
+
+
+def _resolve_trial_steps(global_config: MultiAnalysisConfig):
+    """Set trial_steps_config.base_path to the same value as global_config.output.
+
+    In this way, the custom function can use it as the base path to save any figure.
+    """
+    for config in global_config.analysis.values():
+        for trial_steps_config in config.extraction.trial_steps.values():
+            trial_steps_config.base_path = str(global_config.output)
 
 
 def _resolve_windows(global_config: MultiAnalysisConfig) -> None:
@@ -140,13 +150,12 @@ def _resolve_analysis_configs(global_config: MultiAnalysisConfig) -> None:
         config.features = _resolve_features(config.features)
 
 
-def init_multi_analysis_configuration(
-    global_config: dict, base_path: Optional[Path] = None
-) -> MultiAnalysisConfig:
+def init_multi_analysis_configuration(global_config: dict, base_path: Path) -> MultiAnalysisConfig:
     """Return a config object from a config dict."""
     validate_config(global_config, schema=read_schema("analysis_config"))
     config = MultiAnalysisConfig(**global_config)
     _resolve_paths(config, base_path=base_path)
+    _resolve_trial_steps(config)
     _resolve_windows(config)
     _resolve_analysis_configs(config)
     return config

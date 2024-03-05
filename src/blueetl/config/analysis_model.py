@@ -59,10 +59,20 @@ class WindowConfig(BaseModel):
     initial_offset: float = 0.0
     bounds: tuple[float, float]
     t_step: float = 0.0
-    n_trials: int = 1
+    n_trials: int = 0
     trial_steps_value: float = 0.0
+    trial_steps_list: list[float] = []
     trial_steps_label: str = ""
     window_type: str = ""
+
+    @model_validator(mode="after")
+    def validate_values(self):
+        """Validate the values after loading them."""
+        if self.trial_steps_list and (self.n_trials or self.trial_steps_value):
+            raise ValueError("trial_steps_list cannot be set with n_trials or trial_steps_value")
+        if self.n_trials > 1 and not self.trial_steps_value:
+            raise ValueError("trial_steps_value cannot be 0 when n_trials > 1")
+        return self
 
 
 class TrialStepsConfig(BaseModel):
@@ -72,12 +82,21 @@ class TrialStepsConfig(BaseModel):
         **BaseModel.model_config,
         "extra": "allow",
     }
+    _forbidden_extra_fields: set[str] = {
+        "initial_offset",
+    }
     function: str
-    initial_offset: float = 0.0
     bounds: tuple[float, float]
     population: Optional[str] = None
     node_set: Optional[str] = None
     limit: Optional[int] = None
+
+    @model_validator(mode="after")
+    def forbid_fields(self):
+        """Verify that the forbidden extra fields have not been specified."""
+        if found := self._forbidden_extra_fields.intersection(self.model_extra):
+            raise ValueError(f"Forbidden extra fields: {found}")
+        return self
 
 
 class NeuronClassConfig(BaseModel):
@@ -99,6 +118,7 @@ class ExtractionConfig(BaseModel):
     trial_steps: dict[str, TrialStepsConfig] = {}
 
     @model_validator(mode="before")
+    @classmethod
     def propagate_global_values(cls, values):
         """Propagate global values to each dictionary in neuron_classes and trial_steps."""
         for key in ["population", "node_set", "limit"]:
@@ -138,6 +158,7 @@ class SingleAnalysisConfig(BaseModel):
     custom: dict[str, Any] = {}
 
     @field_validator("features")
+    @classmethod
     def assign_features_config_id(cls, lst):
         """Assign an incremental id to each FeaturesConfig."""
         for i, item in enumerate(lst):
@@ -158,6 +179,7 @@ class MultiAnalysisConfig(BaseModel):
     custom: dict[str, Any] = {}
 
     @field_validator("version")
+    @classmethod
     def version_match(cls, version):
         """Verify that the config version is supported."""
         if version != CONFIG_VERSION:

@@ -1,8 +1,27 @@
 Changelog
 =========
 
-Version 0.5.1
+Version 0.7.0
 -------------
+
+New Features
+~~~~~~~~~~~~
+
+- Allow to specify ``trial_steps_label`` to calculate the dynamic offset of trial steps [NSETM-2281]
+
+
+Version 0.6.0
+-------------
+
+New Features
+~~~~~~~~~~~~
+
+- Allow to specify ``trial_steps_list`` instead of ``trial_steps_value`` and ``n_trials`` [NSETM-2280]
+
+Bug Fixes
+~~~~~~~~~
+
+- Temporarily disable ``trial_steps_label`` [NSETM-2281]
 
 Improvements
 ~~~~~~~~~~~~

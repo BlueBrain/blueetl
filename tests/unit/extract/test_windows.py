@@ -3,7 +3,7 @@ from unittest.mock import Mock, PropertyMock
 import pandas as pd
 from pandas.testing import assert_frame_equal
 
-from blueetl.config.analysis_model import WindowConfig
+from blueetl.config.analysis_model import TrialStepsConfig, WindowConfig
 from blueetl.constants import (
     CIRCUIT,
     CIRCUIT_ID,
@@ -15,8 +15,6 @@ from blueetl.constants import (
     T_STEP,
     T_STOP,
     TRIAL,
-    TRIAL_STEPS_LABEL,
-    TRIAL_STEPS_VALUE,
     WINDOW,
     WINDOW_TYPE,
 )
@@ -25,26 +23,31 @@ from blueetl.resolver import AttrResolver
 from blueetl.utils import ensure_dtypes
 
 
-def test_windows_from_simulations():
+def _myfunc1(spikes, params):
+    """Calculate and return the cortical onset from spikes"""
+    return 250
+
+
+def _myfunc2(spikes, params):
+    """Calculate and return the cortical onset from spikes"""
+    return 750
+
+
+def test_windows_from_simulations(mock_simulation, mock_circuit):
     mock_simulations_df = PropertyMock(
         return_value=pd.DataFrame(
             [
-                {SIMULATION_ID: 0, CIRCUIT_ID: 0, SIMULATION: Mock(), CIRCUIT: Mock()},
+                {
+                    SIMULATION_ID: 0,
+                    CIRCUIT_ID: 0,
+                    SIMULATION: mock_simulation,
+                    CIRCUIT: mock_circuit,
+                },
             ]
         )
     )
     mock_simulations = Mock()
     type(mock_simulations).df = mock_simulations_df
-
-    mock_trial_steps_df = PropertyMock(
-        return_value=pd.DataFrame(
-            [
-                {SIMULATION_ID: 0, CIRCUIT_ID: 0, TRIAL_STEPS_LABEL: "ts1", TRIAL_STEPS_VALUE: 150},
-            ]
-        )
-    )
-    trial_steps = Mock()
-    type(trial_steps).df = mock_trial_steps_df
 
     root = Mock()
     root.soma.repo.windows.df = pd.DataFrame(
@@ -81,16 +84,43 @@ def test_windows_from_simulations():
                 "bounds": [0, 200],
                 "initial_offset": 2000,
                 "window_type": "custom_type_2",
-                "n_trials": 2,
-                "trial_steps_label": "ts1",
+                "trial_steps_list": [0, 150],
             }
         ),
         "w4": "soma.extraction.windows.w9#checksum",
+        "w5": WindowConfig(
+            **{
+                "bounds": [0, 200],
+                "initial_offset": 2000,
+                "window_type": "custom_type_3",
+                "trial_steps_label": "ts1",
+            }
+        ),
+        "w6": WindowConfig(
+            **{
+                "bounds": [0, 200],
+                "initial_offset": 2000,
+                "window_type": "custom_type_4",
+                "trial_steps_list": [50, 150],
+                "trial_steps_label": "ts2",
+            }
+        ),
     }
+    trial_steps_config = {
+        "ts1": TrialStepsConfig(
+            function=f"{__name__}._myfunc1",
+            bounds=[-50, 150],
+        ),
+        "ts2": TrialStepsConfig(
+            function=f"{__name__}._myfunc2",
+            bounds=[-20, 200],
+        ),
+    }
+
     result = test_module.Windows.from_simulations(
         simulations=mock_simulations,
-        trial_steps=trial_steps,
         windows_config=windows_config,
+        trial_steps_config=trial_steps_config,
         resolver=resolver,
     )
 
@@ -167,6 +197,42 @@ def test_windows_from_simulations():
                 T_STEP: 0,
                 DURATION: 900,
                 WINDOW_TYPE: "custom_type_9",
+            },
+            {
+                SIMULATION_ID: 0,
+                CIRCUIT_ID: 0,
+                WINDOW: "w5",
+                TRIAL: 0,
+                OFFSET: 2250,
+                T_START: 0,
+                T_STOP: 200,
+                T_STEP: 0,
+                DURATION: 200,
+                WINDOW_TYPE: "custom_type_3",
+            },
+            {
+                SIMULATION_ID: 0,
+                CIRCUIT_ID: 0,
+                WINDOW: "w6",
+                TRIAL: 0,
+                OFFSET: 2800,
+                T_START: 0,
+                T_STOP: 200,
+                T_STEP: 0,
+                DURATION: 200,
+                WINDOW_TYPE: "custom_type_4",
+            },
+            {
+                SIMULATION_ID: 0,
+                CIRCUIT_ID: 0,
+                WINDOW: "w6",
+                TRIAL: 1,
+                OFFSET: 2900,
+                T_START: 0,
+                T_STOP: 200,
+                T_STEP: 0,
+                DURATION: 200,
+                WINDOW_TYPE: "custom_type_4",
             },
         ]
     )

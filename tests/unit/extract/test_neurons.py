@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, Mock, PropertyMock
+from unittest.mock import Mock, PropertyMock
 
 import numpy as np
 import pandas as pd
@@ -11,51 +11,9 @@ from blueetl.extract.neurons import Neurons
 from blueetl.utils import ensure_dtypes
 
 
-def _get_cells():
-    """Return a DataFrame as returned by circuit.nodes[population].get()."""
-    return pd.DataFrame(
-        [
-            {
-                "layer": 1,
-                "mtype": "L1_DAC",
-                "etype": "cNAC",
-                "region": "S1FL",
-                "synapse_class": "INH",
-                "x": 4497.1,
-                "y": -1404.7,
-                "z": -1710.8,
-            },
-            {
-                "layer": 2,
-                "mtype": "L2_TPC:A",
-                "etype": "cADpyr",
-                "region": "S1FL",
-                "synapse_class": "EXC",
-                "x": 4592.3,
-                "y": -1351.1,
-                "z": -1987.2,
-            },
-            {
-                "layer": 4,
-                "mtype": "L4_BP",
-                "etype": "cNAC",
-                "region": "S1FL",
-                "synapse_class": "INH",
-                "x": 3953.9,
-                "y": -1279.3,
-                "z": -2143.9,
-            },
-        ],
-        index=pd.Index([100, 200, 300], name="node_ids"),
-    )
-
-
-def test_neurons_from_simulations():
+def test_neurons_from_simulations(mock_circuit):
     # set the seed because the neurons may be chosen randomly
     np.random.seed(0)
-    mock_circuit = Mock()
-    mock_circuit = MagicMock()
-    mock_circuit.nodes.__getitem__.return_value.get.return_value = _get_cells()
     mock_simulations_df = PropertyMock(
         return_value=pd.DataFrame(
             [
@@ -116,9 +74,7 @@ def test_neurons_from_simulations():
     assert mock_simulations_df.call_count == 1
 
 
-def test_neurons_from_simulations_without_neurons():
-    mock_circuit = MagicMock()
-    mock_circuit.nodes.__getitem__.return_value.get.return_value = _get_cells()
+def test_neurons_from_simulations_without_neurons(mock_circuit):
     mock_simulations_df = PropertyMock(
         return_value=pd.DataFrame(
             [

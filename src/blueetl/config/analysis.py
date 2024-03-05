@@ -28,11 +28,11 @@ def _resolve_paths(global_config: MultiAnalysisConfig, base_path: Path) -> None:
 
 
 def _resolve_trial_steps(global_config: MultiAnalysisConfig):
-    """Add global_config.output to each trial_steps_config.
+    """Set trial_steps_config.base_path to the same value as global_config.output.
 
     In this way, the custom function can use it as the base path to save any figure.
     """
-    for name, config in global_config.analysis.items():
+    for config in global_config.analysis.values():
         for trial_steps_config in config.extraction.trial_steps.values():
             trial_steps_config.base_path = str(global_config.output)
 

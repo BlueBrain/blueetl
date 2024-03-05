@@ -68,8 +68,6 @@ class WindowConfig(BaseModel):
     @model_validator(mode="after")
     def validate_values(self):
         """Validate the values after loading them."""
-        if self.trial_steps_label:
-            raise ValueError("trial_steps_label cannot be used yet, see NSETM-2281")
         if self.trial_steps_list and (self.n_trials or self.trial_steps_value):
             raise ValueError("trial_steps_list cannot be set with n_trials or trial_steps_value")
         if self.n_trials > 1 and not self.trial_steps_value:
@@ -84,12 +82,21 @@ class TrialStepsConfig(BaseModel):
         **BaseModel.model_config,
         "extra": "allow",
     }
+    _forbidden_extra_fields: set[str] = {
+        "initial_offset",
+    }
     function: str
-    initial_offset: float = 0.0
     bounds: tuple[float, float]
     population: Optional[str] = None
     node_set: Optional[str] = None
     limit: Optional[int] = None
+
+    @model_validator(mode="after")
+    def forbid_fields(self):
+        """Verify that the forbidden extra fields have not been specified."""
+        if found := self._forbidden_extra_fields.intersection(self.model_extra):
+            raise ValueError(f"Forbidden extra fields: {found}")
+        return self
 
 
 class NeuronClassConfig(BaseModel):

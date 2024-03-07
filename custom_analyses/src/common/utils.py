@@ -1,6 +1,7 @@
 import functools
 import json
 import logging
+import multiprocessing
 import os
 import sys
 import time
@@ -90,3 +91,22 @@ def wait_for_slurm():
     initial_sleep = float(os.getenv("SUBMIT_JOBS_INITIAL_SLEEP", "10"))
     L.debug("SUBMIT_JOBS_INITIAL_SLEEP=%s", initial_sleep)
     time.sleep(initial_sleep)
+
+
+def isolated(func):
+    """Isolate a function in a separate process.
+
+    Note: it does not work as a decorator.
+
+    Args:
+        func (function): function to isolate.
+
+    Returns:
+        the isolated function.
+    """
+
+    def func_isolated(*args, **kwargs):
+        with multiprocessing.Pool(1, maxtasksperchild=1) as pool:
+            return pool.apply(func, args, kwargs)
+
+    return func_isolated

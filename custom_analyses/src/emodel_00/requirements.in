@@ -1,3 +1,4 @@
-bluecellulab>=2.3.2
+bluecellulab<2.3.2
+joblib
 matplotlib
 neuron

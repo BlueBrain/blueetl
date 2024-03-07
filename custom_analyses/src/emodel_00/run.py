@@ -1,303 +1,69 @@
-import dataclasses
 import os
 from pathlib import Path
 
-import neuron
-from bluecellulab import Cell, Simulation
-from bluecellulab.circuit.circuit_access import EmodelProperties
-from bluecellulab.stimulus.circuit_stimulus_definitions import ShotNoise
-from common.utils import L, load_json, run_analysis
-from matplotlib import pyplot as plt
-
-
-def _savefig(path, title):
-    """Save a matplotlib figure."""
-    plt.suptitle(title)
-    plt.tight_layout()
-    plt.savefig(str(path), dpi=100, bbox_inches="tight")
-    plt.close("all")
-    plt.clf()
-
-
-def _run_simulation(cell, max_time):
-    """Run the simulation."""
-    sim = Simulation()
-    sim.add_cell(cell)
-    sim.run(max_time, cvode=False, v_init=-75)
-    return cell.get_time(), cell.get_soma_voltage()
-
-
-def _step_stimulus(accessor, step_parameters):
-    """Define stimulus parameters."""
-    cell = Cell(
-        accessor.hoc_file,
-        accessor.morph_file,
-        template_format="v6",
-        emodel_properties=accessor.emodel_properties,
-    )
-    icneurodamusobj = cell.add_step(
-        start_time=step_parameters["start_time"],
-        stop_time=step_parameters["stop_time"],
-        level=step_parameters["level"],
-    )
-    iclamp_current = neuron.h.Vector()
-    iclamp_current.record(icneurodamusobj.ic._ref_i)
-    return cell, iclamp_current
-
-
-def _step_plot(time, voltage, current):
-    """Plot the simulation."""
-    # fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 3))
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(7.5, 10))
-
-    ax1.plot(time, current, drawstyle="steps-post")
-    # ax1.plot(time_vec, stim_vec, drawstyle='steps-post')
-    ax1.set_title("Stimulus")
-    ax1.set_xlabel("Time (ms)")
-    ax1.set_ylabel("Current (nA)")
-    # ax1.fill_between(time_vec, 0, stim_vec, step="post", color='gray', alpha=0.3)
-    ax1.fill_between(time, 0, current, step="post", color="gray", alpha=0.3)
-    ax1.grid(True)
-
-    ax2.plot(time, voltage)
-    ax2.set_title("Response")
-    ax2.set_xlabel("Time (ms)")
-    ax2.set_ylabel("Voltage (mV)")
-    ax2.grid(True)  # If you want grid on the second plot as well
-
-
-def _ramp_stimulus(accessor, ramp_parameters):
-    """Define ramp stimulus parameters."""
-    cell = Cell(
-        accessor.hoc_file,
-        accessor.morph_file,
-        template_format="v6",
-        emodel_properties=accessor.emodel_properties,
-    )
-    ramp_obj = cell.add_ramp(
-        start_time=ramp_parameters["start_time"],
-        stop_time=ramp_parameters["stop_time"],
-        start_level=ramp_parameters["start_level"],
-        stop_level=ramp_parameters["stop_level"],
-    )
-
-    ramp_current = neuron.h.Vector()
-    ramp_current.record(ramp_obj.ic._ref_i)
-
-    # To add the holding current
-    # from bluecellulab.cell.injector import Hyperpolarizing
-    # hyperpolarizing = Hyperpolarizing("single-cell", delay=0, duration=params['tstop'])
-    # cell.add_replay_hypamp(hyperpolarizing)
-
-    return cell, ramp_current
-
-
-def _ramp_plot(time, voltage, current, ramp_parameters):
-    """Plot the simulation."""
-    # time_vec = [0, start_time, stop_time, max_time]
-    # stim_vec = [0, start_level, stop_level, stop_level]
-
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(7.5, 10))
-
-    ax1.plot(time, current)
-    # ax1.plot(time_vec, stim_vec, '-o')
-    ax1.set_title("Ramp Stimulus")
-    ax1.set_xlabel("Time (ms)")
-    ax1.set_ylabel("Current (nA)")
-    ax1.fill_between(
-        [ramp_parameters["start_time"], ramp_parameters["stop_time"]],
-        ramp_parameters["start_level"],
-        ramp_parameters["stop_level"],
-        color="gray",
-        alpha=0.3,
-    )
-    ax1.grid(True)
-
-    ax2.plot(time, voltage)
-    ax2.set_title("Response")
-    ax2.set_xlabel("Time (ms)")
-    ax2.set_ylabel("Voltage (mV)")
-    ax2.grid(True)
-
-
-def _shotnoise_stimulus(accessor, shotnoise_parameters):
-    """Define stimulus parameters."""
-    shotnoise_stimulus = ShotNoise(target="single-cell", **shotnoise_parameters)
-    cell = Cell(
-        accessor.hoc_file,
-        accessor.morph_file,
-        template_format="v6",
-        emodel_properties=accessor.emodel_properties,
-    )
-    time_vec, stim_vec = cell.add_replay_shotnoise(
-        cell.soma, 0.5, shotnoise_stimulus, shotnoise_stim_count=3
-    )
-    return cell, time_vec, stim_vec
-
-
-def _shotnoise_plot(time, voltage, time_vec, stim_vec, max_time):
-    """Plot the simulation."""
-    new_stim_vec = [0] + stim_vec + [0]
-    new_time_vec = [0] + time_vec + [max_time]
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 5))
-
-    ax1.plot(new_time_vec, new_stim_vec, "-o")
-    # ax1.plot(time_vec, stim_vec, '-o')
-    ax1.set_title("Shot noise Stimulus")
-    ax1.set_xlabel("Time (ms)")
-    ax1.set_ylabel("Current (nA)")
-    ax1.grid(True)
-
-    ax2.plot(time, voltage)
-    ax2.set_title("Response")
-    ax2.set_xlabel("Time (ms)")
-    ax2.set_ylabel("Voltage (mV)")
-    ax2.grid(True)
-
-
-def _step_analysis(accessor, output_file):
-    max_time = 600
-    step_parameters = {
-        "start_time": 50.0,  # Start time of the stimulus
-        "stop_time": 500.0,  # Stop time of the stimulus
-        "level": 0.6,  # Current level of the stimulus
-    }
-    cell, current = _step_stimulus(accessor, step_parameters)
-    time, voltage = _run_simulation(cell, max_time=max_time)
-    _step_plot(time, voltage, current.to_python())
-    _savefig(output_file, title="Step")
-
-
-def _ramp_analysis(accessor, output_file):
-    max_time = 200
-    ramp_parameters = {
-        "start_time": 50.0,  # Start time of the ramp
-        "stop_time": 125.0,  # Stop time of the ramp
-        "start_level": 0.0,  # Start level of the ramp
-        "stop_level": 2.0,  # Stop level of the ramp
-    }
-    cell, current = _ramp_stimulus(accessor, ramp_parameters)
-    time, voltage = _run_simulation(cell, max_time=max_time)
-    _ramp_plot(time, voltage, current.to_python(), ramp_parameters)
-    _savefig(output_file, title="Ramp")
-
-
-def _shotnoise_analysis(accessor, output_file):
-    max_time = 60
-    shotnoise_parameters = {
-        "delay": 25,
-        "duration": 20,
-        "rise_time": 0.4,
-        "decay_time": 4,
-        "rate": 2e3,
-        "amp_mean": 40e-3,
-        "amp_var": 16e-4,
-        "seed": 3899663,
-    }
-    cell, time_vec, stim_vec = _shotnoise_stimulus(accessor, shotnoise_parameters)
-    time, voltage = _run_simulation(cell, max_time=max_time)
-    _shotnoise_plot(time, voltage, time_vec.to_python(), stim_vec.to_python(), max_time=max_time)
-    _savefig(output_file, title="Shot Noise")
-
-
-def _get_morphology(path, morphology_list, supported_morphologies=(".asc", ".swc")):
-    for morph_name, morph_file in morphology_list:
-        if morph_file.endswith(supported_morphologies):
-            return Path(path, morph_file)
-    raise FileNotFoundError("Not found any supported morphology")
-
-
-def _get_emodel_properties(emodel_data):
-    holding_current = None
-    threshold_current = None
-    for feature in emodel_data["features"]:
-        if "bpo_holding_current" in feature["name"]:
-            holding_current = feature["value"]
-            L.info(feature)
-        elif "bpo_threshold_current" in feature["name"]:
-            threshold_current = feature["value"]
-            L.info(feature)
-    return EmodelProperties(
-        threshold_current=threshold_current,
-        holding_current=holding_current,
-    )
-
-
-@dataclasses.dataclass(kw_only=True)
-class EModelAccessor:
-    """EModelAccessor."""
-
-    emodel: str
-    etype: str
-    iteration: str
-    seed: int
-    recipes_file: Path
-    hoc_file: Path
-    morph_file: Path
-    emodel_properties: EmodelProperties
-
-    @classmethod
-    def from_metadata(cls, metadata):
-        emodel_dir = Path(metadata["path"])
-        hoc_file = emodel_dir / "model.hoc"
-        recipes_file = emodel_dir / "recipes.json"
-        recipes = load_json(recipes_file)[metadata["emodel"]]
-        morphology_file = _get_morphology(emodel_dir / recipes["morph_path"], recipes["morphology"])
-        emodel_properties = _get_emodel_properties(load_json(emodel_dir / recipes["final"]))
-        return cls(
-            emodel=metadata["emodel"],
-            etype=metadata["etype"],
-            iteration=metadata["iteration"],
-            seed=metadata["seed"],
-            recipes_file=recipes_file,
-            hoc_file=hoc_file,
-            morph_file=morphology_file,
-            emodel_properties=emodel_properties,
-        )
+from common.utils import L, run_analysis
+from emodel_00.lib import EModelAccessor, RampAnalysis, ShotNoiseAnalysis, StepAnalysis, run_all
 
 
 @run_analysis
 def main(analysis_config: dict) -> dict:
-    """Simple analysis example.
-
-    Analysis based on obp_emodel_localrun.zip found at
-    https://bbpteam.epfl.ch/project/issues/browse/BBPP134-1367#comment-234746
-    """
+    """Simple analysis example."""
     L.info("analysis_config:\n%s", analysis_config)
     L.info("Working directory: %s", os.getcwd())
     L.info("BLUECELLULAB_MOD_LIBRARY_PATH=%s", os.getenv("BLUECELLULAB_MOD_LIBRARY_PATH"))
     accessor = EModelAccessor.from_metadata(analysis_config["emodel"])
     output_dir = Path(analysis_config["output"])
-    outputs = []
 
-    output_file = output_dir / "step.pdf"
-    _step_analysis(accessor, output_file=output_file)
-    outputs.append(
-        {
-            "path": str(output_file),
-            "report_type": "step",
-            "report_name": "Step Stimulus Analysis",
-        }
-    )
+    analyses = [
+        StepAnalysis(
+            accessor=accessor,
+            output_file=output_dir / "step.pdf",
+            stimulus_parameters={
+                "start_time": 50.0,  # Start time of the stimulus
+                "stop_time": 500.0,  # Stop time of the stimulus
+                "level": 0.6,  # Current level of the stimulus
+            },
+            simulation_parameters={
+                "maxtime": 600,
+                "cvode": False,
+                "v_init": -75,
+            },
+        ),
+        RampAnalysis(
+            accessor=accessor,
+            output_file=output_dir / "ramp.pdf",
+            stimulus_parameters={
+                "start_time": 50.0,  # Start time of the ramp
+                "stop_time": 125.0,  # Stop time of the ramp
+                "start_level": 0.0,  # Start level of the ramp
+                "stop_level": 2.0,  # Stop level of the ramp
+            },
+            simulation_parameters={
+                "maxtime": 200,
+                "cvode": False,
+                "v_init": -75,
+            },
+        ),
+        ShotNoiseAnalysis(
+            accessor,
+            output_file=output_dir / "shotnoise.pdf",
+            stimulus_parameters={
+                "delay": 25,
+                "duration": 20,
+                "rise_time": 0.4,
+                "decay_time": 4,
+                "rate": 2e3,
+                "amp_mean": 40e-3,
+                "amp_var": 16e-4,
+                "seed": 3899663,
+            },
+            simulation_parameters={
+                "maxtime": 60,
+                "cvode": False,
+                "v_init": -75,
+            },
+        ),
+    ]
 
-    output_file = output_dir / "ramp.pdf"
-    _ramp_analysis(accessor, output_file=output_file)
-    outputs.append(
-        {
-            "path": str(output_file),
-            "report_type": "ramp",
-            "report_name": "Ramp Stimulus Analysis",
-        }
-    )
-
-    output_file = output_dir / "shotnoise.pdf"
-    _shotnoise_analysis(accessor, output_file=output_file)
-    outputs.append(
-        {
-            "path": str(output_file),
-            "report_type": "shotnoise",
-            "report_name": "Shot Noise Stimulus Analysis",
-        }
-    )
-
-    return {"outputs": outputs}
+    run_all(analyses)
+    return {"outputs": [a.metadata() for a in analyses]}

@@ -1,6 +1,14 @@
 Changelog
 =========
 
+Version 0.7.1
+-------------
+
+Bug Fixes
+~~~~~~~~~
+
+- Fix expected data in functional tests.
+
 Version 0.7.0
 -------------
 

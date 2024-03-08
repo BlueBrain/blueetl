@@ -7,6 +7,7 @@ def get_local_access_point(metadata):
         emodel=metadata["emodel"],
         emodel_dir=metadata["path"],
         etype=metadata["etype"],
+        iteration_tag=metadata["iteration"],
         recipes_path="recipes.json",
     )
 

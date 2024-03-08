@@ -5,6 +5,7 @@ import multiprocessing
 import os
 import time
 from collections.abc import Callable
+from contextlib import contextmanager
 from pathlib import Path
 
 import click
@@ -27,6 +28,17 @@ def dump_json(content: dict, path: Path | str) -> None:
     """Dump json to file."""
     with open(path, "w") as f:
         json.dump(content, f)
+
+
+@contextmanager
+def cwd(path):
+    """Context manager to temporarily change the working directory."""
+    original_cwd = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(original_cwd)
 
 
 def run_analysis(func: Callable[[dict], dict]) -> Callable[..., dict]:

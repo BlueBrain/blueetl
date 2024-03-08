@@ -3,10 +3,11 @@ import json
 import logging
 import multiprocessing
 import os
-import sys
 import time
 from collections.abc import Callable
 from pathlib import Path
+
+import click
 
 L = logging.getLogger("analysis")
 
@@ -58,11 +59,28 @@ def run_analysis(func: Callable[[dict], dict]) -> Callable[..., dict]:
         return result
 
     if func.__module__ == "__main__":
-        # if the script is called directly, automatically execute the function
-        wrapper(
-            analysis_config=load_json(Path(sys.argv[1])),
-            analysis_output=Path(sys.argv[2]),
+        # if the script is called directly, automatically wrap and execute the function
+        @click.command()
+        @click.option(
+            "--log-level",
+            default="INFO",
+            help="Log level",
+            type=click.Choice(
+                choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                case_sensitive=False,
+            ),
+            show_default=True,
         )
+        @click.argument("analysis_config_file", type=click.Path(exists=True))
+        @click.argument("analysis_output_file", type=click.Path(exists=False))
+        def cli_wrapper(analysis_config_file, analysis_output_file, log_level):
+            wrapper(
+                analysis_config=load_json(Path(analysis_config_file)),
+                analysis_output=Path(analysis_output_file),
+                log_level=log_level,
+            )
+
+        cli_wrapper()
 
     return wrapper
 

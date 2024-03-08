@@ -4,12 +4,26 @@ from pathlib import Path
 from common.utils import L, run_analysis
 from emodel_00.lib import EModelAccessor, RampAnalysis, ShotNoiseAnalysis, StepAnalysis, run_all
 
+# Example of analysis_config:
+# {
+#   "emodel": {
+#     "id": "<Nexus id>",
+#     "url": "<Nexus url>",
+#     "path": "/path/to/emodel/dir",
+#     "emodel": "cSTUT",
+#     "etype": "cSTUT",
+#     "iteration": "2f92aa0",
+#     "seed": "11"
+#   },
+#   "output": "/path/to/scratch/dir"
+# }
+
 
 @run_analysis
 def main(analysis_config: dict) -> dict:
-    """Simple analysis example."""
-    L.info("analysis_config:\n%s", analysis_config)
-    L.info("Working directory: %s", os.getcwd())
+    """Simple analysis example using bluecellulab."""
+    L.info("analysis config:\n%s", analysis_config)
+    L.info("working directory: %s", os.getcwd())
     L.info("BLUECELLULAB_MOD_LIBRARY_PATH=%s", os.getenv("BLUECELLULAB_MOD_LIBRARY_PATH"))
     accessor = EModelAccessor.from_metadata(analysis_config["emodel"])
     output_dir = Path(analysis_config["output"])

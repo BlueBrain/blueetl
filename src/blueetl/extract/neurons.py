@@ -15,6 +15,77 @@ from blueetl.utils import ensure_list, timed
 
 L = logging.getLogger(__name__)
 
+# cached node_ids for each (population, node_set)
+CellsCache = dict[tuple[Optional[str], Optional[str]], pd.DataFrame]
+
+
+def _get_property_names(neuron_classes: dict[str, NeuronClassConfig]) -> list[str]:
+    """Return the list of properties to be retrieved from the cells DataFrame."""
+    properties_set = set()
+    for conf in neuron_classes.values():
+        for query_dict in ensure_list(conf.query):
+            properties_set.update(query_dict)
+    return sorted(properties_set)
+
+
+def _load_cells(
+    circuit: Circuit,
+    property_names: list[str],
+    cells_cache: CellsCache,
+    population: Optional[str],
+    node_set: Optional[str],
+) -> pd.DataFrame:
+    """Load and return the cells for the given population and node_set.
+
+    Data are retrieved from the circuit or from the cache.
+
+    If node_set is None or empty string, all the cells of the population are loaded.
+    """
+    node_set = node_set or None
+    key = (population, node_set)
+    if key not in cells_cache:
+        msg = f"Loading nodes using population={population}, node_set={node_set}"
+        with timed(L.info, msg):
+            _cells = circuit.nodes[population].get(group=node_set, properties=property_names)
+            cells_cache[key] = _cells
+    return cells_cache[key]
+
+
+def _filter_gids_by_neuron_class(
+    circuit: Circuit,
+    property_names: list[str],
+    cells_cache: CellsCache,
+    name: str,
+    config: NeuronClassConfig,
+) -> np.ndarray:
+    """Return the array of node_ids filtered by neuron class."""
+    cells = _load_cells(
+        circuit=circuit,
+        property_names=property_names,
+        cells_cache=cells_cache,
+        population=config.population,
+        node_set=config.node_set,
+    )
+    gids = cells.etl.q(config.query).index.to_numpy()
+    if config.node_id:
+        gids = np.intersect1d(gids, config.node_id)
+    neuron_count = len(gids)
+    if config.limit and neuron_count > config.limit:
+        gids = np.random.choice(gids, size=config.limit, replace=False)
+    gids.sort()
+    L.info(
+        "Selected gids for %s: %s/%s (limit=%s, population=%s, node_set=%s)",
+        name,
+        len(gids),
+        neuron_count,
+        config.limit,
+        config.population,
+        config.node_set,
+    )
+    L.debug("Configured query: %s", config.query)
+    L.debug("Configured node_id: %s", config.node_id)
+    return gids
+
 
 class Neurons(BaseExtractor):
     """Neurons extractor class."""
@@ -31,58 +102,11 @@ class Neurons(BaseExtractor):
     def _get_gids(
         circuit: Circuit, neuron_classes: dict[str, NeuronClassConfig]
     ) -> dict[str, np.ndarray]:
-        def _get_property_names() -> list[str]:
-            """Return the list of properties to be retrieved from the cells DataFrame."""
-            properties_set = set()
-            for conf in neuron_classes.values():
-                for query_dict in ensure_list(conf.query):
-                    properties_set.update(query_dict)
-            return sorted(properties_set)
-
-        def _load_cells(_population, _node_set: Optional[str]) -> pd.DataFrame:
-            """Load and return the cells for the given population and node_set.
-
-            Data are retrieved from the circuit or from the cache.
-
-            If _node_set is None or empty string, all the cells of the population are loaded.
-            """
-            _node_set = _node_set or None
-            _key = (_population, _node_set)
-            if _key not in cells_cache:
-                msg = f"Loading nodes using population={_population}, node_set={_node_set}"
-                with timed(L.info, msg):
-                    _cells = circuit.nodes[_population].get(
-                        group=_node_set, properties=property_names
-                    )
-                    cells_cache[_key] = _cells
-            return cells_cache[_key]
-
-        def _filter_gids_by_neuron_class(name: str, config: NeuronClassConfig) -> np.ndarray:
-            cells = _load_cells(config.population, config.node_set)
-            gids = cells.etl.q(config.query).index.to_numpy()
-            if config.node_id:
-                gids = np.intersect1d(gids, config.node_id)
-            neuron_count = len(gids)
-            if config.limit and neuron_count > config.limit:
-                gids = np.random.choice(gids, size=config.limit, replace=False)
-            gids.sort()
-            L.info(
-                "Selected gids for %s: %s/%s (limit=%s, population=%s, node_set=%s)",
-                name,
-                len(gids),
-                neuron_count,
-                config.limit,
-                config.population,
-                config.node_set,
-            )
-            L.debug("Configured query: %s", config.query)
-            L.debug("Configured node_id: %s", config.node_id)
-            return gids
-
-        cells_cache: dict[tuple[str, Optional[str]], pd.DataFrame] = {}
-        property_names = _get_property_names()
+        """Return a dict containing name: node_ids for each neuron class."""
+        cells_cache: CellsCache = {}
+        property_names = _get_property_names(neuron_classes=neuron_classes)
         return {
-            name: _filter_gids_by_neuron_class(name, config)
+            name: _filter_gids_by_neuron_class(circuit, property_names, cells_cache, name, config)
             for name, config in neuron_classes.items()
         }
 

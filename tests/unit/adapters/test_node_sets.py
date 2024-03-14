@@ -3,11 +3,11 @@ from pathlib import Path
 import pytest
 
 from blueetl.adapters import node_sets as test_module
-from tests.unit.utils import TEST_DATA_PATH, assert_isinstance
+from tests.unit.utils import TEST_NODE_SETS_FILE, TEST_NODE_SETS_FILE_EXTRA, assert_isinstance
 
 
 def test_node_sets_adapter():
-    path = TEST_DATA_PATH / "circuit" / "sonata" / "node_sets.json"
+    path = TEST_NODE_SETS_FILE
     expected_class_name = "bluepysnap.node_sets.NodeSets"
 
     obj = test_module.NodeSetsAdapter.from_file(path)
@@ -17,8 +17,8 @@ def test_node_sets_adapter():
 
 
 def test_node_sets_adapter_update():
-    path = TEST_DATA_PATH / "circuit" / "sonata" / "node_sets.json"
-    path_extra = TEST_DATA_PATH / "circuit" / "sonata" / "node_sets_extra.json"
+    path = TEST_NODE_SETS_FILE
+    path_extra = TEST_NODE_SETS_FILE_EXTRA
 
     obj = test_module.NodeSetsAdapter.from_file(path)
     obj_extra = test_module.NodeSetsAdapter.from_file(path_extra)
@@ -32,8 +32,8 @@ def test_node_sets_adapter_update():
 
 
 def test_node_sets_adapter_ior():
-    path = TEST_DATA_PATH / "circuit" / "sonata" / "node_sets.json"
-    path_extra = TEST_DATA_PATH / "circuit" / "sonata" / "node_sets_extra.json"
+    path = TEST_NODE_SETS_FILE
+    path_extra = TEST_NODE_SETS_FILE_EXTRA
 
     obj = test_module.NodeSetsAdapter.from_file(path)
     obj_extra = test_module.NodeSetsAdapter.from_file(path_extra)

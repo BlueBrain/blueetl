@@ -14,8 +14,7 @@ analysis:
       limit: 1000
       population: thalamus_neurons
       node_set: null
-      # absolute path, or path relative to the directory containing the analysis config file
-      node_sets_file: /gpfs/bbp.cscs.ch/project/proj12/NSE/blueetl/data/custom_node_sets/node_sets_01.json
+      node_sets_file: node_sets/node_sets_01.json
       windows:
         w1: {bounds: [20, 90], window_type: spontaneous}
         w3: {bounds: [0, 25], initial_offset: 50, trial_steps_label: ts1}

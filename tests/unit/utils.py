@@ -13,6 +13,8 @@ except ImportError:
     BLUEPY_AVAILABLE = False
 
 TEST_DATA_PATH = Path(__file__).parent / "data"
+TEST_NODE_SETS_FILE = TEST_DATA_PATH / "circuit" / "sonata" / "node_sets.json"
+TEST_NODE_SETS_FILE_EXTRA = TEST_DATA_PATH / "circuit" / "sonata" / "node_sets_extra.json"
 
 
 def assert_frame_equal(actual, expected):

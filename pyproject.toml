@@ -123,7 +123,7 @@ branch = true
 parallel = false
 omit = [
     "*/blueetl/_version.py",
-    "*/blueetl/adapters/bluepy/*.py",
+    "*/blueetl/adapters/impl/bluepy/*.py",
     "*/blueetl/external/**/*.py",
 ]
 

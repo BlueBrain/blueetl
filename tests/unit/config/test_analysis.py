@@ -1,8 +1,10 @@
 import pytest
 
-import blueetl.config.analysis
 from blueetl.config import analysis as test_module
-from blueetl.config.analysis_model import FeaturesConfig
+from blueetl.config.analysis_model import FeaturesConfig, MultiAnalysisConfig
+from blueetl.utils import load_yaml
+from tests.functional.utils import TEST_DATA_PATH as TEST_DATA_PATH_FUNCTIONAL
+from tests.unit.utils import TEST_DATA_PATH as TEST_DATA_PATH_UNIT
 from tests.unit.utils import assert_not_duplicates
 
 
@@ -146,7 +148,7 @@ def test_config__resolve_features(config_list, expected_list):
     config_list = [FeaturesConfig(**d) for d in config_list]
     expected_list = [FeaturesConfig(**d) for d in expected_list]
 
-    result = blueetl.config.analysis._resolve_features(config_list)
+    result = test_module._resolve_features(config_list)
 
     assert result == expected_list
     assert_not_duplicates(result)
@@ -168,3 +170,22 @@ def test_config__resolve_features_error():
 
     with pytest.raises(ValueError, match="All the zip params must have the same length"):
         test_module._resolve_features(config_list)
+
+
+@pytest.mark.parametrize(
+    "config_file",
+    [
+        pytest.param(f, id=f"{f.relative_to(f.parents[2])}")
+        for base in (
+            TEST_DATA_PATH_UNIT / "analysis",
+            TEST_DATA_PATH_FUNCTIONAL / "sonata" / "config",
+            TEST_DATA_PATH_FUNCTIONAL / "bbp" / "config",
+        )
+        for f in base.glob("*.yaml")
+    ],
+)
+def test_init_multi_analysis_configuration(config_file):
+    config_dict = load_yaml(config_file)
+    base_path = config_file.parent
+    result = test_module.init_multi_analysis_configuration(config_dict, base_path=base_path)
+    assert isinstance(result, MultiAnalysisConfig)

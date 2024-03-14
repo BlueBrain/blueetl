@@ -26,14 +26,6 @@ class EModelAccessor:
     emodel_properties: dict[str, Any]
 
     @staticmethod
-    def _get_morphology(path, morphology_list, supported_morphologies=(".asc", ".swc")):
-        """Return the path to the first supported morphology file."""
-        for morph_name, morph_file in morphology_list:
-            if morph_file.endswith(supported_morphologies):
-                return Path(path, morph_file)
-        raise FileNotFoundError("Not found any supported morphology")
-
-    @staticmethod
     def _get_emodel_properties(emodel_data):
         """Load and return the EmodelProperties."""
         holding_current = None
@@ -56,8 +48,7 @@ class EModelAccessor:
         hoc_file = emodel_dir / "model.hoc"
         recipes_file = emodel_dir / "recipes.json"
         recipes = load_json(recipes_file)[metadata["emodel"]]
-        morph_dir = emodel_dir / recipes["morph_path"]
-        morphology_file = cls._get_morphology(morph_dir, recipes["morphology"])
+        morphology_file = emodel_dir / recipes["morph_path"] / recipes["morphology"]
         emodel_properties = cls._get_emodel_properties(load_json(emodel_dir / recipes["final"]))
         return cls(
             emodel=metadata["emodel"],

@@ -1,4 +1,5 @@
 import pickle
+from pathlib import Path
 
 import pytest
 
@@ -47,7 +48,7 @@ def test_simulation_adapter(path, population, reports, expected_classes, monkeyp
     path = TEST_DATA_PATH / "simulation" / path
     # enter the circuit dir to resolve relative paths in bluepy
     monkeypatch.chdir(path.parent)
-    obj = test_module.SimulationAdapter(path)
+    obj = test_module.SimulationAdapter.from_file(path)
     assert_isinstance(obj.instance, expected_classes["simulation"])
 
     assert obj.exists() is True
@@ -76,8 +77,8 @@ def test_simulation_adapter(path, population, reports, expected_classes, monkeyp
 
 
 def test_simulation_adapter_with_nonexistent_path():
-    path = "path/to/simulation_config.json"
-    obj = test_module.SimulationAdapter(path)
+    path = Path("path/to/simulation_config.json")
+    obj = test_module.SimulationAdapter.from_file(path)
 
     assert obj.instance is None
     assert obj.exists() is False

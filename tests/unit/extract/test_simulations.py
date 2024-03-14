@@ -25,7 +25,7 @@ def test_simulations_from_config(mock_simulation_class):
     mock_simulation1 = _get_mock_simulation()
     mock_circuit0 = mock_simulation0.circuit
     mock_circuit1 = mock_simulation1.circuit
-    mock_simulation_class.side_effect = [mock_simulation0, mock_simulation1]
+    mock_simulation_class.from_file.side_effect = [mock_simulation0, mock_simulation1]
     config = MagicMock(SimulationCampaign)
     config.get.return_value = pd.DataFrame(
         [
@@ -62,7 +62,7 @@ def test_simulations_from_config(mock_simulation_class):
     assert_frame_equal(result.df, expected_df)
 
     assert config.get.call_count == 1
-    assert mock_simulation_class.call_count == 2
+    assert mock_simulation_class.from_file.call_count == 2
     assert mock_circuit0 != mock_circuit1
     assert mock_simulation0.exists.call_count == 1
     assert mock_simulation1.exists.call_count == 1
@@ -76,7 +76,7 @@ def test_simulations_from_config_filtered_by_simulation_id(mock_simulation_class
     mock_simulation1 = _get_mock_simulation()
     mock_circuit0 = mock_simulation0.circuit
     mock_circuit1 = mock_simulation1.circuit
-    mock_simulation_class.side_effect = [mock_simulation0, mock_simulation1]
+    mock_simulation_class.from_file.side_effect = [mock_simulation0, mock_simulation1]
     config = MagicMock(SimulationCampaign)
     config.get.return_value = pd.DataFrame(
         [
@@ -104,7 +104,7 @@ def test_simulations_from_config_filtered_by_simulation_id(mock_simulation_class
     assert_frame_equal(result.df, expected_df)
 
     assert config.get.call_count == 1
-    assert mock_simulation_class.call_count == 2
+    assert mock_simulation_class.from_file.call_count == 2
     assert mock_circuit0 != mock_circuit1
     assert mock_simulation0.exists.call_count == 1
     assert mock_simulation1.exists.call_count == 1
@@ -118,7 +118,7 @@ def test_simulations_from_config_without_spikes(mock_simulation_class):
     mock_simulation1 = _get_mock_simulation(is_complete=True)
     mock_circuit0 = mock_simulation0.circuit
     mock_circuit1 = mock_simulation1.circuit
-    mock_simulation_class.side_effect = [mock_simulation0, mock_simulation1]
+    mock_simulation_class.from_file.side_effect = [mock_simulation0, mock_simulation1]
     config = MagicMock(SimulationCampaign)
     config.get.return_value = pd.DataFrame(
         [
@@ -147,7 +147,7 @@ def test_simulations_from_config_without_spikes(mock_simulation_class):
     assert_frame_equal(result.df, expected_df)
 
     assert config.get.call_count == 1
-    assert mock_simulation_class.call_count == 2
+    assert mock_simulation_class.from_file.call_count == 2
     assert mock_circuit0 != mock_circuit1
     assert mock_simulation0.exists.call_count == 1
     assert mock_simulation1.exists.call_count == 1
@@ -161,7 +161,7 @@ def test_simulations_from_config_first_nonexistent(mock_simulation_class):
     mock_simulation1 = _get_mock_simulation(exists=True)
     mock_circuit0 = mock_simulation0.circuit
     mock_circuit1 = mock_simulation1.circuit
-    mock_simulation_class.side_effect = [mock_simulation0, mock_simulation1]
+    mock_simulation_class.from_file.side_effect = [mock_simulation0, mock_simulation1]
     config = MagicMock(SimulationCampaign)
     config.get.return_value = pd.DataFrame(
         [
@@ -192,7 +192,7 @@ def test_simulations_from_config_first_nonexistent(mock_simulation_class):
     assert_frame_equal(result.df, expected_df)
 
     assert config.get.call_count == 1
-    assert mock_simulation_class.call_count == 2
+    assert mock_simulation_class.from_file.call_count == 2
     assert mock_circuit0 != mock_circuit1
     assert mock_simulation0.exists.call_count == 1
     assert mock_simulation1.exists.call_count == 1
@@ -206,7 +206,7 @@ def test_simulations_from_pandas_load_complete_campaign(mock_simulation_class):
     mock_simulation1 = _get_mock_simulation()
     mock_circuit0 = mock_simulation0.circuit
     mock_circuit1 = mock_simulation1.circuit
-    mock_simulation_class.side_effect = [mock_simulation0, mock_simulation1]
+    mock_simulation_class.from_file.side_effect = [mock_simulation0, mock_simulation1]
     df = pd.DataFrame(
         [
             {
@@ -252,7 +252,7 @@ def test_simulations_from_pandas_load_complete_campaign(mock_simulation_class):
     assert isinstance(result, test_module.Simulations)
     assert_frame_equal(result.df, expected_df)
 
-    assert mock_simulation_class.call_count == 2
+    assert mock_simulation_class.from_file.call_count == 2
     assert mock_circuit0 != mock_circuit1
     assert mock_simulation0.exists.call_count == 1
     assert mock_simulation1.exists.call_count == 1
@@ -266,7 +266,7 @@ def test_simulations_from_pandas_load_incomplete_campaign(mock_simulation_class)
     mock_simulation1 = _get_mock_simulation()
     mock_circuit0 = mock_simulation0.circuit
     mock_circuit1 = mock_simulation1.circuit
-    mock_simulation_class.side_effect = [mock_simulation0, mock_simulation1]
+    mock_simulation_class.from_file.side_effect = [mock_simulation0, mock_simulation1]
     df = pd.DataFrame(
         [
             {
@@ -312,7 +312,7 @@ def test_simulations_from_pandas_load_incomplete_campaign(mock_simulation_class)
     assert isinstance(result, test_module.Simulations)
     assert_frame_equal(result.df, expected_df)
 
-    assert mock_simulation_class.call_count == 2
+    assert mock_simulation_class.from_file.call_count == 2
     assert mock_circuit0 != mock_circuit1
     assert mock_simulation0.exists.call_count == 1
     assert mock_simulation1.exists.call_count == 1
@@ -328,7 +328,7 @@ def test_simulations_from_pandas_load_inconsistent_campaign(mock_simulation_clas
     mock_simulation1 = _get_mock_simulation(1)
     mock_circuit0 = mock_simulation0.circuit
     mock_circuit1 = mock_simulation1.circuit
-    mock_simulation_class.side_effect = [mock_simulation0, mock_simulation1]
+    mock_simulation_class.from_file.side_effect = [mock_simulation0, mock_simulation1]
     df = pd.DataFrame(
         [
             {
@@ -350,7 +350,7 @@ def test_simulations_from_pandas_load_inconsistent_campaign(mock_simulation_clas
     with pytest.raises(test_module.InconsistentSimulations, match="Inconsistent hash and id"):
         test_module.Simulations.from_pandas(df)
 
-    assert mock_simulation_class.call_count == 2
+    assert mock_simulation_class.from_file.call_count == 2
     assert mock_circuit0 != mock_circuit1
     assert mock_simulation0.exists.call_count == 1
     assert mock_simulation1.exists.call_count == 1
@@ -364,7 +364,7 @@ def test_simulations_from_pandas_first_nonexistent(mock_simulation_class):
     mock_simulation1 = _get_mock_simulation(exists=True)
     mock_circuit0 = mock_simulation0.circuit
     mock_circuit1 = mock_simulation1.circuit
-    mock_simulation_class.side_effect = [mock_simulation0, mock_simulation1]
+    mock_simulation_class.from_file.side_effect = [mock_simulation0, mock_simulation1]
     df = pd.DataFrame(
         [
             {
@@ -386,7 +386,7 @@ def test_simulations_from_pandas_first_nonexistent(mock_simulation_class):
     with pytest.raises(test_module.InconsistentSimulations, match="Inconsistent cache"):
         test_module.Simulations.from_pandas(df)
 
-    assert mock_simulation_class.call_count == 2
+    assert mock_simulation_class.from_file.call_count == 2
     assert mock_circuit0 != mock_circuit1
     assert mock_simulation0.exists.call_count == 1
     assert mock_simulation1.exists.call_count == 1
@@ -400,7 +400,7 @@ def test_simulations_from_pandas_filtered_by_simulation_id(mock_simulation_class
     mock_simulation1 = _get_mock_simulation()
     mock_circuit0 = mock_simulation0.circuit
     mock_circuit1 = mock_simulation1.circuit
-    mock_simulation_class.side_effect = [mock_simulation0, mock_simulation1]
+    mock_simulation_class.from_file.side_effect = [mock_simulation0, mock_simulation1]
 
     df = pd.DataFrame(
         [
@@ -439,7 +439,7 @@ def test_simulations_from_pandas_filtered_by_simulation_id(mock_simulation_class
 
     assert_frame_equal(result.df, expected_df)
 
-    assert mock_simulation_class.call_count == 2
+    assert mock_simulation_class.from_file.call_count == 2
     assert mock_circuit0 != mock_circuit1
     assert mock_simulation0.exists.call_count == 1
     assert mock_simulation1.exists.call_count == 1

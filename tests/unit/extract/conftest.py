@@ -9,7 +9,7 @@ def _get_cells():
     return pd.DataFrame(
         [
             {
-                "layer": 1,
+                "layer": "1",
                 "mtype": "L1_DAC",
                 "etype": "cNAC",
                 "region": "S1FL",
@@ -19,7 +19,7 @@ def _get_cells():
                 "z": -1710.8,
             },
             {
-                "layer": 2,
+                "layer": "2",
                 "mtype": "L2_TPC:A",
                 "etype": "cADpyr",
                 "region": "S1FL",
@@ -29,7 +29,7 @@ def _get_cells():
                 "z": -1987.2,
             },
             {
-                "layer": 4,
+                "layer": "4",
                 "mtype": "L4_BP",
                 "etype": "cNAC",
                 "region": "S1FL",

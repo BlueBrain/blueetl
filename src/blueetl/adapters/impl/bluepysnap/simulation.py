@@ -7,7 +7,7 @@ from typing import Optional
 
 from bluepysnap import Simulation
 
-from blueetl.adapters.bluepysnap.circuit import CircuitImpl
+from blueetl.adapters.impl.bluepysnap.circuit import CircuitImpl
 from blueetl.adapters.interfaces.circuit import CircuitInterface
 from blueetl.adapters.interfaces.simulation import (
     PopulationReportInterface,

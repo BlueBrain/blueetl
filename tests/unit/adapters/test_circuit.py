@@ -1,4 +1,5 @@
 import pickle
+from pathlib import Path
 
 import pytest
 
@@ -39,7 +40,7 @@ def test_circuit_adapter(path, population, expected_classes, monkeypatch):
     path = TEST_DATA_PATH / "circuit" / path
     # enter the circuit dir to resolve relative paths in bluepy
     monkeypatch.chdir(path.parent)
-    obj = test_module.CircuitAdapter(path)
+    obj = test_module.CircuitAdapter.from_file(path)
     assert_isinstance(obj.instance, expected_classes["circuit"])
 
     # access methods and properties
@@ -61,8 +62,8 @@ def test_circuit_adapter(path, population, expected_classes, monkeypatch):
 
 
 def test_circuit_adapter_with_nonexistent_path():
-    path = "path/to/circuit_config.json"
-    obj = test_module.CircuitAdapter(path)
+    path = Path("path/to/circuit_config.json")
+    obj = test_module.CircuitAdapter.from_file(path)
 
     assert obj.instance is None
     assert obj.exists() is False

@@ -1,12 +1,14 @@
 """Windows extractor."""
 
 import logging
+from pathlib import Path
 from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
 
 from blueetl.adapters.circuit import CircuitAdapter as Circuit
+from blueetl.adapters.node_sets import NodeSetsAdapter as NodeSets
 from blueetl.adapters.simulation import SimulationAdapter as Simulation
 from blueetl.config.analysis_model import TrialStepsConfig, WindowConfig
 from blueetl.constants import (
@@ -35,12 +37,17 @@ def _load_dynamic_gids(
     circuit: Circuit,
     population: Optional[str],
     node_set: Optional[str],
+    node_sets_file: Optional[Path],
     limit: Optional[int],
 ) -> np.ndarray:
     """Return the node ids to consider."""
-    with timed(L.info, "Loading cells from circuit"):
-        cells_group = node_set or None
-        gids = circuit.nodes[population].ids(group=cells_group)
+    node_set = node_set or None
+    with timed(L.info, "Loading nodes from circuit for dynamic offset"):
+        if node_set and node_sets_file:
+            node_sets = NodeSets.from_file(circuit.node_sets_file)
+            node_sets |= NodeSets.from_file(node_sets_file)
+            node_set = node_sets.instance[node_set]
+        gids = circuit.nodes[population].ids(group=node_set)
     neuron_count = len(gids)
     if limit and neuron_count > limit:
         gids = np.random.choice(gids, size=limit, replace=False)
@@ -81,6 +88,7 @@ def _calculate_dynamic_offset(
         circuit=circuit,
         population=trial_steps_config.population,
         node_set=trial_steps_config.node_set,
+        node_sets_file=trial_steps_config.node_sets_file,
         limit=trial_steps_config.limit,
     )
     spikes_list = []

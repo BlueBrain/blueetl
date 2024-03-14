@@ -1,12 +1,14 @@
 """Neurons extractor."""
 
 import logging
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
 import pandas as pd
 
 from blueetl.adapters.circuit import CircuitAdapter as Circuit
+from blueetl.adapters.node_sets import NodeSetsAdapter as NodeSets
 from blueetl.config.analysis_model import NeuronClassConfig
 from blueetl.constants import CIRCUIT, CIRCUIT_ID, GID, NEURON_CLASS, NEURON_CLASS_INDEX
 from blueetl.extract.base import BaseExtractor
@@ -15,8 +17,8 @@ from blueetl.utils import ensure_list, timed
 
 L = logging.getLogger(__name__)
 
-# cached node_ids for each (population, node_set)
-CellsCache = dict[tuple[Optional[str], Optional[str]], pd.DataFrame]
+# cached node_ids for each (population, node_set, node_sets_file)
+CellsCache = dict[tuple[Optional[str], Optional[str], Optional[Path]], pd.DataFrame]
 
 
 def _get_property_names(neuron_classes: dict[str, NeuronClassConfig]) -> list[str]:
@@ -34,6 +36,7 @@ def _load_cells(
     cells_cache: CellsCache,
     population: Optional[str],
     node_set: Optional[str],
+    node_sets_file: Optional[Path],
 ) -> pd.DataFrame:
     """Load and return the cells for the given population and node_set.
 
@@ -42,10 +45,14 @@ def _load_cells(
     If node_set is None or empty string, all the cells of the population are loaded.
     """
     node_set = node_set or None
-    key = (population, node_set)
+    key = (population, node_set, node_sets_file)
     if key not in cells_cache:
-        msg = f"Loading nodes using population={population}, node_set={node_set}"
+        msg = f"Loading nodes using {population=}, {node_set=}, {node_sets_file=}"
         with timed(L.info, msg):
+            if node_set and node_sets_file:
+                node_sets = NodeSets.from_file(circuit.node_sets_file)
+                node_sets |= NodeSets.from_file(node_sets_file)
+                node_set = node_sets.instance[node_set]
             _cells = circuit.nodes[population].get(group=node_set, properties=property_names)
             cells_cache[key] = _cells
     return cells_cache[key]
@@ -65,6 +72,7 @@ def _filter_gids_by_neuron_class(
         cells_cache=cells_cache,
         population=config.population,
         node_set=config.node_set,
+        node_sets_file=config.node_sets_file,
     )
     gids = cells.etl.q(config.query).index.to_numpy()
     if config.node_id:

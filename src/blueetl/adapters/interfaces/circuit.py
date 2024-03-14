@@ -2,11 +2,13 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Generic, Optional, TypeVar
 
 import numpy as np
 import pandas as pd
 
+from blueetl.adapters.interfaces.node_sets import NodeSetsInterface
 from blueetl.utils import CachedPropertyMixIn
 
 CircuitT = TypeVar("CircuitT")
@@ -44,3 +46,13 @@ class CircuitInterface(Generic[CircuitT], CachedPropertyMixIn, ABC):
     @abstractmethod
     def nodes(self) -> Mapping[Optional[str], NodePopulationInterface]:
         """Return the nodes as a dict: population -> nodes."""
+
+    @property
+    @abstractmethod
+    def node_sets_file(self) -> Optional[Path]:
+        """Returns the NodeSets file used by the circuit."""
+
+    @property
+    @abstractmethod
+    def node_sets(self) -> NodeSetsInterface:
+        """Returns the NodeSets used by the circuit."""

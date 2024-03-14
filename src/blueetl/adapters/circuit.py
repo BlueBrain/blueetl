@@ -6,22 +6,25 @@ from typing import Optional
 
 from blueetl.adapters.base import BaseAdapter
 from blueetl.adapters.interfaces.circuit import CircuitInterface, NodePopulationInterface
+from blueetl.adapters.node_sets import NodeSetsAdapter
 
 
 class CircuitAdapter(BaseAdapter[CircuitInterface]):
     """Circuit Adapter."""
 
-    def _load_impl(self, config: str) -> Optional[CircuitInterface]:
-        """Load and return the implementation object, or None if the config file doesn't exist."""
+    @classmethod
+    def from_file(cls, filepath: Optional[Path]) -> "CircuitAdapter":
+        """Load and return a new object from file."""
         # pylint: disable=import-outside-toplevel
-        if not config or not Path(config).exists():
-            return None
+        if not filepath or not filepath.exists():
+            return cls(None)
         CircuitImpl: type[CircuitInterface]
-        if config.endswith(".json"):
-            from blueetl.adapters.bluepysnap.circuit import Circuit, CircuitImpl
+        if filepath.suffix == ".json":
+            from blueetl.adapters.impl.bluepysnap.circuit import Circuit, CircuitImpl
         else:
-            from blueetl.adapters.bluepy.circuit import Circuit, CircuitImpl
-        return CircuitImpl(Circuit(config))
+            from blueetl.adapters.impl.bluepy.circuit import Circuit, CircuitImpl
+        impl = CircuitImpl(Circuit(str(filepath)))
+        return cls(impl)
 
     def checksum(self) -> str:
         """Return a checksum of the relevant keys in the circuit configuration."""
@@ -31,3 +34,13 @@ class CircuitAdapter(BaseAdapter[CircuitInterface]):
     def nodes(self) -> Mapping[Optional[str], NodePopulationInterface]:
         """Return the nodes as a dict: population -> nodes."""
         return self._ensure_impl.nodes
+
+    @property
+    def node_sets_file(self) -> Optional[Path]:
+        """Returns the NodeSets file used by the circuit."""
+        return self._ensure_impl.node_sets_file
+
+    @property
+    def node_sets(self) -> NodeSetsAdapter:
+        """Returns the NodeSets file used by the circuit."""
+        return NodeSetsAdapter(self._ensure_impl.node_sets)

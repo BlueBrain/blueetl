@@ -16,17 +16,19 @@ from blueetl.adapters.interfaces.simulation import (
 class SimulationAdapter(BaseAdapter[SimulationInterface]):
     """Simulation Adapter."""
 
-    def _load_impl(self, config: str) -> Optional[SimulationInterface]:
-        """Load and return the implementation object, or None if the config file doesn't exist."""
+    @classmethod
+    def from_file(cls, filepath: Optional[Path]) -> "SimulationAdapter":
+        """Load and return a new object from file."""
         # pylint: disable=import-outside-toplevel
-        if not config or not Path(config).exists():
-            return None
+        if not filepath or not filepath.exists():
+            return cls(None)
         SimulationImpl: type[SimulationInterface]
-        if config.endswith(".json"):
-            from blueetl.adapters.bluepysnap.simulation import Simulation, SimulationImpl
+        if filepath.suffix == ".json":
+            from blueetl.adapters.impl.bluepysnap.simulation import Simulation, SimulationImpl
         else:
-            from blueetl.adapters.bluepy.simulation import Simulation, SimulationImpl
-        return SimulationImpl(Simulation(config))
+            from blueetl.adapters.impl.bluepy.simulation import Simulation, SimulationImpl
+        impl = SimulationImpl(Simulation(str(filepath)))
+        return cls(impl)
 
     def is_complete(self) -> bool:
         """Return True if the simulation is complete, False otherwise."""
@@ -35,7 +37,7 @@ class SimulationAdapter(BaseAdapter[SimulationInterface]):
     @property
     def circuit(self) -> CircuitAdapter:
         """Return the circuit used for the simulation."""
-        return CircuitAdapter.from_impl(self._ensure_impl.circuit)
+        return CircuitAdapter(self._ensure_impl.circuit)
 
     @property
     def spikes(self) -> Mapping[Optional[str], PopulationSpikesReportInterface]:

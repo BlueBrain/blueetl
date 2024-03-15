@@ -78,6 +78,7 @@ def test_concatenated_features():
     expected_df = ensure_dtypes(expected_df)
     assert_frame_equal(obj.df, expected_df)
 
+    # test clear_cache
     assert {"params", "aliases", "df"}.issubset(obj.__dict__)
     obj.clear_cache()
     assert {"params", "aliases", "df"}.isdisjoint(obj.__dict__)
@@ -85,3 +86,40 @@ def test_concatenated_features():
     assert_frame_equal(obj.aliases, expected_aliases)
     assert_frame_equal(obj.df, expected_df)
     assert {"params", "aliases", "df"}.issubset(obj.__dict__)
+
+    # test cloning
+    parent = MagicMock()
+    clone = obj.clone(parent=parent)
+    assert clone._parent == parent
+    assert clone._configs == obj._configs
+    assert clone._configs is not obj._configs
+
+
+def test_calculate_features(repo):
+    groupby = ["simulation_id", "circuit_id", "neuron_class", "window"]
+    features_configs_key = test_module.FeaturesConfigKey(
+        groupby=groupby,
+        neuron_classes=[],
+        windows=[],
+    )
+    features_configs_list = [
+        FeaturesConfig(
+            type="multi",
+            groupby=groupby,
+            function="blueetl.external.bnac.calculate_features.calculate_features_multi",
+        ),
+    ]
+
+    result = test_module.calculate_features(repo, features_configs_key, features_configs_list)
+    assert isinstance(result, list)
+    assert len(result) == 1
+
+    data = result[0]
+    assert isinstance(data, dict)
+    assert set(data) == {
+        "by_gid",
+        "by_gid_and_trial",
+        "by_neuron_class",
+        "by_neuron_class_and_trial",
+        "histograms",
+    }

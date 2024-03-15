@@ -10,6 +10,11 @@ Improvements
 - Add configuration examples 11 and 12 to the documentation.
 - Improve tests coverage.
 
+Bug Fixes
+~~~~~~~~~
+
+- Fix method ``Repository.missing_simulations()``.
+
 Version 0.8.0
 -------------
 

@@ -89,3 +89,17 @@ Example 10
 .. literalinclude:: ../../tests/functional/data/sonata/config/analysis_config_10.yaml
    :language: yaml
    :emphasize-lines: 2
+
+Example 11
+~~~~~~~~~~
+
+.. literalinclude:: ../../tests/functional/data/sonata/config/analysis_config_11.yaml
+   :language: yaml
+   :emphasize-lines: 2
+
+Example 12
+~~~~~~~~~~
+
+.. literalinclude:: ../../tests/functional/data/sonata/config/analysis_config_12.yaml
+   :language: yaml
+   :emphasize-lines: 2

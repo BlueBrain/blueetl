@@ -345,17 +345,17 @@ class Repository:
         """Return a DataFrame with the simulations ignored because of missing spikes.
 
         Returns:
-            pd.DataFrame with simulation_path as columns, simulation conditions as index,
+            pd.DataFrame with the simulation conditions and simulation_path as columns,
                 and one record for each ignored and missing simulation.
         """
-        all_simulations = self._simulations_config.get().rename(SIMULATION_PATH)
-        extracted_simulations = self.simulations.df[SIMULATION_PATH]
+        all_simulations = self._simulations_config.get()
+        extracted_simulations = self.simulations.df[[SIMULATION_PATH]]
         return (
             pd.merge(
                 all_simulations,
                 extracted_simulations,
-                left_on=[*all_simulations.index.names, SIMULATION_PATH],
-                right_on=[*extracted_simulations.index.names, SIMULATION_PATH],
+                left_on=[SIMULATION_PATH],
+                right_on=[SIMULATION_PATH],
                 how="left",
                 indicator=True,
             )

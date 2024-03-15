@@ -1,5 +1,7 @@
 import importlib
+from functools import partial
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pandas as pd
 import pydantic
@@ -15,6 +17,22 @@ except ImportError:
 TEST_DATA_PATH = Path(__file__).parent / "data"
 TEST_NODE_SETS_FILE = TEST_DATA_PATH / "circuit" / "sonata" / "node_sets.json"
 TEST_NODE_SETS_FILE_EXTRA = TEST_DATA_PATH / "circuit" / "sonata" / "node_sets_extra.json"
+TEST_CIRCUIT_CONFIG = TEST_DATA_PATH / "circuit" / "sonata" / "circuit_config.json"
+TEST_SIMULATION_CONFIG = TEST_DATA_PATH / "simulation" / "sonata" / "simulation_config.json"
+
+
+class PicklableMock(MagicMock):
+    """Mock that can be pickled without errors.
+
+    Neither the internal status nor any attribute set after the initialization is saved or restored!
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._args = args
+        self._kwargs = kwargs
+
+    __reduce__ = lambda self: (partial(MagicMock, **self._kwargs), self._args)
 
 
 def assert_frame_equal(actual, expected):

@@ -1,6 +1,7 @@
 ---
 version: 3
-simulation_campaign: ../simulation-campaign/config.json
+simulation_campaign: ../simulation_campaign/config_01_relative_bbp_workflow.json
+simulations_filter: {seed: [334630, 174404]}
 output: analysis_output
 analysis:
   spikes:
@@ -8,16 +9,15 @@ analysis:
       report:
         type: spikes
       neuron_classes:
-        Rt_EXC: {query: {layer: [Rt], synapse_class: [EXC]}}
-        VPL_EXC: {query: {layer: [VPL], synapse_class: [EXC]}}
-        Rt_INH: {query: {layer: [Rt], synapse_class: [INH]}}
-        VPL_INH: {query: {layer: [VPL], synapse_class: [INH]}}
+        All: {}
+        L2_X: {query: {mtype: [L2_X]}}
+        L6_Y: {query: {mtype: [L6_Y]}}
       limit: 1000
-      population: thalamus_neurons
+      population: default
       node_set: null
       windows:
-        w1: {bounds: [20, 90], window_type: spontaneous}
-        w2: {bounds: [10, 70], initial_offset: 10, n_trials: 3, trial_steps_value: 10}
+        w1: {bounds: [0, 1], window_type: spontaneous}
+        w2: {bounds: [0, 1], initial_offset: 0.5, n_trials: 2, trial_steps_value: 0.1}
     features:
     - type: multi
       groupby: [simulation_id, circuit_id, neuron_class, window]

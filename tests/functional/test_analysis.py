@@ -132,10 +132,22 @@ def _update_expected_files(ma, path):
         _dump_all_multi(ma2, path / "_filtered")
 
 
+def _copy_config_files(src_file, dst_dir):
+    # copy the config file
+    analysis_config_path = shutil.copy(src_file, dst_dir)
+    # copy any not hidden subdirectory
+    src_dir = src_file.parent
+    with os.scandir(src_dir) as it:
+        for entry in it:
+            if not entry.name.startswith(".") and entry.is_dir():
+                shutil.copytree(src_dir / entry.name, dst_dir / entry.name)
+    return Path(analysis_config_path)
+
+
 @pytest.mark.force_update
 def test_update_expected_files(analysis_config_path, expected_path, tmp_path):
     np.random.seed(0)
-    analysis_config_path = shutil.copy(analysis_config_path, tmp_path)
+    analysis_config_path = _copy_config_files(analysis_config_path, tmp_path)
 
     with MultiAnalyzer.from_file(analysis_config_path) as multi_analyzer:
         _update_expected_files(multi_analyzer, expected_path)
@@ -143,14 +155,7 @@ def test_update_expected_files(analysis_config_path, expected_path, tmp_path):
 
 def test_analyzer(analysis_config_path, expected_path, tmp_path):
     np.random.seed(0)
-    # copy the config file
-    analysis_config_path = shutil.copy(analysis_config_path, tmp_path)
-    # copy any subdirectory
-    analysis_config_dir = analysis_config_path.parent
-    with os.scandir(analysis_config_path.parent) as it:
-        for entry in it:
-            if not entry.name.startswith(".") and entry.is_dir():
-                shutil.copytree(analysis_config_dir / entry.name, tmp_path / entry.name)
+    analysis_config_path = _copy_config_files(analysis_config_path, tmp_path)
 
     # test without cache
     with MultiAnalyzer.from_file(analysis_config_path) as multi_analyzer:

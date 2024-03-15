@@ -1,3 +1,4 @@
+import os
 import shutil
 from pathlib import Path
 
@@ -142,7 +143,14 @@ def test_update_expected_files(analysis_config_path, expected_path, tmp_path):
 
 def test_analyzer(analysis_config_path, expected_path, tmp_path):
     np.random.seed(0)
+    # copy the config file
     analysis_config_path = shutil.copy(analysis_config_path, tmp_path)
+    # copy any subdirectory
+    analysis_config_dir = analysis_config_path.parent
+    with os.scandir(analysis_config_path.parent) as it:
+        for entry in it:
+            if not entry.name.startswith(".") and entry.is_dir():
+                shutil.copytree(analysis_config_dir / entry.name, tmp_path / entry.name)
 
     # test without cache
     with MultiAnalyzer.from_file(analysis_config_path) as multi_analyzer:

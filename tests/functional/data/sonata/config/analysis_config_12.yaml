@@ -1,0 +1,34 @@
+---
+# configuration using custom node_sets_file
+version: 3
+simulation_campaign: /gpfs/bbp.cscs.ch/project/proj12/NSE/blueetl/data/sim-campaign-sonata/a04addca-bda3-47d7-ad2d-c41187252a2b/config.json
+output: analysis_output
+analysis:
+  spikes:
+    extraction:
+      report:
+        type: spikes
+      neuron_classes:
+        Rt_INH: {query: {layer: [Rt]}, "node_set": Inhibitory}
+        Rt_INH_2: {"node_set": InhibitoryRt}
+      limit: 1000
+      population: thalamus_neurons
+      node_set: null
+      node_sets_file: node_sets/node_sets_01.json
+      windows:
+        w1: {bounds: [20, 90], window_type: spontaneous}
+        w3: {bounds: [0, 25], initial_offset: 50, trial_steps_label: ts1}
+      trial_steps:
+        ts1:
+          function: blueetl.external.bnac.calculate_trial_step.onset_from_spikes
+          bounds: [-50, 25]
+          smoothing_width: 0.1
+          histo_bins_per_ms: 5
+          threshold_std_multiple: 4
+          ms_post_offset: 1
+          figures_path: "figures"
+    features:
+    - type: multi
+      groupby: [simulation_id, circuit_id, neuron_class, window]
+      function: blueetl.external.bnac.calculate_features.calculate_features_multi
+      params: {export_all_neurons: true}

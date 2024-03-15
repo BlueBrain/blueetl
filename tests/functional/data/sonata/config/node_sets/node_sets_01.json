@@ -1,0 +1,6 @@
+{
+  "InhibitoryRt": {
+    "synapse_class": "INH",
+    "layer": "Rt"
+  }
+}

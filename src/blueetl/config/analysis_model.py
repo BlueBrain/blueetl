@@ -89,6 +89,8 @@ class TrialStepsConfig(BaseModel):
     bounds: tuple[float, float]
     population: Optional[str] = None
     node_set: Optional[str] = None
+    node_sets_file: Optional[Path] = None
+    node_sets_checksum: Optional[str] = None  # to invalidate the cache when the file changes
     limit: Optional[int] = None
 
     @model_validator(mode="after")
@@ -105,6 +107,8 @@ class NeuronClassConfig(BaseModel):
     query: Union[dict[str, Any], list[dict[str, Any]]] = {}
     population: Optional[str] = None
     node_set: Optional[str] = None
+    node_sets_file: Optional[Path] = None
+    node_sets_checksum: Optional[str] = None  # to invalidate the cache when the file changes
     limit: Optional[int] = None
     node_id: Optional[list[int]] = None
 
@@ -121,7 +125,7 @@ class ExtractionConfig(BaseModel):
     @classmethod
     def propagate_global_values(cls, values):
         """Propagate global values to each dictionary in neuron_classes and trial_steps."""
-        for key in ["population", "node_set", "limit"]:
+        for key in ["population", "node_set", "node_sets_file", "limit"]:
             if key in values:
                 value = values.pop(key)
                 for inner_key in ["neuron_classes", "trial_steps"]:

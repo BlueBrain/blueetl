@@ -140,8 +140,13 @@ $defs:
         - "null"
       node_set:
         title: NodeSet
-        description: |
-          Optional node_set used to filter the neurons.
+        description: Optional node_set used to filter the neurons.
+        type:
+        - string
+        - "null"
+      node_sets_file:
+        title: NodeSetsFile
+        description: Optional node_sets file used to filter the neurons.
         type:
         - string
         - "null"
@@ -213,6 +218,12 @@ $defs:
       node_set:
         title: NodeSet
         description: Optional node_set, specific to the current neuron class.
+        type:
+        - string
+        - "null"
+      node_sets_file:
+        title: NodeSetsFile
+        description: Optional node_sets file, specific to the current neuron class.
         type:
         - string
         - "null"
@@ -327,6 +338,12 @@ $defs:
       node_set:
         title: NodeSet
         description: Optional node_set used to filter the spikes, overriding the global value.
+        type:
+        - string
+        - "null"
+      node_sets_file:
+        title: NodeSetsFile
+        description: Optional node_sets file used to filter the spikes, overriding the global value.
         type:
         - string
         - "null"

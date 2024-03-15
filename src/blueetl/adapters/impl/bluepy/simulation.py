@@ -12,7 +12,7 @@ from bluepy.impl.compartment_report import CompartmentReport, SomaReport
 from bluepy.impl.spike_report import SpikeReport
 from bluepy.simulation import PathHelpers
 
-from blueetl.adapters.bluepy.circuit import CircuitImpl
+from blueetl.adapters.impl.bluepy.circuit import CircuitImpl
 from blueetl.adapters.interfaces.circuit import CircuitInterface
 from blueetl.adapters.interfaces.simulation import (
     PopulationReportInterface,

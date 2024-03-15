@@ -9,6 +9,7 @@ from blueetl.config.analysis_model import NeuronClassConfig
 from blueetl.constants import CIRCUIT, CIRCUIT_ID, GID, NEURON_CLASS, SIMULATION, SIMULATION_ID
 from blueetl.extract.neurons import Neurons
 from blueetl.utils import ensure_dtypes
+from tests.unit.utils import TEST_NODE_SETS_FILE_EXTRA
 
 
 def test_neurons_from_simulations(mock_circuit):
@@ -25,13 +26,24 @@ def test_neurons_from_simulations(mock_circuit):
     mock_simulations = Mock()
     type(mock_simulations).df = mock_simulations_df
     neuron_classes = {
-        "L1_INH": NeuronClassConfig(
-            **{"population": "thalamus_neurons", "query": {"layer": [1], "synapse_class": ["INH"]}}
+        "L1_INH": NeuronClassConfig.model_validate(
+            {
+                "population": "thalamus_neurons",
+                "query": {"layer": ["1"], "synapse_class": ["INH"]},
+            }
         ),
         "MY_GIDS": NeuronClassConfig(**{"population": "thalamus_neurons", "node_id": [200, 300]}),
-        "EMPTY": NeuronClassConfig(**{"population": "thalamus_neurons", "query": {"layer": [999]}}),
-        "LIMITED": NeuronClassConfig(
-            **{"population": "thalamus_neurons", "query": {"synapse_class": ["INH"]}, "limit": 1}
+        "EMPTY": NeuronClassConfig.model_validate(
+            {"population": "thalamus_neurons", "query": {"layer": ["999"]}}
+        ),
+        "LIMITED": NeuronClassConfig.model_validate(
+            {
+                "population": "thalamus_neurons",
+                "query": {"synapse_class": ["INH"]},
+                "limit": 1,
+                "node_set": "ExtraLayer2",
+                "node_sets_file": TEST_NODE_SETS_FILE_EXTRA,
+            }
         ),
     }
     result = Neurons.from_simulations(
@@ -70,7 +82,7 @@ def test_neurons_from_simulations(mock_circuit):
     expected_df = ensure_dtypes(expected_df)
     assert isinstance(result, Neurons)
     assert_frame_equal(result.df, expected_df)
-    assert mock_circuit.nodes.__getitem__.return_value.get.call_count == 1
+    assert mock_circuit.nodes.__getitem__.return_value.get.call_count == 2
     assert mock_simulations_df.call_count == 1
 
 
@@ -86,7 +98,9 @@ def test_neurons_from_simulations_without_neurons(mock_circuit):
     mock_simulations = Mock()
     type(mock_simulations).df = mock_simulations_df
     neuron_classes = {
-        "EMPTY": NeuronClassConfig(**{"population": "thalamus_neurons", "query": {"layer": [999]}}),
+        "EMPTY": NeuronClassConfig(
+            **{"population": "thalamus_neurons", "query": {"layer": ["999"]}}
+        ),
     }
 
     with pytest.raises(RuntimeError, match="No data extracted to Neurons"):

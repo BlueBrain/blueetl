@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Version 0.8.0
+-------------
+
+New Features
+~~~~~~~~~~~~
+
+- Support custom node_sets_file in extraction, neuron_classes and trial_steps [NSETM-2226]
+
+
 Version 0.7.1
 -------------
 

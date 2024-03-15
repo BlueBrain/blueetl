@@ -31,13 +31,13 @@ def test_neuron_classes_from_neurons():
             "L23_EXC": NeuronClassConfig(
                 **{
                     "population": "thalamus_neurons",
-                    "query": {"layer": [2, 3], "synapse_class": ["EXC"]},
+                    "query": {"layer": ["2", "3"], "synapse_class": ["EXC"]},
                 }
             ),
             "L4_INH": NeuronClassConfig(
                 **{
                     "population": "thalamus_neurons",
-                    "query": {"layer": [4], "synapse_class": ["INH"]},
+                    "query": {"layer": ["4"], "synapse_class": ["INH"]},
                 }
             ),
         },
@@ -54,7 +54,7 @@ def test_neuron_classes_from_neurons():
                 "population": "thalamus_neurons",
                 "node_set": None,
                 "gids": None,
-                "query": json.dumps({"layer": [2, 3], "synapse_class": ["EXC"]}),
+                "query": json.dumps({"layer": ["2", "3"], "synapse_class": ["EXC"]}),
             },
             {
                 CIRCUIT_ID: 0,
@@ -64,7 +64,7 @@ def test_neuron_classes_from_neurons():
                 "population": "thalamus_neurons",
                 "node_set": None,
                 "gids": None,
-                "query": json.dumps({"layer": [4], "synapse_class": ["INH"]}),
+                "query": json.dumps({"layer": ["4"], "synapse_class": ["INH"]}),
             },
         ]
     )

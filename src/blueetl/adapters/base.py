@@ -1,13 +1,14 @@
 """Base Adapter."""
 
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Any, Generic, Optional, TypeVar
 
 from blueetl.adapters.interfaces.circuit import CircuitInterface
+from blueetl.adapters.interfaces.node_sets import NodeSetsInterface
 from blueetl.adapters.interfaces.simulation import SimulationInterface
-from blueetl.types import StrOrPath
 
-InterfaceT = TypeVar("InterfaceT", CircuitInterface, SimulationInterface)
+InterfaceT = TypeVar("InterfaceT", CircuitInterface, SimulationInterface, NodeSetsInterface)
 BaseAdapterT = TypeVar("BaseAdapterT", bound="BaseAdapter")
 
 
@@ -18,13 +19,14 @@ class AdapterError(Exception):
 class BaseAdapter(Generic[InterfaceT], ABC):
     """Base Adapter to be subclassed by other adapters."""
 
-    def __init__(self, config: StrOrPath) -> None:
-        """Init the adapter from the specified config."""
-        self._impl: Optional[InterfaceT] = self._load_impl(str(config))
+    def __init__(self, _impl: Optional[InterfaceT]) -> None:
+        """Init the adapter from the specified implementation."""
+        self._impl: Optional[InterfaceT] = _impl
 
+    @classmethod
     @abstractmethod
-    def _load_impl(self, config: str) -> Optional[InterfaceT]:
-        """Load and return the implementation object, or None if the config file doesn't exist."""
+    def from_file(cls, filepath: Optional[Path]) -> "BaseAdapter":
+        """Load and return a new object from file."""
 
     @property
     def _ensure_impl(self) -> InterfaceT:
@@ -41,10 +43,3 @@ class BaseAdapter(Generic[InterfaceT], ABC):
     def instance(self) -> Any:
         """Return the wrapped instance, or None if it doesn't exist."""
         return self._impl.instance if self._impl is not None else None
-
-    @classmethod
-    def from_impl(cls: type[BaseAdapterT], impl: InterfaceT) -> BaseAdapterT:
-        """Return a new adapter with the specified implementation."""
-        result = object.__new__(cls)
-        result._impl = impl
-        return result

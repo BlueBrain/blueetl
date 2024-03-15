@@ -2,6 +2,7 @@
 
 import logging
 from enum import Enum
+from pathlib import Path
 from typing import Any, Optional, cast
 
 import pandas as pd
@@ -59,7 +60,7 @@ class Simulations(BaseExtractor):
         ), "Simulation and Circuit must be both initialized, or both not initialized"
         circuit_hash = None
         status = SimulationStatus.MISSING
-        simulation = simulation or Simulation(simulation_path)
+        simulation = simulation or Simulation.from_file(Path(simulation_path))
         if simulation.exists():
             # consider the simulation only if it wasn't manually deleted
             status = SimulationStatus.INCOMPLETE

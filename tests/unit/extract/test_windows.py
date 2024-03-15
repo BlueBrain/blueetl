@@ -21,6 +21,7 @@ from blueetl.constants import (
 from blueetl.extract import windows as test_module
 from blueetl.resolver import AttrResolver
 from blueetl.utils import ensure_dtypes
+from tests.unit.utils import TEST_NODE_SETS_FILE_EXTRA
 
 
 def _myfunc1(spikes, params):
@@ -114,6 +115,8 @@ def test_windows_from_simulations(mock_simulation, mock_circuit):
         "ts2": TrialStepsConfig(
             function=f"{__name__}._myfunc2",
             bounds=[-20, 200],
+            node_set="ExtraLayer2",
+            node_sets_file=TEST_NODE_SETS_FILE_EXTRA,
         ),
     }
 

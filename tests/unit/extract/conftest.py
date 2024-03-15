@@ -3,13 +3,15 @@ from unittest.mock import MagicMock
 import pandas as pd
 import pytest
 
+from tests.unit.utils import TEST_NODE_SETS_FILE
+
 
 def _get_cells():
     """Return a DataFrame as returned by circuit.nodes[population].get()."""
     return pd.DataFrame(
         [
             {
-                "layer": 1,
+                "layer": "1",
                 "mtype": "L1_DAC",
                 "etype": "cNAC",
                 "region": "S1FL",
@@ -19,7 +21,7 @@ def _get_cells():
                 "z": -1710.8,
             },
             {
-                "layer": 2,
+                "layer": "2",
                 "mtype": "L2_TPC:A",
                 "etype": "cADpyr",
                 "region": "S1FL",
@@ -29,7 +31,7 @@ def _get_cells():
                 "z": -1987.2,
             },
             {
-                "layer": 4,
+                "layer": "4",
                 "mtype": "L4_BP",
                 "etype": "cNAC",
                 "region": "S1FL",
@@ -47,6 +49,7 @@ def _get_cells():
 def mock_circuit():
     """Simplified mock of circuit, providing only get() and ids() for a node population."""
     mock = MagicMock()
+    mock.node_sets_file = str(TEST_NODE_SETS_FILE)
     df = _get_cells()
     # circuit.nodes[population]
     mock_population = mock.nodes.__getitem__.return_value

@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Version 0.8.1
+-------------
+
+Improvements
+~~~~~~~~~~~~
+
+- Add configuration examples 11 and 12 to the documentation.
+- Improve tests coverage.
+
 Version 0.8.0
 -------------
 

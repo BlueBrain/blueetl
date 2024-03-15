@@ -5,6 +5,7 @@ import pytest
 
 from blueetl.adapters import circuit as test_module
 from blueetl.adapters.base import AdapterError
+from blueetl.adapters.node_sets import NodeSetsAdapter
 from tests.unit.utils import BLUEPY_AVAILABLE, TEST_DATA_PATH, assert_isinstance
 
 
@@ -80,3 +81,15 @@ def test_circuit_adapter_with_nonexistent_path():
 
     assert isinstance(loaded, test_module.CircuitAdapter)
     assert loaded.instance is None
+
+
+def test_circuit_adapter_node_sets():
+    path = TEST_DATA_PATH / "circuit" / "sonata" / "circuit_config.json"
+    obj = test_module.CircuitAdapter.from_file(path)
+
+    assert_isinstance(obj.instance, "bluepysnap.Circuit")
+
+    assert isinstance(obj.node_sets_file, Path)
+    assert obj.node_sets_file.name == "node_sets.json"
+
+    assert isinstance(obj.node_sets, NodeSetsAdapter)

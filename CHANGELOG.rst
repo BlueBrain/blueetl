@@ -1,6 +1,16 @@
 Changelog
 =========
 
+Version 0.9.0
+-------------
+
+New Features
+~~~~~~~~~~~~
+
+- Allow to specify the boolean parameter ``allow_empty`` in the extraction configuration.
+  If True, the extracted neurons, neuron_classes, and windows DataFrames are allowed to be empty.
+  If False (the default), then an exception is raised when any of them is empty.
+
 Version 0.8.2
 -------------
 

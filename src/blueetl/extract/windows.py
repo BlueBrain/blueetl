@@ -126,8 +126,7 @@ class Windows(BaseExtractor):
         WINDOW_TYPE,
     ]
 
-    @classmethod
-    def _validate(cls, df: pd.DataFrame) -> None:
+    def _validate(self, df: pd.DataFrame) -> None:
         super()._validate(df)
         # check that all the trials in the same window have the same t_start, t_stop, duration
         if not np.all(
@@ -221,6 +220,7 @@ class Windows(BaseExtractor):
         windows_config: dict[str, Union[str, WindowConfig]],
         trial_steps_config: dict[str, TrialStepsConfig],
         resolver: Resolver,
+        allow_empty: bool,
     ) -> "Windows":
         """Return a new Windows instance from the given simulations and configuration.
 
@@ -229,6 +229,7 @@ class Windows(BaseExtractor):
             windows_config: configuration dict.
             trial_steps_config: configuration dict.
             resolver: resolver instance.
+            allow_empty: True if the loaded data can be empty, False otherwise.
 
         Returns:
             Windows: new instance.
@@ -264,7 +265,7 @@ class Windows(BaseExtractor):
                 results.extend(partial_results)
 
         df = pd.DataFrame(results)
-        return cls(df, cached=False, filtered=False)
+        return cls(df, cached=False, filtered=False, allow_empty=allow_empty)
 
     def get_bounds(self, window: str) -> tuple[float, float]:
         """Return the interval (t_start, t_stop) for the specified window.

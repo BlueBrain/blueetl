@@ -41,6 +41,7 @@ def test_neuron_classes_from_neurons():
                 }
             ),
         },
+        allow_empty=False,
     )
     assert mock_neurons.count_by_neuron_class.call_count == 1
     assert isinstance(result, NeuronClasses)
@@ -83,5 +84,6 @@ def test_neuron_classes_from_neurons_without_neurons():
                     **{"population": "thalamus_neurons", "query": {"region": "any"}}
                 )
             },
+            allow_empty=False,
         )
     assert mock_neurons.count_by_neuron_class.call_count == 1

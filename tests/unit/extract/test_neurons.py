@@ -49,6 +49,7 @@ def test_neurons_from_simulations(mock_circuit):
     result = Neurons.from_simulations(
         simulations=mock_simulations,
         neuron_classes=neuron_classes,
+        allow_empty=False,
     )
     expected_df = pd.DataFrame(
         [
@@ -104,7 +105,11 @@ def test_neurons_from_simulations_without_neurons(mock_circuit):
     }
 
     with pytest.raises(RuntimeError, match="No data extracted to Neurons"):
-        Neurons.from_simulations(simulations=mock_simulations, neuron_classes=neuron_classes)
+        Neurons.from_simulations(
+            simulations=mock_simulations,
+            neuron_classes=neuron_classes,
+            allow_empty=False,
+        )
     assert mock_circuit.nodes.__getitem__.return_value.get.call_count == 1
     assert mock_simulations_df.call_count == 1
 

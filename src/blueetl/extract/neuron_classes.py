@@ -38,13 +38,17 @@ class NeuronClasses(BaseExtractor):
 
     @classmethod
     def from_neurons(
-        cls, neurons: Neurons, neuron_classes: dict[str, NeuronClassConfig]
+        cls,
+        neurons: Neurons,
+        neuron_classes: dict[str, NeuronClassConfig],
+        allow_empty: bool,
     ) -> "NeuronClasses":
         """Load neuron classes information for each circuit.
 
         Args:
             neurons: Neurons extractor.
             neuron_classes: configuration dict of neuron classes to be extracted.
+            allow_empty: True if the loaded data can be empty, False otherwise.
 
         Returns:
             NeuronClasses: new instance.
@@ -69,4 +73,4 @@ class NeuronClasses(BaseExtractor):
                 }
             )
         df = pd.DataFrame(results)
-        return cls(df, cached=False, filtered=False)
+        return cls(df, cached=False, filtered=False, allow_empty=allow_empty)

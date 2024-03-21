@@ -71,11 +71,17 @@ class SimulationsExtractor(BaseExtractor[Simulations]):
         return Simulations.from_config(
             config=self._repo.simulations_config,
             query=self._repo.simulations_filter,
+            allow_empty=False,
         )
 
     def extract_cached(self, df: pd.DataFrame) -> Simulations:
         """Instantiate an object from a cached DataFrame."""
-        return Simulations.from_pandas(df, query=self._repo.simulations_filter, cached=True)
+        return Simulations.from_pandas(
+            df,
+            query=self._repo.simulations_filter,
+            cached=True,
+            allow_empty=False,
+        )
 
 
 class NeuronsExtractor(BaseExtractor[Neurons]):
@@ -86,6 +92,7 @@ class NeuronsExtractor(BaseExtractor[Neurons]):
         return Neurons.from_simulations(
             simulations=self._repo.simulations,
             neuron_classes=self._repo.extraction_config.neuron_classes,
+            allow_empty=self._repo.extraction_config.allow_empty,
         )
 
     def extract_cached(self, df: pd.DataFrame) -> Neurons:
@@ -94,7 +101,12 @@ class NeuronsExtractor(BaseExtractor[Neurons]):
         if self._repo.simulations_filter:
             selected_sims = self._repo.simulations.df.etl.q(simulation_id=self._repo.simulation_ids)
             query = {CIRCUIT_ID: sorted(set(selected_sims[CIRCUIT_ID]))}
-        return Neurons.from_pandas(df, query=query, cached=True)
+        return Neurons.from_pandas(
+            df,
+            query=query,
+            cached=True,
+            allow_empty=self._repo.extraction_config.allow_empty,
+        )
 
 
 class NeuronClassesExtractor(BaseExtractor[NeuronClasses]):
@@ -103,7 +115,9 @@ class NeuronClassesExtractor(BaseExtractor[NeuronClasses]):
     def extract_new(self) -> NeuronClasses:
         """Instantiate an object from the configuration."""
         return NeuronClasses.from_neurons(
-            neurons=self._repo.neurons, neuron_classes=self._repo.extraction_config.neuron_classes
+            neurons=self._repo.neurons,
+            neuron_classes=self._repo.extraction_config.neuron_classes,
+            allow_empty=self._repo.extraction_config.allow_empty,
         )
 
     def extract_cached(self, df: pd.DataFrame) -> NeuronClasses:
@@ -112,7 +126,12 @@ class NeuronClassesExtractor(BaseExtractor[NeuronClasses]):
         if self._repo.simulations_filter:
             selected_sims = self._repo.simulations.df.etl.q(simulation_id=self._repo.simulation_ids)
             query = {CIRCUIT_ID: sorted(set(selected_sims[CIRCUIT_ID]))}
-        return NeuronClasses.from_pandas(df, query=query, cached=True)
+        return NeuronClasses.from_pandas(
+            df,
+            query=query,
+            cached=True,
+            allow_empty=self._repo.extraction_config.allow_empty,
+        )
 
 
 class WindowsExtractor(BaseExtractor[Windows]):
@@ -126,6 +145,7 @@ class WindowsExtractor(BaseExtractor[Windows]):
             windows_config=self._repo.extraction_config.windows,
             trial_steps_config=self._repo.extraction_config.trial_steps,
             resolver=self._repo.resolver,
+            allow_empty=self._repo.extraction_config.allow_empty,
         )
 
     def extract_cached(self, df: pd.DataFrame) -> Windows:
@@ -133,7 +153,12 @@ class WindowsExtractor(BaseExtractor[Windows]):
         query = {}
         if self._repo.simulations_filter:
             query = {SIMULATION_ID: self._repo.simulation_ids}
-        return Windows.from_pandas(df, query=query, cached=True)
+        return Windows.from_pandas(
+            df,
+            query=query,
+            cached=True,
+            allow_empty=self._repo.extraction_config.allow_empty,
+        )
 
 
 class SpikesExtractor(BaseExtractor[Spikes]):
@@ -147,6 +172,7 @@ class SpikesExtractor(BaseExtractor[Spikes]):
             windows=self._repo.windows,
             neuron_classes=self._repo.neuron_classes,
             name=self._repo.extraction_config.report.name,
+            allow_empty=self._repo.extraction_config.allow_empty,
         )
 
     def extract_cached(self, df: pd.DataFrame) -> Spikes:
@@ -154,7 +180,12 @@ class SpikesExtractor(BaseExtractor[Spikes]):
         query = {}
         if self._repo.simulations_filter:
             query = {SIMULATION_ID: self._repo.simulation_ids}
-        return Spikes.from_pandas(df, query=query, cached=True)
+        return Spikes.from_pandas(
+            df,
+            query=query,
+            cached=True,
+            allow_empty=self._repo.extraction_config.allow_empty,
+        )
 
 
 class SomaReportExtractor(BaseExtractor[SomaReport]):
@@ -168,6 +199,7 @@ class SomaReportExtractor(BaseExtractor[SomaReport]):
             windows=self._repo.windows,
             neuron_classes=self._repo.neuron_classes,
             name=self._repo.extraction_config.report.name,
+            allow_empty=self._repo.extraction_config.allow_empty,
         )
 
     def extract_cached(self, df: pd.DataFrame) -> SomaReport:
@@ -175,7 +207,12 @@ class SomaReportExtractor(BaseExtractor[SomaReport]):
         query = {}
         if self._repo.simulations_filter:
             query = {SIMULATION_ID: self._repo.simulation_ids}
-        return SomaReport.from_pandas(df, query=query, cached=True)
+        return SomaReport.from_pandas(
+            df,
+            query=query,
+            cached=True,
+            allow_empty=self._repo.extraction_config.allow_empty,
+        )
 
 
 class CompartmentReportExtractor(BaseExtractor[CompartmentReport]):
@@ -189,6 +226,7 @@ class CompartmentReportExtractor(BaseExtractor[CompartmentReport]):
             windows=self._repo.windows,
             neuron_classes=self._repo.neuron_classes,
             name=self._repo.extraction_config.report.name,
+            allow_empty=self._repo.extraction_config.allow_empty,
         )
 
     def extract_cached(self, df: pd.DataFrame) -> CompartmentReport:
@@ -196,7 +234,12 @@ class CompartmentReportExtractor(BaseExtractor[CompartmentReport]):
         query = {}
         if self._repo.simulations_filter:
             query = {SIMULATION_ID: self._repo.simulation_ids}
-        return CompartmentReport.from_pandas(df, query=query, cached=True)
+        return CompartmentReport.from_pandas(
+            df,
+            query=query,
+            cached=True,
+            allow_empty=self._repo.extraction_config.allow_empty,
+        )
 
 
 class Repository:

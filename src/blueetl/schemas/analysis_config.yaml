@@ -150,6 +150,13 @@ $defs:
         type:
         - string
         - "null"
+      allow_empty:
+        title: Allow Empty
+        description: |
+          If True, the extracted neurons, neuron_classes, and windows DataFrames are allowed to be empty.
+          If False, then an exception is raised when any of them is empty.
+        type: boolean
+        default: "false"
       windows:
         title: Windows
         description: |

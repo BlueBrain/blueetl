@@ -18,44 +18,42 @@ class BaseExtractor(ABC):
     COLUMNS: list[str] = []
     _allow_missing_columns = False
     _allow_extra_columns = False
-    _allow_empty_data = False
 
-    def __init__(self, df: pd.DataFrame, cached: bool, filtered: bool) -> None:
+    def __init__(self, df: pd.DataFrame, cached: bool, filtered: bool, allow_empty: bool) -> None:
         """Initialize the extractor.
 
         Args:
             df: Pandas DataFrame containing the extracted data.
             cached: True if the data have been extracted from the cache, False otherwise.
             filtered: True if the data have been filtered using a custom query, False otherwise.
+            allow_empty: True if the extracted data are allowed to be empty, False otherwise.
         """
+        self._allow_empty = allow_empty
         self._cached = cached
         self._filtered = filtered
         self._validate(df)
         self._df = ensure_dtypes(df)
 
-    @classmethod
-    def _validate(cls, df: pd.DataFrame) -> None:
+    def _validate(self, df: pd.DataFrame) -> None:
         """Validate the dataframe.
 
         It can be overridden if a custom validation is needed.
         """
-        cls._validate_data(df)
-        cls._validate_columns(df)
+        self._validate_data(df)
+        self._validate_columns(df)
 
-    @classmethod
-    def _validate_data(cls, df: pd.DataFrame) -> None:
+    def _validate_data(self, df: pd.DataFrame) -> None:
         """Validate the content of the dataframe."""
-        if not cls._allow_empty_data and df.empty:
-            raise RuntimeError(f"No data extracted to {cls.__name__}")
+        if not self._allow_empty and df.empty:
+            raise RuntimeError(f"No data extracted to {self.__class__.__name__}")
 
-    @classmethod
-    def _validate_columns(cls, df: pd.DataFrame) -> None:
+    def _validate_columns(self, df: pd.DataFrame) -> None:
         """Validate the names of the columns of the dataframe."""
         actual = set(df.columns)
-        expected = set(cls.COLUMNS)
-        if not cls._allow_missing_columns and expected - actual:
+        expected = set(self.COLUMNS)
+        if not self._allow_missing_columns and expected - actual:
             raise ValueError(f"Expected columns not present: {expected - actual}")
-        if not cls._allow_extra_columns and actual - expected:
+        if not self._allow_extra_columns and actual - expected:
             raise ValueError(f"Additional columns not allowed: {actual - expected}")
 
     @property
@@ -69,6 +67,7 @@ class BaseExtractor(ABC):
         df: pd.DataFrame,
         query: Optional[dict] = None,
         cached: bool = True,
+        allow_empty: bool = False,
     ) -> ExtractorT:
         """Return a new object from the given dataframe.
 
@@ -80,6 +79,7 @@ class BaseExtractor(ABC):
             df: dataframe to load.
             query: optional filter dictionary, passed to ``etl.q``.
             cached: True if the data is loaded from the cache, False otherwise.
+            allow_empty: True if the loaded data can be empty, False otherwise.
 
         Returns:
             a new extractor instance.
@@ -92,7 +92,7 @@ class BaseExtractor(ABC):
                 # reset the index to remove any gap
                 df = df.reset_index(drop=True)
         filtered = len(df) != original_len
-        return cls(df, cached=cached, filtered=filtered)
+        return cls(df, cached=cached, filtered=filtered, allow_empty=allow_empty)
 
     def to_pandas(self) -> pd.DataFrame:
         """Return a dataframe that can be serialized and stored to disk.

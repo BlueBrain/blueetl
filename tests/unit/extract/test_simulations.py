@@ -474,7 +474,12 @@ def test_simulations_to_pandas():
             },
         ]
     )
-    result_df = test_module.Simulations(df, cached=False, filtered=False).to_pandas()
+    result_df = test_module.Simulations(
+        df,
+        cached=False,
+        filtered=False,
+        allow_empty=False,
+    ).to_pandas()
     expected_df = pd.DataFrame(
         [
             {

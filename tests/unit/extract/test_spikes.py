@@ -125,6 +125,7 @@ def test_spikes_from_simulations():
         windows=mock_windows,
         neuron_classes=mock_neuron_classes,
         name="spikes",
+        allow_empty=False,
     )
 
     expected_df = pd.DataFrame(

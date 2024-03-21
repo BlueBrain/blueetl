@@ -120,6 +120,7 @@ class ExtractionConfig(BaseModel):
     neuron_classes: dict[str, NeuronClassConfig] = {}
     windows: dict[str, Union[str, WindowConfig]] = {}
     trial_steps: dict[str, TrialStepsConfig] = {}
+    allow_empty: bool = False
 
     @model_validator(mode="before")
     @classmethod

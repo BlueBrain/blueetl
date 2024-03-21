@@ -130,6 +130,7 @@ def test_soma_report_from_simulations():
         windows=mock_windows,
         neuron_classes=mock_neuron_classes,
         name="soma",
+        allow_empty=False,
     )
 
     expected_df = pd.DataFrame(

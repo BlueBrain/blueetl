@@ -140,6 +140,7 @@ def test_compartment_report_from_simulations():
         windows=mock_windows,
         neuron_classes=mock_neuron_classes,
         name="AllCompartments",
+        allow_empty=False,
     )
 
     expected_df = pd.DataFrame(

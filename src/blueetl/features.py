@@ -326,7 +326,7 @@ class FeaturesCollection:
         query = {SIMULATION_ID: self._repo.simulation_ids}
         result = {}
         for name, df in df_dict.items():
-            result[name] = Feature.from_pandas(df, query=query, cached=cached)
+            result[name] = Feature.from_pandas(df, query=query, cached=cached, allow_empty=True)
             if config is not None:
                 # make a copy of the config accessible from the features dataframe attrs
                 result[name].df.attrs["config"] = config.dict()

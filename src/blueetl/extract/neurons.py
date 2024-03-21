@@ -100,9 +100,9 @@ class Neurons(BaseExtractor):
 
     COLUMNS = [CIRCUIT_ID, NEURON_CLASS, GID, NEURON_CLASS_INDEX]
 
-    def __init__(self, df: pd.DataFrame, cached: bool, filtered: bool) -> None:
+    def __init__(self, df: pd.DataFrame, cached: bool, filtered: bool, allow_empty: bool) -> None:
         """Initialize the extractor."""
-        super().__init__(df, cached=cached, filtered=filtered)
+        super().__init__(df, cached=cached, filtered=filtered, allow_empty=allow_empty)
         # ensure that the neurons are sorted
         self._df: pd.DataFrame = self._df.sort_values(self.COLUMNS, ignore_index=True)
 
@@ -120,13 +120,17 @@ class Neurons(BaseExtractor):
 
     @classmethod
     def from_simulations(
-        cls, simulations: Simulations, neuron_classes: dict[str, NeuronClassConfig]
+        cls,
+        simulations: Simulations,
+        neuron_classes: dict[str, NeuronClassConfig],
+        allow_empty: bool,
     ) -> "Neurons":
         """Return a new Neurons instance from the given simulations and configuration.
 
         Args:
             simulations: Simulations extractor.
             neuron_classes: configuration dict of neuron classes to be extracted.
+            allow_empty: True if the loaded data can be empty, False otherwise.
 
         Returns:
             Neurons: new instance.
@@ -141,7 +145,7 @@ class Neurons(BaseExtractor):
                 for neuron_class_index, gid in enumerate(gids)
             )
         df = pd.DataFrame.from_records(records, columns=cls.COLUMNS)
-        return cls(df, cached=False, filtered=False)
+        return cls(df, cached=False, filtered=False, allow_empty=allow_empty)
 
     def count_by_neuron_class(self, observed: bool = True) -> pd.Series:
         """Return the number of gids for each circuit and neuron class.

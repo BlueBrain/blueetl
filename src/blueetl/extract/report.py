@@ -83,6 +83,7 @@ class ReportExtractor(BaseExtractor, metaclass=ABCMeta):
         windows: Windows,
         neuron_classes: NeuronClasses,
         name: str,
+        allow_empty: bool,
     ) -> ReportExtractorT:
         """Return a new instance from the given simulations, neurons, and windows.
 
@@ -92,6 +93,7 @@ class ReportExtractor(BaseExtractor, metaclass=ABCMeta):
             windows: Windows extractor.
             neuron_classes: NeuronClasses extractor.
             name: name of the report in the simulation configuration.
+            allow_empty: True if the loaded data can be empty, False otherwise.
 
         Returns:
             New instance.
@@ -125,4 +127,4 @@ class ReportExtractor(BaseExtractor, metaclass=ABCMeta):
             parallel=True,
         )
         df = smart_concat(all_df, ignore_index=True)
-        return cls(df, cached=False, filtered=False)
+        return cls(df, cached=False, filtered=False, allow_empty=allow_empty)

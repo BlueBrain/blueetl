@@ -125,6 +125,7 @@ def test_windows_from_simulations(mock_simulation, mock_circuit):
         windows_config=windows_config,
         trial_steps_config=trial_steps_config,
         resolver=resolver,
+        allow_empty=False,
     )
 
     expected_df = pd.DataFrame(

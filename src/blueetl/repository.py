@@ -75,7 +75,7 @@ class SimulationsExtractor(BaseExtractor[Simulations]):
 
     def extract_cached(self, df: pd.DataFrame) -> Simulations:
         """Instantiate an object from a cached DataFrame."""
-        return Simulations.from_pandas(df, query=self._repo.simulations_filter)
+        return Simulations.from_pandas(df, query=self._repo.simulations_filter, cached=True)
 
 
 class NeuronsExtractor(BaseExtractor[Neurons]):
@@ -94,7 +94,7 @@ class NeuronsExtractor(BaseExtractor[Neurons]):
         if self._repo.simulations_filter:
             selected_sims = self._repo.simulations.df.etl.q(simulation_id=self._repo.simulation_ids)
             query = {CIRCUIT_ID: sorted(set(selected_sims[CIRCUIT_ID]))}
-        return Neurons.from_pandas(df, query=query)
+        return Neurons.from_pandas(df, query=query, cached=True)
 
 
 class NeuronClassesExtractor(BaseExtractor[NeuronClasses]):
@@ -112,7 +112,7 @@ class NeuronClassesExtractor(BaseExtractor[NeuronClasses]):
         if self._repo.simulations_filter:
             selected_sims = self._repo.simulations.df.etl.q(simulation_id=self._repo.simulation_ids)
             query = {CIRCUIT_ID: sorted(set(selected_sims[CIRCUIT_ID]))}
-        return NeuronClasses.from_pandas(df, query=query)
+        return NeuronClasses.from_pandas(df, query=query, cached=True)
 
 
 class WindowsExtractor(BaseExtractor[Windows]):
@@ -133,7 +133,7 @@ class WindowsExtractor(BaseExtractor[Windows]):
         query = {}
         if self._repo.simulations_filter:
             query = {SIMULATION_ID: self._repo.simulation_ids}
-        return Windows.from_pandas(df, query=query)
+        return Windows.from_pandas(df, query=query, cached=True)
 
 
 class SpikesExtractor(BaseExtractor[Spikes]):
@@ -154,7 +154,7 @@ class SpikesExtractor(BaseExtractor[Spikes]):
         query = {}
         if self._repo.simulations_filter:
             query = {SIMULATION_ID: self._repo.simulation_ids}
-        return Spikes.from_pandas(df, query=query)
+        return Spikes.from_pandas(df, query=query, cached=True)
 
 
 class SomaReportExtractor(BaseExtractor[SomaReport]):
@@ -175,7 +175,7 @@ class SomaReportExtractor(BaseExtractor[SomaReport]):
         query = {}
         if self._repo.simulations_filter:
             query = {SIMULATION_ID: self._repo.simulation_ids}
-        return SomaReport.from_pandas(df, query=query)
+        return SomaReport.from_pandas(df, query=query, cached=True)
 
 
 class CompartmentReportExtractor(BaseExtractor[CompartmentReport]):
@@ -196,7 +196,7 @@ class CompartmentReportExtractor(BaseExtractor[CompartmentReport]):
         query = {}
         if self._repo.simulations_filter:
             query = {SIMULATION_ID: self._repo.simulation_ids}
-        return CompartmentReport.from_pandas(df, query=query)
+        return CompartmentReport.from_pandas(df, query=query, cached=True)
 
 
 class Repository:

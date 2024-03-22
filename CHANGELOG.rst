@@ -1,6 +1,14 @@
 Changelog
 =========
 
+Version 0.8.2
+-------------
+
+Bug Fixes
+~~~~~~~~~
+
+- If ``node_id`` in the neuron_classes configuration is set to an empty list, it's now considered as an empty selection instead of selecting all the neurons.
+
 Version 0.8.1
 -------------
 

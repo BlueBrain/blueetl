@@ -21,7 +21,13 @@ class BaseExtractor(ABC):
     _allow_empty_data = False
 
     def __init__(self, df: pd.DataFrame, cached: bool, filtered: bool) -> None:
-        """Initialize the extractor."""
+        """Initialize the extractor.
+
+        Args:
+            df: Pandas DataFrame containing the extracted data.
+            cached: True if the data have been extracted from the cache, False otherwise.
+            filtered: True if the data have been filtered using a custom query, False otherwise.
+        """
         self._cached = cached
         self._filtered = filtered
         self._validate(df)
@@ -39,7 +45,7 @@ class BaseExtractor(ABC):
     @classmethod
     def _validate_data(cls, df: pd.DataFrame) -> None:
         """Validate the content of the dataframe."""
-        if not cls._allow_empty_data and len(df) == 0:
+        if not cls._allow_empty_data and df.empty:
             raise RuntimeError(f"No data extracted to {cls.__name__}")
 
     @classmethod
@@ -85,7 +91,8 @@ class BaseExtractor(ABC):
             if not any(df.index.names):
                 # reset the index to remove any gap
                 df = df.reset_index(drop=True)
-        return cls(df, cached=cached, filtered=len(df) != original_len)
+        filtered = len(df) != original_len
+        return cls(df, cached=cached, filtered=filtered)
 
     def to_pandas(self) -> pd.DataFrame:
         """Return a dataframe that can be serialized and stored to disk.

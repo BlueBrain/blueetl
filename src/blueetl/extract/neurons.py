@@ -75,7 +75,7 @@ def _filter_gids_by_neuron_class(
         node_sets_file=config.node_sets_file,
     )
     gids = cells.etl.q(config.query).index.to_numpy()
-    if config.node_id:
+    if config.node_id is not None:
         gids = np.intersect1d(gids, config.node_id)
     neuron_count = len(gids)
     if config.limit and neuron_count > config.limit:

@@ -160,10 +160,7 @@ class Simulations(BaseExtractor):
     def from_config(cls, config: SimulationCampaign, query: Optional[dict] = None) -> "Simulations":
         """Extract simulations from the given simulation campaign."""
         df = config.get()
-        original_len = len(df)
-        df = cls._from_paths(df)
-        df = cls._filter_simulations_df(df, query)
-        return cls(df, cached=False, filtered=len(df) != original_len)
+        return cls.from_pandas(df=df, query=query, cached=False)
 
     @classmethod
     def from_pandas(
@@ -175,8 +172,9 @@ class Simulations(BaseExtractor):
         """Extract simulations from a dataframe containing valid simulation ids and circuit ids."""
         original_len = len(df)
         df = cls._from_paths(df)
-        df = cls._filter_simulations_df(df, query, cached=True)
-        return cls(df, cached=cached, filtered=len(df) != original_len)
+        df = cls._filter_simulations_df(df, query, cached=cached)
+        filtered = len(df) != original_len
+        return cls(df, cached=cached, filtered=filtered)
 
     def to_pandas(self) -> pd.DataFrame:
         """Dump simulations to a dataframe that can be serialized and stored."""

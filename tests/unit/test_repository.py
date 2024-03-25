@@ -14,6 +14,15 @@ from blueetl.extract.windows import Windows
 from tests.unit.utils import TEST_DATA_PATH, assert_frame_equal
 
 
+def test_repository_init(repo):
+    assert isinstance(repo, test_module.Repository)
+    assert repo.extraction_config is not None
+    assert repo.simulations_config is not None
+    assert repo.cache_manager is not None
+    assert repo.simulations_filter is not None
+    assert repo.resolver is not None
+
+
 def test_repository_names(repo):
     assert repo.names == ["simulations", "neurons", "neuron_classes", "windows", "report"]
 
@@ -29,11 +38,11 @@ def test_repository_extract(repo, capsys):
 
     captured = capsys.readouterr()
     pattern = (
-        "Extraction: simulations.*"
-        "Extraction: neurons.*"
-        "Extraction: neuron_classes.*"
-        "Extraction: windows.*"
-        "Extraction: report.*"
+        "Extraction: simulations\n.*"
+        "Extraction: neurons\n.*"
+        "Extraction: neuron_classes\n.*"
+        "Extraction: windows\n.*"
+        "Extraction: report\n.*"
     )
     assert re.search(pattern, captured.out, flags=re.MULTILINE | re.DOTALL)
 

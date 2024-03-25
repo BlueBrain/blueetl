@@ -1,6 +1,14 @@
 Changelog
 =========
 
+Version 0.8.3
+-------------
+
+Improvements
+~~~~~~~~~~~~
+
+- Improve tests coverage.
+
 Version 0.8.2
 -------------
 

@@ -130,7 +130,7 @@ omit = [
 [tool.coverage.report]
 show_missing = true
 precision = 0
-fail_under = 70
+fail_under = 90
 
 [tool.pydocstyle]
 # D301: Use r""" if any backslashes in a docstring

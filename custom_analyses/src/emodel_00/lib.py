@@ -28,8 +28,8 @@ class EModelAccessor:
     @staticmethod
     def _get_emodel_properties(emodel_data):
         """Load and return the EmodelProperties."""
-        holding_current = None
-        threshold_current = None
+        holding_current = 0.0
+        threshold_current = 0.0
         for feature in emodel_data["features"]:
             if "bpo_holding_current" in feature["name"]:
                 holding_current = feature["value"]

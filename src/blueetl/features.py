@@ -225,28 +225,6 @@ class FeaturesCollection:
             # Features already calculated
             return
 
-        def _calculate_cached(
-            features_config: FeaturesConfig, df_dict: dict[str, pd.DataFrame]
-        ) -> dict[str, Feature]:
-            """Load cached features from a dict of DataFrames."""
-            return self._dataframes_to_features(df_dict, config=features_config, cached=True)
-
-        def _calculate_new(
-            features_configs_key: FeaturesConfigKey, features_configs_list: list[FeaturesConfig]
-        ) -> Iterator[tuple[FeaturesConfig, dict[str, Feature]]]:
-            """Calculate new features and yield tuples."""
-            results = calculate_features(
-                repo=self._repo,
-                features_configs_key=features_configs_key,
-                features_configs_list=features_configs_list,
-            )
-            assert len(features_configs_list) == len(results)
-            for features_config, df_dict in zip(features_configs_list, results):
-                features = self._dataframes_to_features(
-                    df_dict, config=features_config, cached=False
-                )
-                yield features_config, features
-
         def _process_features(
             features_config: FeaturesConfig, features: dict[str, Feature]
         ) -> None:
@@ -298,7 +276,7 @@ class FeaturesCollection:
             for num, (features_configs_key, features_configs_list) in enumerate(groups.items(), 1):
                 L.info("Considering group: %s/%s, key: %s", num, len(groups), features_configs_key)
                 for n, (features_config, features) in enumerate(
-                    _calculate_new(features_configs_key, features_configs_list), 1
+                    _calculate_new(self._repo, features_configs_key, features_configs_list), 1
                 ):
                     _process_features(features_config, features)
                     _log_features(features, n, len(features_configs_list), features_config.id)
@@ -310,27 +288,6 @@ class FeaturesCollection:
         with timed(L.info, "Step 3: processing new features"):
             _process_new_features(features_configs_groups)
         L.info("Features calculation completed")
-
-    def _dataframes_to_features(
-        self, df_dict: dict[str, pd.DataFrame], config: Optional[FeaturesConfig], cached: bool
-    ) -> dict[str, Feature]:
-        """Wrap the given DataFrames with Feature objects, and return the resulting dict.
-
-        The DataFrames are filtered by the simulation_ids contained in the internal repo.
-
-        Args:
-            df_dict: dict of DataFrames to be wrapped.
-            config: config converted to dict and assigned to attrs["config"] for each DataFrame.
-            cached: True if the data is loaded from the cache, False otherwise.
-        """
-        query = {SIMULATION_ID: self._repo.simulation_ids}
-        result = {}
-        for name, df in df_dict.items():
-            result[name] = Feature.from_pandas(df, query=query, cached=cached)
-            if config is not None:
-                # make a copy of the config accessible from the features dataframe attrs
-                result[name].df.attrs["config"] = config.dict()
-        return result
 
     def apply_filter(self, repo: Repository) -> "FeaturesCollection":
         """Apply a filter based on the extracted simulations and return a new object."""
@@ -351,7 +308,8 @@ class FilteredFeaturesCollection(FeaturesCollection):
             cache_manager=parent.cache_manager.to_readonly(),
         )
         dataframes = {name: features.df for name, features in parent._data.items()}
-        self._data = self._dataframes_to_features(dataframes, config=None, cached=True)
+        query = {SIMULATION_ID: repo.simulation_ids}
+        self._data = _dataframes_to_features(dataframes, config=None, cached=True, query=query)
         self._concatenated_features = self._clone_concatenated_features(
             parent._concatenated_features
         )
@@ -361,6 +319,57 @@ class FilteredFeaturesCollection(FeaturesCollection):
     ) -> dict[str, ConcatenatedFeatures]:
         """Return a dict of cloned concatenated_features."""
         return {name: cf.clone(parent=self) for name, cf in concatenated_features.items()}
+
+
+def _dataframes_to_features(
+    df_dict: dict[str, pd.DataFrame],
+    config: Optional[FeaturesConfig],
+    cached: bool,
+    query: Optional[dict],
+) -> dict[str, Feature]:
+    """Wrap the given DataFrames with Feature objects, and return the resulting dict.
+
+    The DataFrames are filtered by the simulation_ids contained in the internal repo.
+
+    Args:
+        df_dict: dict of DataFrames to be wrapped.
+        config: config converted to dict and assigned to attrs["config"] for each DataFrame.
+        cached: True if the data is loaded from the cache, False otherwise.
+        query: optional query that can be used to filter the features dataframes.
+    """
+    result = {}
+    for name, df in df_dict.items():
+        result[name] = Feature.from_pandas(df, query=query, cached=cached)
+        if config is not None:
+            # make a copy of the config accessible from the features dataframe attrs
+            result[name].df.attrs["config"] = config.dict()
+    return result
+
+
+def _calculate_cached(
+    features_config: FeaturesConfig, df_dict: dict[str, pd.DataFrame]
+) -> dict[str, Feature]:
+    """Load cached features from a dict of DataFrames."""
+    return _dataframes_to_features(df_dict, config=features_config, cached=True, query=None)
+
+
+def _calculate_new(
+    repo: Repository,
+    features_configs_key: FeaturesConfigKey,
+    features_configs_list: list[FeaturesConfig],
+) -> Iterator[tuple[FeaturesConfig, dict[str, Feature]]]:
+    """Calculate new features and yield tuples."""
+    results = calculate_features(
+        repo=repo,
+        features_configs_key=features_configs_key,
+        features_configs_list=features_configs_list,
+    )
+    assert len(features_configs_list) == len(results)
+    for features_config, df_dict in zip(features_configs_list, results):
+        features = _dataframes_to_features(
+            df_dict, config=features_config, cached=False, query=None
+        )
+        yield features_config, features
 
 
 def _func_wrapper(

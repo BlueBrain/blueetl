@@ -4,9 +4,15 @@ Changelog
 Version 0.8.3
 -------------
 
+Bug Fixes
+~~~~~~~~~
+
+- Ensure that invalid cache entries are always deleted from ``checksums.cached.yaml``.
+
 Improvements
 ~~~~~~~~~~~~
 
+- Filter features only when ``apply_filter`` is called to save some time.
 - Improve tests coverage.
 
 Version 0.8.2

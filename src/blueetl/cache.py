@@ -204,7 +204,6 @@ class CacheManager:
                     "simulations": None,
                     "neurons": None,
                     "neuron_classes": None,
-                    "trial_steps": None,
                     "windows": None,
                     "report": None,
                 },
@@ -258,7 +257,6 @@ class CacheManager:
             "simulations",
             "neurons",
             "neuron_classes",
-            "trial_steps",
             "windows",
             "report",
             "features",
@@ -302,7 +300,7 @@ class CacheManager:
         # check the extraction config for changed keys, and invalidate the affected names
         keys_and_affected_names = [
             ({"neuron_classes"}, {"neurons", "neuron_classes"}),
-            ({"windows", "trial_steps"}, {"trial_steps", "windows", "report"}),
+            ({"windows", "trial_steps"}, {"windows", "report"}),
             ({"report"}, {"report"}),
         ]
         for keys, names in keys_and_affected_names:
@@ -318,7 +316,9 @@ class CacheManager:
         valid_checksums = set()
         for features_config in self._analysis_configs.actual.features:
             config_checksum = features_config.checksum()
-            if config_checksum in self._cached_checksums["features"]:
+            if config_checksum in self._cached_checksums["features"] and all(
+                self._cached_checksums["features"][config_checksum].values()
+            ):
                 valid_checksums.add(config_checksum)
 
         # invalidate the invalid features checksums
@@ -339,7 +339,7 @@ class CacheManager:
         """
         to_be_deleted = set()
         for name, file_checksum in self._cached_checksums["repo"].items():
-            if file_checksum != self._repo_store.checksum(name):
+            if not file_checksum or file_checksum != self._repo_store.checksum(name):
                 to_be_deleted.add(name)
         return to_be_deleted
 
@@ -355,7 +355,7 @@ class CacheManager:
             del self._cached_checksums["repo"][name]
 
     def _check_cached_features_files(self) -> set[str]:
-        """Determine the cached features files to be delated b/c the checksum is None or different.
+        """Determine the cached features files to be deleted b/c the checksum is None or different.
 
         Returns:
             set of features checksums to be deleted.
@@ -363,7 +363,7 @@ class CacheManager:
         to_be_deleted = set()
         for config_checksum, checksums_by_name in self._cached_checksums["features"].items():
             for name, file_checksum in checksums_by_name.items():
-                if file_checksum != self._features_store.checksum(name):
+                if not file_checksum or file_checksum != self._features_store.checksum(name):
                     to_be_deleted.add(config_checksum)
                     break
         return to_be_deleted
@@ -377,7 +377,7 @@ class CacheManager:
         for config_checksum in to_be_deleted:
             # delete every feature generated with the same configuration
             for name in self._cached_checksums["features"].pop(config_checksum):
-                L.info("Deleting invalid cached features %s", name)
+                L.info("Deleting invalid cached features %s/%s", config_checksum[:8], name)
                 self._features_store.delete(name)
 
     @_raise_if(readonly=True)
@@ -392,6 +392,7 @@ class CacheManager:
         self._delete_cached_features_files(features_to_be_deleted)
         self._dump_analysis_config()
         self._dump_simulations_config()
+        self._dump_cached_checksums()
 
     @_raise_if(locked=False)
     def load_repo(self, name: str) -> Optional[pd.DataFrame]:
@@ -430,7 +431,7 @@ class CacheManager:
         """Return the cached features checksums, or an empty dict if the cache doesn't exist."""
         config_checksum = features_config.checksum()
         cached = self._cached_checksums["features"].get(config_checksum, {})
-        L.debug("The features %s are cached: %s", config_checksum, bool(cached))
+        L.debug("The features %s are cached: %s", config_checksum[:8], bool(cached))
         return cached
 
     @_raise_if(locked=False)

@@ -51,7 +51,7 @@ class ParquetStore(BaseStore):
         # is converted to Int64Index in MultiIndexes with Pandas >= 1.5.0.
         # See https://github.com/apache/arrow/issues/33030
         index = True if isinstance(df.index, pd.MultiIndex) else None
-        with timed(L.debug, "Writing %s to %s", name, path):
+        with timed(L.debug, f"Writing {name} to {path}"):
             df.to_parquet(path=path, **{"index": index, **self._dump_options})
 
     def load(self, name: str) -> Optional[pd.DataFrame]:
@@ -59,5 +59,5 @@ class ParquetStore(BaseStore):
         path = self.path(name)
         if not path.exists():
             return None
-        with timed(L.debug, "Reading %s from %s", name, path):
+        with timed(L.debug, f"Reading {name} from {path}"):
             return pd.read_parquet(path=path, **self._load_options)

@@ -13,6 +13,7 @@ Improvements
 ~~~~~~~~~~~~
 
 - Filter features only when ``apply_filter`` is called to save some time.
+- Improve logging in ``utils.timed()``.
 - Improve tests coverage.
 
 Version 0.8.2

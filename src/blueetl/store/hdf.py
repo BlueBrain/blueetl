@@ -27,7 +27,7 @@ class HDFStore(BaseStore):
     def dump(self, df: pd.DataFrame, name: str) -> None:
         """Save a dataframe to file, using the given name and the class extension."""
         path = self.path(name)
-        with timed(L.debug, "Writing %s to %s", name, path):
+        with timed(L.debug, f"Writing {name} to {path}"):
             df = _category_to_object(df)
             df.to_hdf(
                 str(path),
@@ -44,5 +44,5 @@ class HDFStore(BaseStore):
         path = self.path(name)
         if not path.exists():
             return None
-        with timed(L.debug, "Reading %s from %s", name, path):
+        with timed(L.debug, f"Reading {name} from {path}"):
             return pd.read_hdf(path, key=name)

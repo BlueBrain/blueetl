@@ -19,6 +19,8 @@ import yaml
 from blueetl.constants import DTYPES
 from blueetl.types import StrOrPath
 
+L = logging.getLogger(__name__)
+
 
 class CachedPropertyMixIn:
     """MixIn to be used with classes using cached_property to be skipped when pickled."""
@@ -116,11 +118,9 @@ def ensure_dtypes(
         df: original Pandas DataFrame.
         desired_dtypes: dict of names and desired dtypes. If None, the predefined dtypes are used.
             If the dict contains names not present in the columns or in the index, they are ignored.
-            In the index, any (u)int16 or (u)int32 dtype are considered as (u)int64,
-            since Pandas doesn't have a corresponding Index type for them.
 
     Returns:
-        A new DataFrame with the desired dtypes, or the same DataFrame if the columns are unchanged.
+        The same DataFrame is modified and returned, if it's possible to avoid making a copy.
     """
     if desired_dtypes is None:
         desired_dtypes = DTYPES
@@ -334,3 +334,15 @@ def copy_config(src: StrOrPath, dst: StrOrPath) -> None:
     config = load_yaml(src)
     config["simulation_campaign"] = resolve_path(src.parent, config["simulation_campaign"])
     dump_yaml(dst, config, default_flow_style=None)
+
+
+def get_shmdir() -> Optional[Path]:
+    """Return the shared memory directory, or None if not set."""
+    shmdir = os.getenv("SHMDIR")
+    if not shmdir:
+        L.warning("SHMDIR should be set to the shared memory directory")
+        return None
+    shmdir = Path(shmdir)
+    if not shmdir.is_dir():
+        raise RuntimeError("SHMDIR must be set to an existing directory")
+    return shmdir

@@ -1,6 +1,18 @@
 Changelog
 =========
 
+Version 0.9.1
+-------------
+
+Improvements
+~~~~~~~~~~~~
+
+- Improve performance of report extraction and features calculation by writing partial DataFrames to the shared memory (or temp directory, if shared memory is not available).
+  Both the used memory and the execution time should be lower than before, when processing large DataFrames.
+- Use zstd compression instead of snappy when writing parquet files.
+- When ``repo`` is pickled, extract the DataFrames only if they aren't already stored in the cache.
+- Remove fastparquet extra dependency.
+
 Version 0.9.0
 -------------
 

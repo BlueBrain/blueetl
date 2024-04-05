@@ -1,14 +1,17 @@
 """Features collection."""
 
 import logging
+import tempfile
 from collections import Counter, defaultdict
 from collections.abc import Iterator
 from copy import deepcopy
 from dataclasses import dataclass
-from functools import cached_property
+from functools import cached_property, partial
+from pathlib import Path
 from typing import Any, NamedTuple, Optional, Union
 
 import pandas as pd
+from blueetl_core.parallel import isolated
 from blueetl_core.utils import smart_concat
 
 from blueetl.cache import CacheManager
@@ -17,7 +20,15 @@ from blueetl.constants import SIMULATION_ID
 from blueetl.extract.feature import Feature
 from blueetl.parallel import merge_filter
 from blueetl.repository import Repository
-from blueetl.utils import all_equal, ensure_dtypes, extract_items, import_by_string, timed
+from blueetl.store.parquet import ParquetStore
+from blueetl.utils import (
+    all_equal,
+    ensure_dtypes,
+    extract_items,
+    get_shmdir,
+    import_by_string,
+    timed,
+)
 
 L = logging.getLogger(__name__)
 
@@ -236,7 +247,8 @@ class FeaturesCollection:
                 if not f._cached or f._filtered:  # pylint: disable=protected-access
                     to_be_written[name] = f.to_pandas()
             if to_be_written:
-                self.cache_manager.dump_features(to_be_written, features_config=features_config)
+                with timed(L.info, "Writing cached features"):
+                    self.cache_manager.dump_features(to_be_written, features_config=features_config)
 
         def _log_features(features: dict[str, Feature], n: int, tot: int, features_id) -> None:
             """Log a message about the features being processed."""
@@ -364,7 +376,7 @@ def _calculate_new(
     features_configs_list: list[FeaturesConfig],
 ) -> Iterator[tuple[FeaturesConfig, dict[str, Feature]]]:
     """Calculate new features and yield tuples."""
-    results = calculate_features(
+    results = _calculate_features(
         repo=repo,
         features_configs_key=features_configs_key,
         features_configs_list=features_configs_list,
@@ -377,28 +389,31 @@ def _calculate_new(
         yield features_config, features
 
 
-def _func_wrapper(
+def _user_func_wrapper(
+    task_index: int,
     key: NamedTuple,
     neurons_df: pd.DataFrame,
     windows_df: pd.DataFrame,
     report_df: pd.DataFrame,
     repo: Repository,
     features_config: FeaturesConfig,
-) -> dict[str, pd.DataFrame]:
-    """Call the user function for the specified key.
+    temp_folder: Path,
+) -> None:
+    """Call the user function for the specified key, and save the resulting DataFrames.
+
+    It should be executed in a subprocess.
 
     Args:
+        task_index: incremental index.
         key: namedtuple specifying the filter.
         neurons_df: filtered neurons DataFrame.
         windows_df:  filtered windows DataFrame.
         report_df:  filtered report DataFrame.
         repo: Repository instance.
         features_config: features configuration.
-
-    Returns:
-        dict of features DataFrames.
+        temp_folder: path to the shared memory (recommended) or temp directory.
     """
-    L.debug("Calculating features for %s", key)
+    L.info("Calculating features for %s", key)
     merged_df = neurons_df.merge(windows_df, how="left").merge(report_df, how="left")
     # The params dict is deepcopied because it could be modified in the user function.
     # It could happen even with multiprocessing, because joblib may process tasks in batch.
@@ -410,7 +425,6 @@ def _func_wrapper(
     # verify and process the result
     if not isinstance(features_dict, dict):
         raise ValueError("The user function must return a dict of dataframes")
-    features_records = {}
     for feature_group, result_df in features_dict.items():
         if not isinstance(result_df, pd.DataFrame):
             raise ValueError(f"Expected a DataFrame, not {type(result_df).__name__}")
@@ -418,11 +432,130 @@ def _func_wrapper(
         # for example when the returned DataFrame has a RangeIndex to be dropped
         drop = result_df.index.names == [None]
         result_df = result_df.etl.add_conditions(conditions=key._fields, values=key, drop=drop)
-        features_records[feature_group + features_config.suffix] = result_df
-    return features_records
+        # the conversion to the desired dtype here is important to reduce memory usage and cpu time
+        result_df = ensure_dtypes(result_df)
+        output_dir = temp_folder / f"{feature_group}{features_config.suffix}"
+        if not output_dir.is_dir():
+            # the directory should be created in the first process
+            output_dir.mkdir(parents=True, exist_ok=True)
+        ParquetStore(output_dir).dump(result_df, name=f"{task_index:08d}")
 
 
-def calculate_features(
+def _merge_filter_func(
+    task_index: int,
+    key: NamedTuple,
+    df_list: list[pd.DataFrame],
+    temp_folder: Path,
+    repo: Repository,
+    features_configs_list: list[FeaturesConfig],
+) -> None:
+    """Executed in a subprocess, call the wrapper function for each features_config."""
+    neurons_df, windows_df, report_df = df_list
+    for features_config_index, features_config in enumerate(features_configs_list):
+        _user_func_wrapper(
+            task_index=task_index,
+            key=key,
+            neurons_df=neurons_df,
+            windows_df=windows_df,
+            report_df=report_df,
+            repo=repo,
+            features_config=features_config,
+            temp_folder=temp_folder / str(features_config_index),
+        )
+
+
+def _filter_by_value(df: pd.DataFrame, key: str, value: Any) -> pd.DataFrame:
+    """Filter the DataFrame only if the specified value is not None or empty."""
+    return df.etl.q({key: value}) if value else df
+
+
+@isolated
+def _merge_filter_wrapper(
+    temp_folder: Path,
+    repo: Repository,
+    features_configs_key: FeaturesConfigKey,
+    features_configs_list: list[FeaturesConfig],
+) -> None:
+    """Execute merge_filter in an isolated subprocess.
+
+    It's faster than running in the main process, for example the subprocess
+    can take 167 seconds instead of 266 seconds (needing more investigation).
+
+    With the current approach:
+
+    - repo is pickled and passed to the subprocess
+    - the needed dataframes are loaded from the cache in the subprocess
+    - this is faster than passing big dataframes as parameters, that should be pickled
+      in the main process and unpickled in the subprocess.
+    """
+    func = partial(
+        _merge_filter_func,
+        temp_folder=temp_folder,
+        features_configs_list=features_configs_list,
+        repo=repo,
+    )
+    merge_filter(
+        df_list=[
+            _filter_by_value(
+                repo.neurons.df,
+                key="neuron_class",
+                value=features_configs_key.neuron_classes,
+            ),
+            _filter_by_value(
+                repo.windows.df,
+                key="window",
+                value=features_configs_key.windows,
+            ),
+            repo.report.df,
+        ],
+        groupby=features_configs_key.groupby,
+        func=func,
+    )
+
+
+def _concatenate_all(temp_folder: Path) -> list[dict[str, pd.DataFrame]]:
+    """Concatenate all the dataframes having the same feature_group label.
+
+    The DataFrames are loaded from parquet files contained in a folder structure like:
+
+    /temp_folder
+    ├── 0
+    │   ├── by_gid
+    │   │   └── *.parquet
+    │   ├── by_gid_and_trial
+    │   │   └── *.parquet
+    │   ├── by_neuron_class
+    │   │   └── *.parquet
+    │   └── by_neuron_class_and_trial
+    │       └── *.parquet
+    ├── 1
+    │   └── other_features
+    │       └── *.parquet
+    ...
+    └── n
+        └── other_features
+            └── *.parquet
+
+    where each numerical folder corresponds to one entry in features_configs_list,
+    and contains one subfolder for each DataFrame to be created.
+
+    Returns:
+        list of DataFrames obtained by the concatenation of the partial DataFrames.
+    """
+    result = []
+    # the numerical subdirectories must be processed in ascending order
+    for index_path in sorted(temp_folder.iterdir(), key=lambda p: int(p.name)):
+        d = {}
+        # the dataframes subdirectories can be processed in any order
+        for features_path in sorted(index_path.iterdir()):
+            df = ParquetStore(features_path).load()
+            df = ensure_dtypes(df)
+            d[features_path.name] = df
+        result.append(d)
+    return result
+
+
+def _calculate_features(
     repo: Repository,
     features_configs_key: FeaturesConfigKey,
     features_configs_list: list[FeaturesConfig],
@@ -435,78 +568,15 @@ def calculate_features(
         features_configs_list: list of features configurations.
 
     Returns:
-        list of dicts of features DataFrames, one item for each features config.
+        list of dicts of features DataFrames, one item for each features_config.
     """
-
-    def _func(key: NamedTuple, df_list: list[pd.DataFrame]) -> list[dict[str, pd.DataFrame]]:
-        """Should be called in a subprocess to execute the wrapper function."""
-        neurons_df, windows_df, report_df = df_list
-        return [
-            _func_wrapper(
-                key=key,
-                neurons_df=neurons_df,
-                windows_df=windows_df,
-                report_df=report_df,
+    with tempfile.TemporaryDirectory(prefix="blueetl_", dir=get_shmdir()) as _temp_folder:
+        with timed(L.info, "Executing merge_filter"):
+            _merge_filter_wrapper(
+                temp_folder=Path(_temp_folder),
                 repo=repo,
-                features_config=features_config,
+                features_configs_key=features_configs_key,
+                features_configs_list=features_configs_list,
             )
-            for features_config in features_configs_list
-        ]
-
-    def _filter_by_value(df: pd.DataFrame, key: str, value: Any) -> pd.DataFrame:
-        """Filter the DataFrame only if the specified value is not None or empty."""
-        return df.etl.q({key: value}) if value else df
-
-    def _concatenate_all(
-        it: Iterator[list[dict[str, pd.DataFrame]]]
-    ) -> list[dict[str, pd.DataFrame]]:
-        """Concatenate all the dataframes having the same feature_group label.
-
-        Args:
-            it: iterator yielding lists of dict of DataFrames, where the number of lists is equal
-                to the number of groups determined by features_configs_key, and the number of dicts
-                in each list is equal to the number of FeaturesConfig in features_configs_list.
-
-        Returns:
-            list of DataFrames obtained by the concatenation of the partial DataFrames.
-        """
-        tmp_result: list[dict[str, list[pd.DataFrame]]] = [
-            defaultdict(list) for _ in range(len(features_configs_list))
-        ]
-        for n_group, lst in enumerate(it):
-            # lst is the list of dicts returned by _func, and it contains one dict for each config
-            assert len(lst) == len(tmp_result)
-            for n_config, df_dict in enumerate(lst):
-                # to concatenate across the groups the DataFrames contained in each dict,
-                # append tmp_df to the list holding all the other tmp_df of the same type
-                partial_result = tmp_result[n_config]
-                for feature_group, tmp_df in df_dict.items():
-                    L.debug(
-                        "Iterating over group=%s, config=%s, feature_group=%s",
-                        n_group,
-                        n_config,
-                        feature_group,
-                    )
-                    partial_result[feature_group].append(tmp_df)
-        # finally, build the dicts of DataFrames in a single concat operation
-        return [
-            {
-                feature_group: ensure_dtypes(smart_concat(df_list))
-                for feature_group, df_list in dct.items()
-            }
-            for dct in tmp_result
-        ]
-
-    key = features_configs_key
-    return _concatenate_all(
-        merge_filter(
-            df_list=[
-                _filter_by_value(repo.neurons.df, "neuron_class", value=key.neuron_classes),
-                _filter_by_value(repo.windows.df, "window", value=key.windows),
-                repo.report.df,
-            ],
-            groupby=key.groupby,
-            func=_func,
-            parallel=True,
-        )
-    )
+        with timed(L.info, "Executing concatenation"):
+            return _concatenate_all(temp_folder=Path(_temp_folder))

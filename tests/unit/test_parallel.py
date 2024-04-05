@@ -91,7 +91,7 @@ def test_merge_groupby():
     df_list = list(all_dataframes.values())
     groupby = ["simulation_id", "circuit_id", "neuron_class"]
 
-    result = test_module.merge_groupby(df_list, groupby=groupby, parallel=False)
+    result = test_module.merge_groupby(df_list, groupby=groupby)
     expected = merge_groupby_classic(df_list, groupby=groupby)
 
     for result_item, expected_item in itertools.zip_longest(result, expected):

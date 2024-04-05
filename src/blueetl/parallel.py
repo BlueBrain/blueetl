@@ -62,7 +62,7 @@ def _groups(df_list: list[pd.DataFrame], groupby: list[str]) -> pd.DataFrame:
 
 def _func_generator(
     df_list: list[pd.DataFrame], groupby: list[str], func: Callable
-) -> Iterator[Callable[[], Any]]:
+) -> Iterator[Callable]:
     """Yield functions to be executed in a subprocess."""
     groups = _groups(df_list, groupby=groupby)
     caches = [CachedDataFrame(df) for df in df_list]
@@ -76,9 +76,8 @@ def _func_generator(
 def merge_filter(
     df_list: list[pd.DataFrame],
     groupby: list[str],
-    func: Callable[[NamedTuple, list[pd.DataFrame]], Any],
-    parallel: bool = True,
-) -> Iterator[Any]:
+    func: Callable[[int, NamedTuple, list[pd.DataFrame]], Any],
+) -> list:
     """Merge the specified columns of the list of DataFrames, and call func for each combination.
 
     The merge operation is similar to a SQL left outer join.
@@ -86,40 +85,41 @@ def merge_filter(
     Args:
         df_list: list of DataFrames.
         groupby: list of columns to consider across the DataFrames.
-        func: callback function accepting ``key: NamedTuple, df_list: list[pd.DataFrames]``,
-            executed for each calculated combination of columns.
-        parallel: True to call the callback function in subprocesses, False otherwise.
+        func: callback executed for each calculated combination of columns, with parameters:
 
-    Yields:
-        values returned by the callback function.
+            - task_index (int): task index.
+            - key (NamedTuple): key used to filter the DataFrames passed to each function call.
+            - df_list (list[pd.DataFrames]): list of DataFrames filtered by key.
+
+    Returns:
+        list of values returned by the callback function.
 
     """
     func_generator = _func_generator(df_list=df_list, groupby=groupby, func=func)
-    if parallel:
-        yield from run_parallel(Task(f) for f in func_generator)
-    else:
-        yield from (f() for f in func_generator)
+    task_generator = (Task(partial(f, task_index=i)) for i, f in enumerate(func_generator))
+    return run_parallel(task_generator)
 
 
 def merge_groupby(
-    df_list: list[pd.DataFrame], groupby: list[str], parallel=True
+    df_list: list[pd.DataFrame], groupby: list[str]
 ) -> Iterator[tuple[NamedTuple, pd.DataFrame]]:
     """Merge a list of DataFrames, group by the given keys, and yield keys and groups.
 
-    The merge operation is similar to a SQL left outer join.
-
-    If parallel is True, the dataframes are filtered in the main process and merged in subprocesses.
-    If parallel is False, the dataframes are merged in the same process.
+    The merge operation is similar to a SQL left outer join, but
+    the dataframes are filtered in the main process and merged in subprocesses.
     """
 
-    def _func(key: NamedTuple, df_list: list[pd.DataFrame]) -> tuple[NamedTuple, pd.DataFrame]:
+    def _func(
+        task_index: int, key: NamedTuple, df_list: list[pd.DataFrame]
+    ) -> tuple[NamedTuple, pd.DataFrame]:
+        # pylint: disable=unused-argument
         # executed in a subprocess
         merged = df_list[0]
         for df in df_list[1:]:
             merged = merged.merge(df, how="left", copy=False)
         return key, merged
 
-    yield from merge_filter(df_list=df_list, groupby=groupby, func=_func, parallel=parallel)
+    yield from merge_filter(df_list=df_list, groupby=groupby, func=_func)
 
 
 def call_by_simulation(
@@ -148,7 +148,9 @@ def call_by_simulation(
         list of results
     """
 
-    def _func(key: NamedTuple, df_list: list[pd.DataFrame]) -> tuple[NamedTuple, pd.DataFrame]:
+    def _func(
+        task_index: int, key: NamedTuple, df_list: list[pd.DataFrame]
+    ) -> tuple[NamedTuple, pd.DataFrame]:
         # pylint: disable=unused-argument
         # executed in a subprocess
         simulation_row = convert_row(df_list[0].reset_index())
@@ -167,6 +169,5 @@ def call_by_simulation(
             df_list=[simulations, *dataframes_to_filter.values()],
             groupby=[SIMULATION_ID, CIRCUIT_ID],
             func=_func,
-            parallel=True,
         )
     )

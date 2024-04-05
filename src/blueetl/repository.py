@@ -48,7 +48,7 @@ class BaseExtractor(ABC, Generic[ExtractorT]):
         Args:
             name: name of the dataframe.
         """
-        with timed(L.info, "Extracting %s", name):
+        with timed(L.debug, f"Extracting {name}") as messages:
             df = self._repo.cache_manager.load_repo(name)
             if df is not None:
                 instance = self.extract_cached(df)
@@ -59,7 +59,7 @@ class BaseExtractor(ABC, Generic[ExtractorT]):
             is_filtered = instance._filtered  # pylint: disable=protected-access
             if not is_cached or is_filtered:
                 self._repo.cache_manager.dump_repo(df=instance.to_pandas(), name=name)
-            L.info("Extracting %s: cached=%s, filtered=%s", name, is_cached, is_filtered)
+            messages[:] = [f"Extracted {name}: {is_cached=} {is_filtered=} rows={len(instance.df)}"]
             return instance
 
 

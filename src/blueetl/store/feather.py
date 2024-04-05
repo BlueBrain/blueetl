@@ -59,7 +59,7 @@ class FeatherStore(BaseStore):
     def dump(self, df: pd.DataFrame, name: str) -> None:
         """Save a dataframe to file, using the given name and the class extension."""
         path = self.path(name)
-        with timed(L.debug, "Writing %s to %s", name, path):
+        with timed(L.debug, f"Writing {name} to {path}"):
             df = _index_to_columns(df)
             df.to_feather(path)
 
@@ -68,6 +68,6 @@ class FeatherStore(BaseStore):
         path = self.path(name)
         if not path.exists():
             return None
-        with timed(L.debug, "Reading %s from %s", name, path):
+        with timed(L.debug, f"Reading {name} from {path}"):
             df = pd.read_feather(path)
             return _columns_to_index(df)

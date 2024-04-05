@@ -37,17 +37,22 @@ class CachedPropertyMixIn:
 
 
 @contextmanager
-def timed(log: Callable, msg, *args) -> Iterator[None]:
-    """Context manager to log the execution time using the specified logger function."""
-    log(f"{msg}...", *args)
+def timed(log: Callable[[str], None], msg: str) -> Iterator[list[str]]:
+    """Context manager to log the execution time using the specified logger function.
+
+    The yielded list of messages can be used to replace the existing message,
+    or inject additional strings to the final log.
+    """
+    log(f"{msg}...")
     start_time = time.monotonic()
-    status = "failed"
+    status = "FAILED"
+    messages = [msg]
     try:
-        yield
-        status = "done"
+        yield messages
+        status = "DONE"
     finally:
         elapsed = time.monotonic() - start_time
-        log(f"{msg} [{status} in {elapsed:.2f} seconds]", *args)
+        log(f"{' '.join(messages)} [{status} in {elapsed:.2f} seconds]")
 
 
 def setup_logging(loglevel: Union[int, str], logformat: Optional[str] = None, **logparams) -> None:

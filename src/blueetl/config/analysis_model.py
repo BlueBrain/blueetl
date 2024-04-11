@@ -176,6 +176,7 @@ class FeaturesConfig(BaseModel):
     params_product: dict[str, Any] = {}
     params_zip: dict[str, Any] = {}
     suffix: str = ""
+    multi_index: bool = True
 
 
 class SingleAnalysisConfig(BaseModel):

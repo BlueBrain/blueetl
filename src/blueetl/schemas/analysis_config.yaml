@@ -483,6 +483,15 @@ $defs:
           A numeric suffix is automatically added when any of ``params_product`` or ``params_zip`` is specified.
         default: "''"
         type: string
+      multi_index:
+        title: MultiIndex
+        description: |
+          - If True, do not reset the index of the resulting DataFrames of features, and add the values specified in ``groupby`` to the MultiIndex.
+          - If False, reset the index, returning columnar DataFrames.
+
+          The DataFrames with MultiIndex should use less memory then the columnar DataFrames, but they take more time to load and dump to disk.
+        type: boolean
+        default: "true"
     required:
     - type
     - groupby

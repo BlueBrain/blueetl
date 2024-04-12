@@ -168,7 +168,7 @@ def calculate_features_multi(repo, key, df, params):
                 "smoothed_3ms_spike_times_max_normalised_hist_1ms_bin"
             ],
         }
-    ).rename_axis(BIN)
+    ).rename_axis(index=BIN)
 
     return {
         "by_gid": by_gid,

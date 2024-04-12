@@ -393,6 +393,15 @@ class CacheManager:
         self._dump_cached_checksums()
 
     @_raise_if(locked=False)
+    def is_repo_cached(self, name: str) -> bool:
+        """Return whether a specific repo dataframe is present in the cache."""
+        # the checksums have been checked in _initialize_cache/_delete_cached_repo_files,
+        # so they are not calculate again here
+        return bool(
+            self._cached_checksums["repo"].get(name) and self._repo_store.path(name).is_file()
+        )
+
+    @_raise_if(locked=False)
     def load_repo(self, name: str) -> Optional[pd.DataFrame]:
         """Load a specific repo dataframe from the cache.
 
@@ -402,10 +411,7 @@ class CacheManager:
         Returns:
             The loaded dataframe, or None if it's not cached.
         """
-        is_cached = bool(self._cached_checksums["repo"].get(name))
-        L.debug("The repository %s is cached: %s", name, is_cached)
-        # the checksums have been checked in _initialize_cache/_delete_cached_repo_files,
-        # so they are not calculate again here
+        is_cached = self.is_repo_cached(name)
         return self._repo_store.load(name) if is_cached else None
 
     @_raise_if(readonly=True)
@@ -417,7 +423,6 @@ class CacheManager:
             df: dataframe to be saved.
             name: name of the repo dataframe.
         """
-        L.info("Writing cached %s", name)
         self._repo_store.dump(df, name)
         self._cached_checksums["repo"][name] = self._repo_store.checksum(name)
         self._dump_cached_checksums()
@@ -429,7 +434,6 @@ class CacheManager:
         """Return the cached features checksums, or an empty dict if the cache doesn't exist."""
         config_checksum = features_config.checksum()
         cached = self._cached_checksums["features"].get(config_checksum, {})
-        L.debug("The features %s are cached: %s", config_checksum[:8], bool(cached))
         return cached
 
     @_raise_if(locked=False)
@@ -467,7 +471,6 @@ class CacheManager:
             features_dict: dict of features to be written.
             features_config: configuration dict of the features to be written.
         """
-        L.info("Writing cached features")
         config_checksum = features_config.checksum()
         old_checksums = self._cached_checksums["features"].pop(config_checksum, None)
         new_checksums = self._cached_checksums["features"][config_checksum] = {}

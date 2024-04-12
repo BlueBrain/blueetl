@@ -44,7 +44,8 @@ def _resolve_trial_steps(global_config: MultiAnalysisConfig, base_path: Path):
     """
     for config in global_config.analysis.values():
         for trial_steps_config in config.extraction.trial_steps.values():
-            trial_steps_config.base_path = str(global_config.output)
+            if not trial_steps_config.base_path:
+                trial_steps_config.base_path = global_config.output
             if path := trial_steps_config.node_sets_file:
                 path = base_path / path
                 trial_steps_config.node_sets_file = path

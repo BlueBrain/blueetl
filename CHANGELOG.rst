@@ -12,8 +12,8 @@ Bug Fixes
 Improvements
 ~~~~~~~~~~~~
 
-- Filter features only when ``apply_filter`` is called to save some time.
-- Improve logging in ``utils.timed()``.
+- Filter features only when ``apply_filter`` is called to save some time, but ensure that repo and features are filtered when they are loaded from the cache using a more restrictive filter.
+- Improve logging in ``blueetl.utils.timed()``.
 - Improve tests coverage.
 
 Version 0.8.2

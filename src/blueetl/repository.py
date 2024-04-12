@@ -39,7 +39,7 @@ class BaseExtractor(ABC, Generic[ExtractorT]):
         """Instantiate an object from the configuration."""
 
     @abstractmethod
-    def extract_cached(self, df: pd.DataFrame) -> ExtractorT:
+    def extract_cached(self, df: pd.DataFrame, name: str) -> ExtractorT:
         """Instantiate an object from a cached DataFrame."""
 
     def extract(self, name: str) -> ExtractorT:
@@ -51,7 +51,7 @@ class BaseExtractor(ABC, Generic[ExtractorT]):
         with timed(L.debug, f"Extracting {name}") as messages:
             df = self._repo.cache_manager.load_repo(name)
             if df is not None:
-                instance = self.extract_cached(df)
+                instance = self.extract_cached(df, name)
             else:
                 instance = self.extract_new()
             assert instance is not None, "The extraction didn't return a valid instance."
@@ -73,9 +73,12 @@ class SimulationsExtractor(BaseExtractor[Simulations]):
             query=self._repo.simulations_filter,
         )
 
-    def extract_cached(self, df: pd.DataFrame) -> Simulations:
+    def extract_cached(self, df: pd.DataFrame, name: str) -> Simulations:
         """Instantiate an object from a cached DataFrame."""
-        return Simulations.from_pandas(df, query=self._repo.simulations_filter, cached=True)
+        query = None
+        if self._repo.needs_filter(name):
+            query = self._repo.simulations_filter
+        return Simulations.from_pandas(df, query=query, cached=True)
 
 
 class NeuronsExtractor(BaseExtractor[Neurons]):
@@ -88,10 +91,10 @@ class NeuronsExtractor(BaseExtractor[Neurons]):
             neuron_classes=self._repo.extraction_config.neuron_classes,
         )
 
-    def extract_cached(self, df: pd.DataFrame) -> Neurons:
+    def extract_cached(self, df: pd.DataFrame, name: str) -> Neurons:
         """Instantiate an object from a cached DataFrame."""
-        query = {}
-        if self._repo.simulations_filter:
+        query = None
+        if self._repo.needs_filter(name):
             selected_sims = self._repo.simulations.df.etl.q(simulation_id=self._repo.simulation_ids)
             query = {CIRCUIT_ID: sorted(set(selected_sims[CIRCUIT_ID]))}
         return Neurons.from_pandas(df, query=query, cached=True)
@@ -106,10 +109,10 @@ class NeuronClassesExtractor(BaseExtractor[NeuronClasses]):
             neurons=self._repo.neurons, neuron_classes=self._repo.extraction_config.neuron_classes
         )
 
-    def extract_cached(self, df: pd.DataFrame) -> NeuronClasses:
+    def extract_cached(self, df: pd.DataFrame, name: str) -> NeuronClasses:
         """Instantiate an object from a cached DataFrame."""
-        query = {}
-        if self._repo.simulations_filter:
+        query = None
+        if self._repo.needs_filter(name):
             selected_sims = self._repo.simulations.df.etl.q(simulation_id=self._repo.simulation_ids)
             query = {CIRCUIT_ID: sorted(set(selected_sims[CIRCUIT_ID]))}
         return NeuronClasses.from_pandas(df, query=query, cached=True)
@@ -128,10 +131,10 @@ class WindowsExtractor(BaseExtractor[Windows]):
             resolver=self._repo.resolver,
         )
 
-    def extract_cached(self, df: pd.DataFrame) -> Windows:
+    def extract_cached(self, df: pd.DataFrame, name: str) -> Windows:
         """Instantiate an object from a cached DataFrame."""
-        query = {}
-        if self._repo.simulations_filter:
+        query = None
+        if self._repo.needs_filter(name):
             query = {SIMULATION_ID: self._repo.simulation_ids}
         return Windows.from_pandas(df, query=query, cached=True)
 
@@ -149,10 +152,10 @@ class SpikesExtractor(BaseExtractor[Spikes]):
             name=self._repo.extraction_config.report.name,
         )
 
-    def extract_cached(self, df: pd.DataFrame) -> Spikes:
+    def extract_cached(self, df: pd.DataFrame, name: str) -> Spikes:
         """Instantiate an object from a cached DataFrame."""
-        query = {}
-        if self._repo.simulations_filter:
+        query = None
+        if self._repo.needs_filter(name):
             query = {SIMULATION_ID: self._repo.simulation_ids}
         return Spikes.from_pandas(df, query=query, cached=True)
 
@@ -170,10 +173,10 @@ class SomaReportExtractor(BaseExtractor[SomaReport]):
             name=self._repo.extraction_config.report.name,
         )
 
-    def extract_cached(self, df: pd.DataFrame) -> SomaReport:
+    def extract_cached(self, df: pd.DataFrame, name: str) -> SomaReport:
         """Instantiate an object from a cached DataFrame."""
-        query = {}
-        if self._repo.simulations_filter:
+        query = None
+        if self._repo.needs_filter(name):
             query = {SIMULATION_ID: self._repo.simulation_ids}
         return SomaReport.from_pandas(df, query=query, cached=True)
 
@@ -191,10 +194,10 @@ class CompartmentReportExtractor(BaseExtractor[CompartmentReport]):
             name=self._repo.extraction_config.report.name,
         )
 
-    def extract_cached(self, df: pd.DataFrame) -> CompartmentReport:
+    def extract_cached(self, df: pd.DataFrame, name: str) -> CompartmentReport:
         """Instantiate an object from a cached DataFrame."""
-        query = {}
-        if self._repo.simulations_filter:
+        query = None
+        if self._repo.needs_filter(name):
             query = {SIMULATION_ID: self._repo.simulation_ids}
         return CompartmentReport.from_pandas(df, query=query, cached=True)
 
@@ -374,6 +377,10 @@ class Repository:
         """Apply the given filter and return a new object."""
         return FilteredRepository(parent=self, simulations_filter=simulations_filter)
 
+    def needs_filter(self, name: str) -> bool:
+        """Return True if the repository needs to be filtered during the extraction."""
+        return bool(self.simulations_filter) and self.cache_manager.repo_cache_needs_filter(name)
+
 
 class FilteredRepository(Repository):
     """FilteredRepository class."""
@@ -396,5 +403,9 @@ class FilteredRepository(Repository):
         """Assign the repository properties from the given dict of DataFrames."""
         for name, df in dicts.items():
             assert name not in self.__dict__
-            value = self._mapping[name](self).extract_cached(df)
+            value = self._mapping[name](self).extract_cached(df, name)
             setattr(self, name, value)
+
+    def needs_filter(self, name: str) -> bool:
+        """Return True if the repository needs to be filtered during the extraction."""
+        return bool(self.simulations_filter)

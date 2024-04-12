@@ -285,9 +285,7 @@ class CacheManager:
             return False
 
         # check the criteria used to filter the simulations
-        actual_filter = self._analysis_configs.actual.simulations_filter
-        cached_filter = self._analysis_configs.cached.simulations_filter
-        if not is_subfilter(actual_filter, cached_filter):
+        if not self._is_subfilter(strict=False):
             # the filter is less specific, so the cache cannot be used
             self._invalidate_cached_checksums()
             return False
@@ -484,3 +482,40 @@ class CacheManager:
                 len(set(new_checksums).difference(old_checksums)) == 0
             ), "Some features have been found only in the new cached data"
         self._dump_cached_checksums()
+
+    def _is_subfilter(self, strict: bool) -> bool:
+        """Check whether the actual filter is more or less specific than the cached filter.
+
+        Args:
+            strict: affects the result only when the two filters Actual and Cached are equal.
+                If True, the filter Actual isn't considered a subfilter of Cached.
+                If False, the filter Actual is considered a subfilter of Cached.
+
+        Returns:
+            True if the actual filter is more specific than the cached filter.
+            False if the actual filter is less specific than the cached filter.
+        """
+        if not self._analysis_configs.cached:
+            return False
+        actual_filter = self._analysis_configs.actual.simulations_filter
+        cached_filter = self._analysis_configs.cached.simulations_filter
+        return is_subfilter(actual_filter, cached_filter, strict=strict)
+
+    @_raise_if(locked=False)
+    def repo_cache_needs_filter(self, name: str) -> bool:
+        """Return True if the cached repo needs to be filtered.
+
+        This happens when the cache is used, but the actual filter
+        is more specific than the cached filter.
+        """
+        return self.is_repo_cached(name) and self._is_subfilter(strict=True)
+
+    @_raise_if(locked=False)
+    def features_cache_needs_filter(self, features_config: FeaturesConfig) -> bool:
+        """Return True if the cached features need to be filtered.
+
+        This happens when the cache is used, but the actual filter
+        is more specific than the cached filter.
+        """
+        cached_checksums = self.get_cached_features_checksums(features_config)
+        return len(cached_checksums) > 0 and self._is_subfilter(strict=True)

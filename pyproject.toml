@@ -24,7 +24,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-    "blueetl-core>=0.1.0",
+    "blueetl-core>=0.2.3",
     "bluepysnap>=1.0.7",
     "click>=8",
     "jsonschema>=4.0",

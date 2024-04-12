@@ -30,7 +30,7 @@ class BaseModel(PydanticBaseModel):
     def json(self, *args, sort_keys=False, **kwargs):
         """Generate a JSON representation of the model, using by_alias=True by default."""
         # use json.dumps because model_dump_json in pydantic v2 doesn't support sort_keys
-        return json.dumps(self.dict(*args, **kwargs), sort_keys=sort_keys)
+        return json.dumps(self.dict(*args, **kwargs), sort_keys=sort_keys, default=str)
 
     def dump(self, path: Path) -> None:
         """Dump the model to file in yaml format."""
@@ -92,6 +92,7 @@ class TrialStepsConfig(BaseModel):
     node_sets_file: Optional[Path] = None
     node_sets_checksum: Optional[str] = None  # to invalidate the cache when the file changes
     limit: Optional[int] = None
+    base_path: Optional[Path] = None  # can be used in the function calculating the trial steps
 
     @model_validator(mode="after")
     def forbid_fields(self):

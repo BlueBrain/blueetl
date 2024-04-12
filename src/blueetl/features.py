@@ -267,8 +267,11 @@ class FeaturesCollection:
 
         def _process_cached_features(cached: list[FeaturesConfig]) -> None:
             for n, features_config in enumerate(cached, 1):
+                query = None
+                if self._repo.cache_manager.features_cache_needs_filter(features_config):
+                    query = {SIMULATION_ID: self._repo.simulation_ids}
                 df_dict = self.cache_manager.load_features(features_config=features_config)
-                features = _calculate_cached(features_config, df_dict)
+                features = _calculate_cached(features_config, df_dict, query=query)
                 _process_features(features_config, features)
                 _log_features(features, n, len(cached), features_config.id)
 
@@ -347,10 +350,12 @@ def _dataframes_to_features(
 
 
 def _calculate_cached(
-    features_config: FeaturesConfig, df_dict: dict[str, pd.DataFrame]
+    features_config: FeaturesConfig,
+    df_dict: dict[str, pd.DataFrame],
+    query: Optional[dict],
 ) -> dict[str, Feature]:
     """Load cached features from a dict of DataFrames."""
-    return _dataframes_to_features(df_dict, config=features_config, cached=True, query=None)
+    return _dataframes_to_features(df_dict, config=features_config, cached=True, query=query)
 
 
 def _calculate_new(

@@ -26,6 +26,7 @@ def repo(global_config):
     simulations_config = SimulationCampaign.load(global_config.simulation_campaign)
     extraction_config = global_config.analysis["spikes"].extraction
     cache_manager = PicklableMock(
+        is_repo_cached=PicklableMock(return_value=False),
         load_repo=PicklableMock(return_value=None),
         load_features=PicklableMock(return_value=None),
         get_cached_features_checksums=PicklableMock(return_value={}),

@@ -2,6 +2,7 @@
 
 import json
 import warnings
+from enum import Enum
 from pathlib import Path
 from typing import Annotated, Any, Optional, TypeVar, Union
 
@@ -45,6 +46,30 @@ class BaseModel(PydanticBaseModel):
     def checksum(self):
         """Calculate the checksum of the model."""
         return checksum_str(self.json(sort_keys=True))
+
+
+class StoreTypeEnum(str, Enum):
+    """StoreType Enumeration."""
+
+    parquet = "parquet"
+    feather = "feather"
+
+
+class CacheConfig(BaseModel):
+    """CacheConfig Model."""
+
+    path: Path
+    clear: bool = False
+    readonly: bool = False
+    skip_features: bool = False
+    store_type: StoreTypeEnum = StoreTypeEnum.parquet
+
+    @model_validator(mode="after")
+    def validate_values(self):
+        """Validate the values after loading them."""
+        if self.clear and self.readonly:
+            raise ValueError("clear and readonly cannot be both True at the same time")
+        return self
 
 
 class ReportConfig(BaseModel):
@@ -156,7 +181,6 @@ class FeaturesConfig(BaseModel):
 class SingleAnalysisConfig(BaseModel):
     """SingleAnalysisConfig Model."""
 
-    output: Optional[Path] = None
     simulations_filter: dict[str, Any] = {}
     simulations_filter_in_memory: dict[str, Any] = {}
     extraction: ExtractionConfig
@@ -171,14 +195,21 @@ class SingleAnalysisConfig(BaseModel):
             item.id = i
         return lst
 
+    @model_validator(mode="before")
+    @classmethod
+    def handle_deprecated_fields(cls, data: Any) -> Any:
+        """Handle the deprecated fields."""
+        # needed to load any cached analysis configuration created with blueetl <= 0.8.2
+        data.pop("output", None)
+        return data
+
 
 class MultiAnalysisConfig(BaseModel):
     """MultiAnalysisConfig Model."""
 
     version: int
     simulation_campaign: Path
-    output: Path
-    clear_cache: Annotated[bool, Field(exclude=True)] = False  # do not consider in the checksum
+    cache: CacheConfig
     simulations_filter: dict[str, Any] = {}
     simulations_filter_in_memory: dict[str, Any] = {}
     analysis: dict[str, SingleAnalysisConfig]
@@ -193,6 +224,23 @@ class MultiAnalysisConfig(BaseModel):
         if version != CONFIG_VERSION:
             warnings.warn(f"version {version} is deprecated, see the docs to update the config")
         return version
+
+    @model_validator(mode="before")
+    @classmethod
+    def handle_deprecated_fields(cls, data: Any) -> Any:
+        """Handle the deprecated fields."""
+        cache_config = data.setdefault("cache", {})
+        if (value := data.pop("output", None)) is not None:
+            if "path" in cache_config:
+                raise ValueError("output must be removed when path is defined")
+            warnings.warn("output is deprecated, use cache.path instead")
+            cache_config["path"] = value
+        if (value := data.pop("clear_cache", None)) is not None:
+            if "clear_cache" in cache_config:
+                raise ValueError("clear_cache must be removed when clear is defined")
+            warnings.warn("clear_cache is deprecated, use cache.clear instead")
+            cache_config["clear"] = value
+        return data
 
 
 if __name__ == "__main__":

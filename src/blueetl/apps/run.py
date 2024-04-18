@@ -17,14 +17,29 @@ from blueetl.analysis import run_from_file
 @click.option("--show/--no-show", help="Show repository and features dataframes.")
 @click.option(
     "--clear-cache/--no-clear-cache",
-    help="If specified, force clearing or keeping the cache, regardless of the configuration file.",
+    help="If True, force clearing the cache.",
+    default=None,
+)
+@click.option(
+    "--readonly-cache/--no-readonly-cache",
+    help="If True, use the existing cache if possible, or raise an error if not.",
     default=None,
 )
 @click.option("-i", "--interactive/--no-interactive", help="Start an interactive IPython shell.")
 @click.option("-v", "--verbose", count=True, help="-v for INFO, -vv for DEBUG")
-def run(analysis_config_file, seed, extract, calculate, show, clear_cache, interactive, verbose):
+def run(
+    analysis_config_file,
+    seed,
+    extract,
+    calculate,
+    show,
+    clear_cache,
+    readonly_cache,
+    interactive,
+    verbose,
+):
     """Run the analysis."""
-    # pylint: disable=unused-variable,unused-import,import-outside-toplevel
+    # pylint: disable=unused-variable,unused-import,import-outside-toplevel,too-many-arguments
     loglevel = (logging.WARNING, logging.INFO, logging.DEBUG)[min(verbose, 2)]
     # assign the result to a local variable to make it available in the interactive shell
     ma = run_from_file(  # noqa
@@ -34,6 +49,7 @@ def run(analysis_config_file, seed, extract, calculate, show, clear_cache, inter
         calculate=calculate,
         show=show,
         clear_cache=clear_cache,
+        readonly_cache=readonly_cache,
         loglevel=loglevel,
     )
     if interactive:

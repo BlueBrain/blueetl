@@ -1,6 +1,23 @@
 Changelog
 =========
 
+Version 0.9.0
+-------------
+
+New Features
+~~~~~~~~~~~~
+
+- Add ``cache.readonly``, to be able to use an existing cache without exclusive locking [NSETM-2310].
+- Add ``cache.store_type``, to change the file format (experimental).
+- Add ``cache.skip_features``, to skip writing the features DataFrames (not implemented yet).
+
+Deprecations
+~~~~~~~~~~~~
+
+- Deprecate ``output``, use ``cache.path`` instead.
+- Deprecate ``clear_cache``, use ``cache.clear`` instead.
+
+
 Version 0.8.3
 -------------
 

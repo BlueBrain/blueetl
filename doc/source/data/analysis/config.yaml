@@ -1,7 +1,8 @@
 # simple configuration with extraction and analysis, and combination of parameters
-version: 3
+version: 4
 simulation_campaign: ../simulation-campaign/config.json
-output: analysis_output
+cache:
+  path: analysis_output
 analysis:
   spikes:
     extraction:

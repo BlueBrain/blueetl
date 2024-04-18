@@ -1,0 +1,32 @@
+From 0.8.x to 0.9.x (v4)
+------------------------
+
+BlueETL 0.9.x introduces some changes in the configuration (v4), but it's backward compatible with the configuration used in 0.8.x (v3).
+
+1. The ``version`` should be set to ``4``.
+
+2. The following fields have been deprecated and should be replaced, because they will be removed in a future version:
+
+   - ``output``: use ``cache.path`` instead
+   - ``clear_cache``: use ``cache.clear`` instead
+
+For example, if the old configuration contains::
+
+    version: 3
+    simulation_campaign: /path/to/config.json
+    output: analysis_output
+    clear_cache: true
+    ...
+
+then it should be replaced with::
+
+    version: 4
+    simulation_campaign: /path/to/config.json
+    cache:
+      path: analysis_output
+      clear: true
+    ...
+
+You can see an example of configuration in the new format here:
+
+- https://github.com/BlueBrain/blueetl/blob/blueetl-v0.9.0/tests/functional/data/sonata/config/analysis_config_01.yaml

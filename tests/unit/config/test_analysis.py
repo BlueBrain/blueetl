@@ -187,5 +187,7 @@ def test_config__resolve_features_error():
 def test_init_multi_analysis_configuration(config_file):
     config_dict = load_yaml(config_file)
     base_path = config_file.parent
-    result = test_module.init_multi_analysis_configuration(config_dict, base_path=base_path)
+    result = test_module.init_multi_analysis_configuration(
+        config_dict, base_path=base_path, extra_params={}
+    )
     assert isinstance(result, MultiAnalysisConfig)

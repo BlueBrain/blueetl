@@ -14,16 +14,18 @@ properties:
     format: path
   output:
     title: Output
-    description: |
-      Path to the output folder, used to store the generated files.
-      If the directory is not empty, its content can be loaded as cache, or it can be automatically deleted if invalid.
+    description: Deprecated, use ``cache.path`` instead.
     type: string
     format: path
+    deprecated: true
   clear_cache:
     title: Clear Cache
-    description: If True, remove any existing cache in the output folder; if False, reuse the existing cache if possible.
+    description: Deprecated, use ``cache.clear`` instead.
     type: boolean
     default: "false"
+    deprecated: true
+  cache:
+    $ref: '#/$defs/CacheConfig'
   simulations_filter:
     title: Simulations Filter
     description: |
@@ -65,20 +67,57 @@ properties:
 required:
 - version
 - simulation_campaign
-- output
 - analysis
 additionalProperties: false
 $defs:
+  CacheConfig:
+    title: CacheConfig
+    description: CacheConfig Model.
+    type: object
+    properties:
+      path:
+        title: Cache Path
+        description: |
+          Path to the cache folder, used to store the generated files.
+          If the directory is not empty, its content is loaded in the cache if valid, or it's automatically deleted.
+        type: string
+        format: path
+      clear:
+        title: Cache Clear
+        description: |
+          If True, remove any existing cache.
+          If False, reuse the existing cache if possible.
+        type: boolean
+        default: "false"
+      readonly:
+        title: Cache Read-Only
+        description: |
+          If True, use the existing cache if possible, or raise an error.
+          If False, use the existing cache if possible, or update it.
+          It can be used to prevent accidental updates, or to read the same cache from
+          multiple processes, since the lock is shared and not exclusive in this case.
+        type: boolean
+        default: "false"
+      skip_features:
+        title: Skip features
+        description: |
+          Do not write the features files in the cache folder.
+          It can be useful to shorten the execution time when experimenting with different parameters, since writing big DataFrames can take some time.
+        type: boolean
+        default: "false"
+      store_type:
+        title: Store Type
+        description: Name of the format used to store the files in the cache folder (experimental).
+        enum:
+        - parquet
+        - feather
+        default: parquet
+    additionalProperties: false
   SingleAnalysisConfig:
     title: SingleAnalysisConfig
     description: SingleAnalysisConfig Model.
     type: object
     properties:
-      output:
-        title: Output
-        description: Reserved field, it should be set only at the top level.
-        type: string
-        format: path
       simulations_filter:
         title: Simulations Filter
         description: Reserved field, it should be set only at the top level.

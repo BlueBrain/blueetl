@@ -1,8 +1,9 @@
 ---
-version: 3
+version: 4
 simulation_campaign: ../simulation_campaign/config_01_relative_bbp_workflow.json
 simulations_filter: {seed: [334630, 174404]}
-output: analysis_output
+cache:
+  path: analysis_output
 analysis:
   spikes:
     extraction:

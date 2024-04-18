@@ -1,10 +1,11 @@
 ---
 # configuration with simulations_filter and a window with trial_steps
-version: 3
+version: 4
 simulation_campaign: /gpfs/bbp.cscs.ch/project/proj12/NSE/blueetl/data/sim-campaign-sonata/a04addca-bda3-47d7-ad2d-c41187252a2b/config.json
-output: analysis_output
 simulations_filter:
   seed: 201209
+cache:
+  path: analysis_output
 analysis:
   spikes:
     extraction:

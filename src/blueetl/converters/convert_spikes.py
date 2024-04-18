@@ -251,7 +251,9 @@ def _write_analysis_config(path: Path, simulation_campaign_config_path: Path) ->
     analysis_config = {
         "version": 3,
         "simulation_campaign": simulation_campaign,
-        "output": "analysis",
+        "cache": {
+            "path": "analysis",
+        },
         "analysis": {
             "spikes": {
                 "extraction": {

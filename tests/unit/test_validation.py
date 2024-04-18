@@ -12,13 +12,19 @@ def test_read_schema():
     "analysis_config",
     [
         {
-            "version": 2,
+            "version": 3,
             "simulation_campaign": "/path/to/simulation/campaign",
             "output": "/path/to/output",
             "analysis": {},
         },
         {
-            "version": 2,
+            "version": 4,
+            "simulation_campaign": "/path/to/simulation/campaign",
+            "cache": {"path": "/path/to/output"},
+            "analysis": {},
+        },
+        {
+            "version": 3,
             "simulation_campaign": "/path/to/simulation/campaign",
             "output": "/path/to/output",
             "analysis": {
@@ -44,7 +50,7 @@ def test_validate_config(analysis_config):
     [
         {},
         {
-            "version": 2,
+            "version": 3,
             "simulation_campaign": "/path/to/simulation/campaign",
             "output": "/path/to/output",
             "analysis": {

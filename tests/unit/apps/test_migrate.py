@@ -42,7 +42,7 @@ def test_migrate_config(tmp_path):
         "version": CONFIG_VERSION,
         "simulation_campaign": "/path/to/config.json",
         "simulations_filter_in_memory": {"simulation_id": 2},
-        "output": "output_dir",
+        "cache": {"path": "output_dir"},
         "analysis": {
             "spikes": {
                 "extraction": {

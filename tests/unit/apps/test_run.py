@@ -9,17 +9,19 @@ from click.testing import CliRunner
 from blueetl.apps import run as test_module
 
 
+@pytest.mark.parametrize("readonly_cache", [True, False, None])
 @pytest.mark.parametrize("clear_cache", [True, False, None])
 @pytest.mark.parametrize("show", [True, False])
 @pytest.mark.parametrize("calculate", [True, False])
 @pytest.mark.parametrize("extract", [True, False])
 @patch(test_module.__name__ + ".run_from_file")
-def test_run(mock_run_from_file, tmp_path, extract, calculate, show, clear_cache):
+def test_run(mock_run_from_file, tmp_path, extract, calculate, show, clear_cache, readonly_cache):
     options_dict = {
         "extract": extract,
         "calculate": calculate,
         "show": show,
         "clear-cache": clear_cache,
+        "readonly-cache": readonly_cache,
     }
     options = [f"--{k}" if v else f"--no-{k}" for k, v in options_dict.items() if v is not None]
     analysis_config_file = "config.yaml"
@@ -38,6 +40,7 @@ def test_run(mock_run_from_file, tmp_path, extract, calculate, show, clear_cache
         calculate=calculate,
         show=show,
         clear_cache=clear_cache,
+        readonly_cache=readonly_cache,
         loglevel=logging.DEBUG,
     )
 

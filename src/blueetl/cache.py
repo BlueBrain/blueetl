@@ -5,6 +5,7 @@ import fcntl
 import logging
 import os
 import shutil
+from abc import abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import wraps
@@ -59,17 +60,20 @@ class LockManagerProtocol(Protocol):
     """Lock Manager Interface."""
 
     @property
+    @abstractmethod
     def locked(self) -> bool:
         """Return the lock status."""
 
+    @abstractmethod
     def lock(self, mode: int) -> None:
         """Lock."""
 
+    @abstractmethod
     def unlock(self) -> None:
         """Unlock."""
 
 
-class LockManager:
+class LockManager(LockManagerProtocol):
     """Lock Manager.
 
     On Linux, the flock call is handled locally, and the underlying filesystem (GPFS) does not get
@@ -119,7 +123,7 @@ class LockManager:
             self._fd = None
 
 
-class DummyLockManager:
+class DummyLockManager(LockManagerProtocol):
     """Dummy Lock Manager."""
 
     @property

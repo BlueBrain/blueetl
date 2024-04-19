@@ -12,9 +12,9 @@
    configuration
    features
    components
-   migration
    notebooks
    api
+   migration
    changelog
 
 .. |banner| image:: /_images/BlueETL.jpeg

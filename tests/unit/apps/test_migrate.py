@@ -5,6 +5,12 @@ from blueetl.constants import CONFIG_VERSION
 from blueetl.utils import dump_yaml, load_yaml
 
 
+def test_supported_version():
+    assert (
+        test_module.MIGRATION_CONFIG_VERSION == CONFIG_VERSION
+    ), "The migration script needs to be updated to support the current configuration version"
+
+
 def test_migrate_config(tmp_path):
     input_config_file = "input_config.yaml"
     output_config_file = "output_config.yaml"

@@ -1,6 +1,7 @@
 """Analysis Configuration Models."""
 
 import json
+import warnings
 from pathlib import Path
 from typing import Annotated, Any, Optional, TypeVar, Union
 
@@ -8,7 +9,7 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
 from pydantic.functional_validators import field_validator, model_validator
 
-from blueetl.constants import CONFIG_VERSION
+from blueetl.constants import CONFIG_VERSION, MIN_SUPPORTED_CONFIG_VERSION
 from blueetl.utils import checksum_str, dump_yaml, load_yaml
 
 BaseModelT = TypeVar("BaseModelT", bound="BaseModel")
@@ -160,7 +161,7 @@ class SingleAnalysisConfig(BaseModel):
     simulations_filter_in_memory: dict[str, Any] = {}
     extraction: ExtractionConfig
     features: list[FeaturesConfig] = []
-    custom: dict[str, Any] = {}
+    custom: Annotated[dict[str, Any], Field(exclude=True)] = {}  # do not dump to file
 
     @field_validator("features")
     @classmethod
@@ -181,14 +182,16 @@ class MultiAnalysisConfig(BaseModel):
     simulations_filter: dict[str, Any] = {}
     simulations_filter_in_memory: dict[str, Any] = {}
     analysis: dict[str, SingleAnalysisConfig]
-    custom: dict[str, Any] = {}
+    custom: Annotated[dict[str, Any], Field(exclude=True)] = {}  # do not dump to file
 
     @field_validator("version")
     @classmethod
     def version_match(cls, version):
         """Verify that the config version is supported."""
+        if version < MIN_SUPPORTED_CONFIG_VERSION:
+            raise ValueError(f"Config version {version} is not supported.")
         if version != CONFIG_VERSION:
-            raise ValueError(f"Only config version {CONFIG_VERSION} is supported.")
+            warnings.warn(f"version {version} is deprecated, see the docs to update the config")
         return version
 
 

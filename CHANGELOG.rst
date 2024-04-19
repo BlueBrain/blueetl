@@ -15,6 +15,8 @@ Improvements
 - Filter features only when ``apply_filter`` is called to save some time, but ensure that repo and features are filtered when they are loaded from the cache using a more restrictive filter.
 - Improve logging in ``blueetl.utils.timed()``.
 - Improve tests coverage.
+- Split migration documentation.
+- Add ``--sort/--no-sort`` option to ``blueetl migrate-config`` to sort the root keys of the converted configuration.
 
 Version 0.8.2
 -------------

@@ -9,6 +9,9 @@ from blueetl import validation
 from blueetl.constants import CONFIG_VERSION
 from blueetl.utils import dump_yaml, load_yaml
 
+# it should always match CONFIG_VERSION if the script supports the current version
+MIGRATION_CONFIG_VERSION = 3
+
 
 def _safe_set(d, key, value):
     """Set the value in the given dict, or raise if it already exists."""
@@ -24,7 +27,7 @@ def _rename_key(d, old, new):
 
 
 def _migrate_v1_to_v2(input_config):
-    """Migrate the configuration from v1 (0.1.x) to v2 (0.2.x)."""
+    """Migrate the configuration from v1 (BlueETL 0.1.x) to v2 (BlueETL 0.2.x)."""
 
     def _process_extraction(extraction):
         for neuron_class in extraction["neuron_classes"].values():
@@ -58,7 +61,7 @@ def _migrate_v1_to_v2(input_config):
 
 
 def _migrate_v2_to_v3(input_config):
-    """Migrate the configuration from v2 (0.2.x) to v3 (0.3.x)."""
+    """Migrate the configuration from v2 (BlueETL 0.2.x) to v3 (BlueETL 0.3.x)."""
     output_config = deepcopy(input_config)
     output_config["version"] = 3
     for analysis in output_config["analysis"].values():
@@ -78,12 +81,26 @@ def _migrate_v2_to_v3(input_config):
     return output_config
 
 
+def _sort_root_keys(input_config):
+    root_keys = [
+        "version",
+        "simulation_campaign",
+        "simulations_filter",
+        "simulations_filter_in_memory",
+        "output",
+        "analysis",
+        "custom",
+    ]
+    output_config = {k: input_config.pop(k) for k in root_keys if k in input_config}
+    return output_config | input_config
+
+
 @click.command()
+@click.option("--sort/--no-sort", help="Sort the root keys.", default=True, show_default=True)
 @click.argument("input_config_file", type=click.Path(exists=True))
 @click.argument("output_config_file", type=click.Path(exists=False))
-def migrate_config(input_config_file, output_config_file):
+def migrate_config(input_config_file, output_config_file, sort):
     """Migrate a configuration file."""
-    assert CONFIG_VERSION == 3, "The migration script isn't up to date."
     config = load_yaml(input_config_file)
     version = config.get("version", 1)
     if not isinstance(version, int) or version < 1 or version > CONFIG_VERSION:
@@ -95,6 +112,8 @@ def migrate_config(input_config_file, output_config_file):
         config = _migrate_v2_to_v3(config)
     if version == CONFIG_VERSION:
         click.secho(f"The config version {version} doesn't need to be migrated.", fg="yellow")
+    if sort:
+        config = _sort_root_keys(config)
     validation.validate_config(config, schema=validation.read_schema("analysis_config"))
     dump_yaml(output_config_file, config, default_style="", default_flow_style=None)
     click.secho(f"The converted configuration has been saved to {output_config_file}.", fg="green")

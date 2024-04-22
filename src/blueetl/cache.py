@@ -169,13 +169,15 @@ class CacheManager:
         }
         store_class = store_classes[cache_config.store_type]
 
-        self.readonly = cache_config.readonly
+        self._readonly = cache_config.readonly
+        self._skip_features = cache_config.skip_features
+
         self._version = 1
         self._repo_store = store_class(repo_dir)
         self._features_store = store_class(features_dir)
 
         self._lock_manager: LockManagerProtocol = LockManager(self._output_dir)
-        self._lock_manager.lock(mode=LockManager.LOCK_SH if self.readonly else LockManager.LOCK_EX)
+        self._lock_manager.lock(mode=LockManager.LOCK_SH if self._readonly else LockManager.LOCK_EX)
 
         self._cached_analysis_config_path = config_dir / "analysis_config.cached.yaml"
         self._cached_simulations_config_path = config_dir / "simulations_config.cached.yaml"
@@ -205,7 +207,7 @@ class CacheManager:
         """Set the object state when the object is unpickled."""
         self.__dict__.update(state)
         # The unpickled object must always be readonly, even when the pickled object isn't.
-        self.readonly = True
+        self._readonly = True
         # A new lock isn't created in the subprocess b/c we want to be able to read the cache.
         self._lock_manager = DummyLockManager()
 
@@ -220,6 +222,11 @@ class CacheManager:
         After calling this method, the Cache Manager instance shouldn't be used anymore.
         """
         self._lock_manager.unlock()
+
+    @property
+    def readonly(self) -> bool:
+        """Return True if the cache manager is set to read-only, False otherwise."""
+        return self._readonly
 
     @_raise_if(locked=False)
     def to_readonly(self) -> "CacheManager":
@@ -539,6 +546,9 @@ class CacheManager:
             features_dict: dict of features to be written.
             features_config: configuration dict of the features to be written.
         """
+        if self._skip_features:
+            L.info("Skipping writing features to cache")
+            return
         config_checksum = features_config.checksum()
         old_checksums = self._cached_checksums["features"].pop(config_checksum, None)
         new_checksums = self._cached_checksums["features"][config_checksum] = {}

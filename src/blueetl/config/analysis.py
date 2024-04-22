@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from copy import deepcopy
 from itertools import chain
 from pathlib import Path
-from typing import Any, NamedTuple, Union
+from typing import Any, NamedTuple, Optional, Union
 
 from blueetl.config.analysis_model import (
     FeaturesConfig,
@@ -28,6 +28,8 @@ def _override_params(global_config: dict[str, Any], extra_params: dict[str, Any]
         cache_config["clear"] = value
     if (value := extra_params.get("readonly_cache")) is not None:
         cache_config["readonly"] = value
+    if (value := extra_params.get("skip_features_cache")) is not None:
+        cache_config["skip_features"] = value
     return global_config
 
 
@@ -176,10 +178,10 @@ def _resolve_analysis_configs(global_config: MultiAnalysisConfig) -> None:
 
 
 def init_multi_analysis_configuration(
-    global_config: dict, base_path: Path, extra_params: dict[str, Any]
+    global_config: dict, base_path: Path, extra_params: Optional[dict[str, Any]]
 ) -> MultiAnalysisConfig:
     """Return a config object from a config dict."""
-    global_config = _override_params(global_config, extra_params)
+    global_config = _override_params(global_config, extra_params or {})
     validate_config(global_config, schema=read_schema("analysis_config"))
     config = MultiAnalysisConfig.model_validate(global_config)
     _resolve_paths(config, base_path=base_path)

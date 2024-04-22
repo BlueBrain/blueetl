@@ -25,6 +25,11 @@ from blueetl.analysis import run_from_file
     help="If True, use the existing cache if possible, or raise an error if not.",
     default=None,
 )
+@click.option(
+    "--skip-features-cache/--no-skip-features-cache",
+    help="If True, do not write the features to the cache.",
+    default=None,
+)
 @click.option("-i", "--interactive/--no-interactive", help="Start an interactive IPython shell.")
 @click.option("-v", "--verbose", count=True, help="-v for INFO, -vv for DEBUG")
 def run(
@@ -35,11 +40,12 @@ def run(
     show,
     clear_cache,
     readonly_cache,
+    skip_features_cache,
     interactive,
     verbose,
 ):
     """Run the analysis."""
-    # pylint: disable=unused-variable,unused-import,import-outside-toplevel,too-many-arguments
+    # pylint: disable=unused-variable,unused-import,import-outside-toplevel,too-many-arguments,too-many-locals
     loglevel = (logging.WARNING, logging.INFO, logging.DEBUG)[min(verbose, 2)]
     # assign the result to a local variable to make it available in the interactive shell
     ma = run_from_file(  # noqa
@@ -50,6 +56,7 @@ def run(
         show=show,
         clear_cache=clear_cache,
         readonly_cache=readonly_cache,
+        skip_features_cache=skip_features_cache,
         loglevel=loglevel,
     )
     if interactive:

@@ -10,7 +10,7 @@ from blueetl.constants import CONFIG_VERSION
 from blueetl.utils import dump_yaml, load_yaml
 
 # it should always match CONFIG_VERSION if the script supports the current version
-MIGRATION_CONFIG_VERSION = 3
+MIGRATION_CONFIG_VERSION = 4
 
 
 def _safe_set(d, key, value):
@@ -81,13 +81,25 @@ def _migrate_v2_to_v3(input_config):
     return output_config
 
 
+def _migrate_v3_to_v4(input_config):
+    """Migrate the configuration from v3 (BlueETL 0.8.x) to v4 (BlueETL 0.9.x)."""
+    output_config = deepcopy(input_config)
+    output_config["version"] = 4
+    cache_config = output_config.setdefault("cache", {})
+    if (value := output_config.pop("output", None)) is not None:
+        _safe_set(cache_config, "path", value)
+    if (value := output_config.pop("clear_cache", None)) is not None:
+        _safe_set(cache_config, "clear", value)
+    return output_config
+
+
 def _sort_root_keys(input_config):
     root_keys = [
         "version",
         "simulation_campaign",
         "simulations_filter",
         "simulations_filter_in_memory",
-        "output",
+        "cache",
         "analysis",
         "custom",
     ]
@@ -110,6 +122,8 @@ def migrate_config(input_config_file, output_config_file, sort):
         config = _migrate_v1_to_v2(config)
     if version <= 2:
         config = _migrate_v2_to_v3(config)
+    if version <= 3:
+        config = _migrate_v3_to_v4(config)
     if version == CONFIG_VERSION:
         click.secho(f"The config version {version} doesn't need to be migrated.", fg="yellow")
     if sort:

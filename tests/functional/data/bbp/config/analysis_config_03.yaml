@@ -1,7 +1,8 @@
 # configuration where neuron classes are specified using subtargets
-version: 3
+version: 4
 simulation_campaign: /gpfs/bbp.cscs.ch/project/proj12/NSE/blueetl/data/sim-campaign-bluepy/11567ba9-57fa-41ec-ac7b-d727ec4e65f3/config.json
-output: analysis_output
+cache:
+  path: analysis_output
 analysis:
   spikes:
     extraction:

@@ -16,9 +16,11 @@ def lazy_fixture(request):
 
 
 @pytest.fixture
-def global_config():
+def global_config(tmp_path):
     config_path = TEST_DATA_PATH / "analysis" / "analysis_config_01_relative.yaml"
-    return init_multi_analysis_configuration(load_yaml(config_path), config_path.parent)
+    config_dict = load_yaml(config_path)
+    config_dict["cache"]["path"] = str(tmp_path / "analysis_output")
+    return init_multi_analysis_configuration(config_dict, config_path.parent, extra_params={})
 
 
 @pytest.fixture

@@ -2,7 +2,6 @@
 
 import gc
 import logging
-from copy import deepcopy
 from pathlib import Path
 from typing import Any, NamedTuple, Optional
 
@@ -12,7 +11,7 @@ import pandas as pd
 from blueetl.cache import CacheManager
 from blueetl.campaign.config import SimulationCampaign
 from blueetl.config.analysis import init_multi_analysis_configuration
-from blueetl.config.analysis_model import MultiAnalysisConfig, SingleAnalysisConfig
+from blueetl.config.analysis_model import CacheConfig, MultiAnalysisConfig, SingleAnalysisConfig
 from blueetl.features import FeaturesCollection
 from blueetl.repository import Repository
 from blueetl.resolver import AttrResolver, Resolver
@@ -47,21 +46,21 @@ class Analyzer:
         cls,
         analysis_config: SingleAnalysisConfig,
         simulations_config: SimulationCampaign,
+        cache_config: CacheConfig,
         resolver: Resolver,
-        clear_cache: bool = False,
     ) -> "Analyzer":
         """Initialize the Analyzer from the given configuration.
 
         Args:
             analysis_config: analysis configuration.
             simulations_config: simulation campaign configuration.
+            cache_config: cache configuration.
             resolver: resolver instance.
-            clear_cache: if True, remove any existing cache.
         """
         cache_manager = CacheManager(
+            cache_config=cache_config,
             analysis_config=analysis_config,
             simulations_config=simulations_config,
-            clear_cache=clear_cache,
         )
         repo = Repository(
             simulations_config=simulations_config,
@@ -193,19 +192,18 @@ class MultiAnalyzer:
         cls,
         global_config: dict,
         base_path: StrOrPath,
-        clear_cache: Optional[bool] = None,
+        extra_params: dict[str, Any],
     ) -> "MultiAnalyzer":
         """Initialize the MultiAnalyzer from the given configuration.
 
         Args:
             global_config: analysis configuration.
             base_path: base path used to resolve relative paths in the configuration.
-            clear_cache: if True, remove any existing cache; if False, reuse the existing cache;
-                if None, use the value from the configuration file.
+            extra_params: dict of overriding parameters.
         """
-        global_config = init_multi_analysis_configuration(global_config, Path(base_path))
-        if clear_cache is not None:
-            global_config.clear_cache = clear_cache
+        global_config = init_multi_analysis_configuration(
+            global_config, base_path=Path(base_path), extra_params=extra_params
+        )
         return cls(global_config=global_config)
 
     def _init_analyzers(self) -> dict[str, Analyzer]:
@@ -216,19 +214,21 @@ class MultiAnalyzer:
             name: Analyzer.from_config(
                 analysis_config=analysis_config,
                 simulations_config=simulations_config,
+                cache_config=self.global_config.cache.model_copy(
+                    update={"path": self.global_config.cache.path / name}
+                ),
                 resolver=resolver,
-                clear_cache=self.global_config.clear_cache,
             )
             for name, analysis_config in self.global_config.analysis.items()
         }
 
     @classmethod
-    def from_file(cls, path: StrOrPath, clear_cache: Optional[bool] = None) -> "MultiAnalyzer":
+    def from_file(cls, path: StrOrPath, extra_params: dict[str, Any]) -> "MultiAnalyzer":
         """Return a new instance loaded using the given configuration file."""
         return cls.from_config(
             global_config=load_yaml(path),
             base_path=Path(path).parent,
-            clear_cache=clear_cache,
+            extra_params=extra_params,
         )
 
     @property
@@ -316,7 +316,10 @@ class MultiAnalyzer:
         if not simulations_filter:
             return self
         analyzers = {name: a.apply_filter(simulations_filter) for name, a in self.analyzers.items()}
-        return MultiAnalyzer(global_config=deepcopy(self.global_config), analyzers=analyzers)
+        return MultiAnalyzer(
+            global_config=self.global_config.model_copy(deep=True),
+            analyzers=analyzers,
+        )
 
     def show(self):
         """Print all the DataFrames."""
@@ -333,6 +336,7 @@ def run_from_file(
     calculate: bool = True,
     show: bool = False,
     clear_cache: Optional[bool] = None,
+    readonly_cache: Optional[bool] = None,
     loglevel: Optional[int] = None,
 ) -> MultiAnalyzer:
     """Initialize and return the MultiAnalyzer.
@@ -343,8 +347,12 @@ def run_from_file(
         extract: if True, run the extraction of the repository.
         calculate: if True, run the calculation of the features.
         show: if True, show a short representation of all the Pandas DataFrames, mainly for debug.
-        clear_cache: if True, remove any existing cache; if False, reuse the existing cache;
-            if None, use the value from the configuration file.
+        clear_cache: if None, use the value from the configuration file. Otherwise:
+            if True, remove any existing cache;
+            if False, reuse the existing cache if possible.
+        readonly_cache: if None, use the value from the configuration file. Otherwise:
+            if True, use the existing cache if possible, or raise an error;
+            if False, use the existing cache if possible, or update it.
         loglevel: if specified, used to set up logging.
 
     Returns:
@@ -355,7 +363,13 @@ def run_from_file(
     if seed is not None:
         np.random.seed(seed)
     L.info("MultiAnalyzer configuration: %s", analysis_config_file)
-    ma = MultiAnalyzer.from_file(analysis_config_file, clear_cache=clear_cache)
+    ma = MultiAnalyzer.from_file(
+        analysis_config_file,
+        extra_params={
+            "clear_cache": clear_cache,
+            "readonly_cache": readonly_cache,
+        },
+    )
     if extract:
         ma.extract_repo()
     if calculate:

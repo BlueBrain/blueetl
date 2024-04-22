@@ -1,21 +1,23 @@
 """Cache Manager."""
 
+import errno
 import fcntl
 import logging
 import os
 import shutil
+from abc import abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import wraps
-from pathlib import Path
-from typing import Generic, Optional, TypeVar
+from typing import Generic, Optional, Protocol, TypeVar
 
 import pandas as pd
 from blueetl_core.utils import is_subfilter
 
 from blueetl.campaign.config import SimulationCampaign
-from blueetl.config.analysis_model import FeaturesConfig, SingleAnalysisConfig
+from blueetl.config.analysis_model import CacheConfig, FeaturesConfig, SingleAnalysisConfig
 from blueetl.store.base import BaseStore
+from blueetl.store.feather import FeatherStore
 from blueetl.store.parquet import ParquetStore
 from blueetl.utils import dump_yaml, load_yaml
 
@@ -54,12 +56,32 @@ class CacheError(Exception):
     """Cache error raised when a read-only cache is written."""
 
 
-class LockManager:
+class LockManagerProtocol(Protocol):
+    """Lock Manager Interface."""
+
+    @property
+    @abstractmethod
+    def locked(self) -> bool:
+        """Return the lock status."""
+
+    @abstractmethod
+    def lock(self, mode: int) -> None:
+        """Lock."""
+
+    @abstractmethod
+    def unlock(self) -> None:
+        """Unlock."""
+
+
+class LockManager(LockManagerProtocol):
     """Lock Manager.
 
     On Linux, the flock call is handled locally, and the underlying filesystem (GPFS) does not get
     any notification that locks are being set. Therefore, GPFS cannot enforce locks across nodes.
     """
+
+    LOCK_EX = fcntl.LOCK_EX  # exclusive lock
+    LOCK_SH = fcntl.LOCK_SH  # shared lock
 
     def __init__(self, path: os.PathLike) -> None:
         """Initialize the object.
@@ -75,24 +97,45 @@ class LockManager:
         """Return True if the lock manager is locking the cache, False otherwise."""
         return self._fd is not None
 
-    def lock(self) -> None:
-        """Lock exclusively the directory."""
-        if self.locked:
-            return
-        self._fd = os.open(self._path, os.O_RDONLY)
+    def lock(self, mode: int) -> None:
+        """Lock the directory.
+
+        Args:
+            mode: LockManager.LOCK_EX for exclusive lock, or LockManager.LOCK_SH for shared lock.
+        """
+        if self._fd is None:
+            self._fd = os.open(self._path, os.O_RDONLY)
         try:
-            fcntl.flock(self._fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except OSError:
+            fcntl.flock(self._fd, mode | fcntl.LOCK_NB)
+        except OSError as ex:
             os.close(self._fd)
             self._fd = None
-            raise CacheError(f"Another process is locking {self._path}") from None
+            if ex.errno in (errno.EACCES, errno.EAGAIN):
+                # the lock cannot be acquired
+                raise CacheError(f"Another process is locking {self._path}") from None
+            # re-raise any other type of OSError
+            raise
 
     def unlock(self) -> None:
         """Unlock the directory."""
-        if not self.locked:
-            return
-        os.close(self._fd)  # type: ignore[arg-type]
-        self._fd = None
+        if self._fd is not None:
+            os.close(self._fd)
+            self._fd = None
+
+
+class DummyLockManager(LockManagerProtocol):
+    """Dummy Lock Manager."""
+
+    @property
+    def locked(self) -> bool:
+        """Always return True."""
+        return True
+
+    def lock(self, mode: int) -> None:
+        """Pretend to lock."""
+
+    def unlock(self) -> None:
+        """Pretend to unlock."""
 
 
 class CacheManager:
@@ -100,22 +143,19 @@ class CacheManager:
 
     def __init__(
         self,
+        cache_config: CacheConfig,
         analysis_config: SingleAnalysisConfig,
         simulations_config: SimulationCampaign,
-        store_class: type[BaseStore] = ParquetStore,
-        clear_cache: bool = False,
     ) -> None:
         """Initialize the object.
 
         Args:
+            cache_config: cache configuration dict.
             analysis_config: analysis configuration dict.
             simulations_config: simulations campaign configuration.
-            store_class: class to be used to load and dump the cached dataframes.
-            clear_cache: if True, remove any existing cache.
         """
-        assert analysis_config.output is not None
-        self._output_dir = Path(analysis_config.output)
-        if clear_cache:
+        self._output_dir = cache_config.path
+        if cache_config.clear:
             self._clear_cache()
         repo_dir = self._output_dir / "repo"
         features_dir = self._output_dir / "features"
@@ -123,13 +163,19 @@ class CacheManager:
         for new_dir in repo_dir, features_dir, config_dir:
             new_dir.mkdir(exist_ok=True, parents=True)
 
-        self._lock_manager = LockManager(self._output_dir)
-        self._lock_manager.lock()
+        store_classes: dict[str, type[BaseStore]] = {
+            "parquet": ParquetStore,
+            "feather": FeatherStore,
+        }
+        store_class = store_classes[cache_config.store_type]
 
-        self.readonly = False
+        self.readonly = cache_config.readonly
         self._version = 1
         self._repo_store = store_class(repo_dir)
         self._features_store = store_class(features_dir)
+
+        self._lock_manager: LockManagerProtocol = LockManager(self._output_dir)
+        self._lock_manager.lock(mode=LockManager.LOCK_SH if self.readonly else LockManager.LOCK_EX)
 
         self._cached_analysis_config_path = config_dir / "analysis_config.cached.yaml"
         self._cached_simulations_config_path = config_dir / "simulations_config.cached.yaml"
@@ -151,6 +197,18 @@ class CacheManager:
         L.info("Removing cache if it exists: %s", self._output_dir)
         shutil.rmtree(self._output_dir, ignore_errors=True)
 
+    def __getstate__(self) -> dict:
+        """Get the object state when the object is pickled."""
+        return self.__dict__ | {"_lock_manager": None}
+
+    def __setstate__(self, state: dict) -> None:
+        """Set the object state when the object is unpickled."""
+        self.__dict__.update(state)
+        # The unpickled object must always be readonly, even when the pickled object isn't.
+        self.readonly = True
+        # A new lock isn't created in the subprocess b/c we want to be able to read the cache.
+        self._lock_manager = DummyLockManager()
+
     @property
     def locked(self) -> bool:
         """Return True if the cache manager is locking the cache, False otherwise."""
@@ -167,10 +225,11 @@ class CacheManager:
     def to_readonly(self) -> "CacheManager":
         """Return a read-only copy of the object.
 
-        The returned object will raise an exception if `dump_repo` or `dump_features` is called.
+        The returned object will raise an exception if any writing method is called.
         """
         obj = deepcopy(self)
-        obj.readonly = True
+        # readonly is always True because of __getstate__ and __setstate__
+        assert obj.readonly is True
         return obj
 
     def _load_cached_analysis_config(self) -> Optional[SingleAnalysisConfig]:
@@ -211,16 +270,19 @@ class CacheManager:
             }
         return checksums
 
+    @_raise_if(readonly=True)
     def _dump_analysis_config(self) -> None:
         """Write the cached analysis config to file."""
         path = self._cached_analysis_config_path
         self._analysis_configs.actual.dump(path)
 
+    @_raise_if(readonly=True)
     def _dump_simulations_config(self) -> None:
         """Write the cached simulations config to file."""
         path = self._cached_simulations_config_path
         self._simulations_configs.actual.dump(path)
 
+    @_raise_if(readonly=True)
     def _dump_cached_checksums(self) -> None:
         """Write the cached checksums to file."""
         path = self._cached_checksums_path
@@ -270,7 +332,7 @@ class CacheManager:
                 else:
                     _invalidate_repo(name)
                 invalidated.append(name)
-        L.info("Invalidated cache: %s", invalidated)
+        L.info("Invalid cache: %s", invalidated)
 
     def _check_config_cache(self) -> bool:
         """Compare the cached and actual configurations.
@@ -281,17 +343,19 @@ class CacheManager:
             True if the cache is valid and complete, False otherwise.
         """
         if not self._analysis_configs.cached or not self._simulations_configs.cached:
+            L.debug("The cached configurations have not been found")
             self._invalidate_cached_checksums()
             return False
 
         # check the criteria used to filter the simulations
         if not self._is_subfilter(strict=False):
-            # the filter is less specific, so the cache cannot be used
+            L.debug("The simulations filter is less specific, so the cache cannot be used")
             self._invalidate_cached_checksums()
             return False
 
         # check the simulations config
         if self._simulations_configs.cached != self._simulations_configs.actual:
+            L.debug("The cached simulation campaign configurations is invalid")
             self._invalidate_cached_checksums({"simulations"})
             return False
 
@@ -307,6 +371,7 @@ class CacheManager:
                 != getattr(self._analysis_configs.actual.extraction, k)
                 for k in keys
             ):
+                L.debug("The following cached objects are invalid: %s", names)
                 self._invalidate_cached_checksums(names)
                 return False
 
@@ -341,6 +406,7 @@ class CacheManager:
                 to_be_deleted.add(name)
         return to_be_deleted
 
+    @_raise_if(readonly=True)
     def _delete_cached_repo_files(self, to_be_deleted: set[str]) -> None:
         """Delete the given repository files.
 
@@ -366,6 +432,7 @@ class CacheManager:
                     break
         return to_be_deleted
 
+    @_raise_if(readonly=True)
     def _delete_cached_features_files(self, to_be_deleted) -> None:
         """Delete the files corresponding to the given features checksums.
 
@@ -378,19 +445,20 @@ class CacheManager:
                 L.info("Deleting invalid cached features %s/%s", config_checksum[:8], name)
                 self._features_store.delete(name)
 
-    @_raise_if(readonly=True)
-    @_raise_if(locked=False)
     def _initialize_cache(self) -> None:
         """Initialize the cache."""
         L.info("Initialize cache")
-        self._check_config_cache()
+        is_config_cache_valid = self._check_config_cache()
         repo_to_be_deleted = self._check_cached_repo_files()
         features_to_be_deleted = self._check_cached_features_files()
-        self._delete_cached_repo_files(repo_to_be_deleted)
-        self._delete_cached_features_files(features_to_be_deleted)
-        self._dump_analysis_config()
-        self._dump_simulations_config()
-        self._dump_cached_checksums()
+        if repo_to_be_deleted:
+            self._delete_cached_repo_files(repo_to_be_deleted)
+        if features_to_be_deleted:
+            self._delete_cached_features_files(features_to_be_deleted)
+        if not is_config_cache_valid:
+            self._dump_analysis_config()
+            self._dump_simulations_config()
+            self._dump_cached_checksums()
 
     @_raise_if(locked=False)
     def is_repo_cached(self, name: str) -> bool:

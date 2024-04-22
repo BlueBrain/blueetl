@@ -24,12 +24,13 @@ def _prepare_env(path):
     )
 
 
+@pytest.mark.parametrize("readonly_cache", [True, False, None])
 @pytest.mark.parametrize("clear_cache", [True, False, None])
 @pytest.mark.parametrize("show", [True, False])
 @pytest.mark.parametrize("calculate", [True, False])
 @pytest.mark.parametrize("extract", [True, False])
 @patch.object(test_module.MultiAnalyzer, "from_file")
-def test_run_from_file(from_file, tmp_path, extract, calculate, show, clear_cache):
+def test_run_from_file(from_file, tmp_path, extract, calculate, show, clear_cache, readonly_cache):
     analysis_config_file = tmp_path / "config.yaml"
     analysis_config_file.write_text("---")
 
@@ -39,9 +40,16 @@ def test_run_from_file(from_file, tmp_path, extract, calculate, show, clear_cach
         calculate=calculate,
         show=show,
         clear_cache=clear_cache,
+        readonly_cache=readonly_cache,
     )
 
-    from_file.assert_called_once_with(analysis_config_file, clear_cache=clear_cache)
+    from_file.assert_called_once_with(
+        analysis_config_file,
+        extra_params={
+            "clear_cache": clear_cache,
+            "readonly_cache": readonly_cache,
+        },
+    )
     assert instance.extract_repo.call_count == int(extract)
     assert instance.calculate_features.call_count == int(calculate)
     assert instance.show.call_count == int(show)
@@ -49,7 +57,7 @@ def test_run_from_file(from_file, tmp_path, extract, calculate, show, clear_cach
 
 def test_multi_analyzer_from_file(tmp_path):
     path = _prepare_env(tmp_path)
-    with test_module.MultiAnalyzer.from_file(path) as ma:
+    with test_module.MultiAnalyzer.from_file(path, extra_params={}) as ma:
         assert isinstance(ma, test_module.MultiAnalyzer)
         assert isinstance(ma.global_config, MultiAnalysisConfig)
         assert isinstance(ma.analyzers, dict)

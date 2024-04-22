@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from copy import deepcopy
 from itertools import chain
 from pathlib import Path
-from typing import NamedTuple, Union
+from typing import Any, NamedTuple, Union
 
 from blueetl.config.analysis_model import (
     FeaturesConfig,
@@ -20,11 +20,22 @@ from blueetl.validation import read_schema, validate_config
 L = logging.getLogger(__name__)
 
 
+def _override_params(global_config: dict[str, Any], extra_params: dict[str, Any]) -> dict[str, Any]:
+    """Override global_config with params in extra_params."""
+    global_config = deepcopy(global_config)
+    cache_config = global_config.setdefault("cache", {})
+    if (value := extra_params.get("clear_cache")) is not None:
+        cache_config["clear"] = value
+    if (value := extra_params.get("readonly_cache")) is not None:
+        cache_config["readonly"] = value
+    return global_config
+
+
 def _resolve_paths(global_config: MultiAnalysisConfig, base_path: Path) -> None:
     """Resolve any relative path at the top level."""
     base_path = base_path or Path()
-    global_config.output = base_path / global_config.output
     global_config.simulation_campaign = base_path / global_config.simulation_campaign
+    global_config.cache.path = base_path / global_config.cache.path
 
 
 def _resolve_neuron_classes(global_config: MultiAnalysisConfig, base_path: Path):
@@ -38,14 +49,14 @@ def _resolve_neuron_classes(global_config: MultiAnalysisConfig, base_path: Path)
 
 
 def _resolve_trial_steps(global_config: MultiAnalysisConfig, base_path: Path):
-    """Set trial_steps_config.base_path to the same value as global_config.output.
+    """Set trial_steps_config.base_path to the configuration base path.
 
     In this way, the custom function can use it as the base path to save any figure.
     """
     for config in global_config.analysis.values():
         for trial_steps_config in config.extraction.trial_steps.values():
             if not trial_steps_config.base_path:
-                trial_steps_config.base_path = global_config.output
+                trial_steps_config.base_path = base_path
             if path := trial_steps_config.node_sets_file:
                 path = base_path / path
                 trial_steps_config.node_sets_file = path
@@ -158,17 +169,19 @@ def _resolve_features(features_config_list: list[FeaturesConfig]) -> list[Featur
 
 
 def _resolve_analysis_configs(global_config: MultiAnalysisConfig) -> None:
-    for name, config in global_config.analysis.items():
-        config.output = global_config.output / name
+    for config in global_config.analysis.values():
         config.simulations_filter = global_config.simulations_filter
         config.simulations_filter_in_memory = global_config.simulations_filter_in_memory
         config.features = _resolve_features(config.features)
 
 
-def init_multi_analysis_configuration(global_config: dict, base_path: Path) -> MultiAnalysisConfig:
+def init_multi_analysis_configuration(
+    global_config: dict, base_path: Path, extra_params: dict[str, Any]
+) -> MultiAnalysisConfig:
     """Return a config object from a config dict."""
+    global_config = _override_params(global_config, extra_params)
     validate_config(global_config, schema=read_schema("analysis_config"))
-    config = MultiAnalysisConfig(**global_config)
+    config = MultiAnalysisConfig.model_validate(global_config)
     _resolve_paths(config, base_path=base_path)
     _resolve_neuron_classes(config, base_path=base_path)
     _resolve_trial_steps(config, base_path=base_path)

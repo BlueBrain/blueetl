@@ -111,7 +111,7 @@ def test_calculate_features(repo):
         ),
     ]
 
-    result = test_module.calculate_features(repo, features_configs_key, features_configs_list)
+    result = test_module._calculate_features(repo, features_configs_key, features_configs_list)
     assert isinstance(result, list)
     assert len(result) == 1
 

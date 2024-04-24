@@ -26,7 +26,7 @@ class BaseStore(ABC):
             basedir: base directory where the files should be stored.
         """
         self._basedir = resolve_path(basedir)
-        L.info("Using class %s with basedir %s", self.__class__.__name__, self.basedir)
+        L.debug("Using class %s with basedir %s", self.__class__.__name__, self.basedir)
 
     @property
     def basedir(self) -> Path:
@@ -51,12 +51,17 @@ class BaseStore(ABC):
         self.path(name).unlink(missing_ok=True)
 
     def path(self, name: str) -> Path:
-        """Return the full path of the file with the given name and the class extension."""
-        return self.basedir / f"{name}.{self.extension}"
+        """Return the full path of the file with the given name and the class extension.
+
+        If name is empty, then return the base directory.
+        This can be useful when working with partitioned DataFrames and
+        directories containing multiple files.
+        """
+        return self.basedir / f"{name}.{self.extension}" if name else self.basedir
 
     def checksum(self, name: str) -> Optional[str]:
         """Return a checksum of the file, or None if it doesn't exist."""
         path = self.path(name)
-        if path.exists():
+        if path.is_file():
             return checksum(path)
         return None

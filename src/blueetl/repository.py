@@ -49,16 +49,18 @@ class BaseExtractor(ABC, Generic[ExtractorT]):
             name: name of the dataframe.
         """
         with timed(L.debug, f"Extracting {name}") as messages:
-            df = self._repo.cache_manager.load_repo(name)
-            if df is not None:
+            is_cached = self._repo.cache_manager.is_repo_cached(name)
+            if is_cached:
+                df = self._repo.cache_manager.load_repo(name)
                 instance = self.extract_cached(df, name)
             else:
                 instance = self.extract_new()
             assert instance is not None, "The extraction didn't return a valid instance."
-            is_cached = instance._cached  # pylint: disable=protected-access
+            assert is_cached is instance._cached  # pylint: disable=protected-access
             is_filtered = instance._filtered  # pylint: disable=protected-access
             if not is_cached or is_filtered:
-                self._repo.cache_manager.dump_repo(df=instance.to_pandas(), name=name)
+                with timed(L.info, f"Writing cached {name}"):
+                    self._repo.cache_manager.dump_repo(df=instance.to_pandas(), name=name)
             messages[:] = [f"Extracted {name}: {is_cached=} {is_filtered=} rows={len(instance.df)}"]
             return instance
 
@@ -244,7 +246,7 @@ class Repository:
 
     def __getstate__(self) -> dict:
         """Get the object state when the object is pickled."""
-        if not self.is_extracted():
+        if not self.is_cached():
             # ensure that the dataframes are extracted and stored to disk,
             # because we want to be able to use the cached data in the subprocesses.
             L.info("Extracting dataframes before serialization")
@@ -335,7 +337,7 @@ class Repository:
         self.check_extractions()
 
     def is_extracted(self) -> bool:
-        """Return True if all the dataframes have been extracted."""
+        """Return True if all the dataframes have been extracted and loaded in memory."""
         # note: the cached_property is stored as an attribute after it's accessed
         return all(name in self.__dict__ for name in self.names)
 
@@ -343,6 +345,10 @@ class Repository:
         """Check that all the dataframes have been extracted."""
         if not self.is_extracted():
             raise RuntimeError("Not all the dataframes have been extracted")
+
+    def is_cached(self) -> bool:
+        """Return True if all the dataframes have been cached (loaded in memory or not)."""
+        return all(self.cache_manager.is_repo_cached(name) for name in self.names)
 
     def missing_simulations(self) -> pd.DataFrame:
         """Return a DataFrame with the simulations ignored because of missing spikes.

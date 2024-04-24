@@ -278,3 +278,17 @@ def test_copy_config(tmp_path):
     assert src_sim_campaign_path.is_absolute() is False
     assert dst_sim_campaign_path.is_absolute() is True
     assert (src.parent / src_sim_campaign_path).resolve() == dst_sim_campaign_path.resolve()
+
+
+def test_get_shmdir(monkeypatch, tmp_path):
+    monkeypatch.setenv("SHMDIR", str(tmp_path))
+    shmdir = test_module.get_shmdir()
+    assert shmdir == tmp_path
+
+    monkeypatch.delenv("SHMDIR")
+    shmdir = test_module.get_shmdir()
+    assert shmdir is None
+
+    monkeypatch.setenv("SHMDIR", str(tmp_path / "non-existent"))
+    with pytest.raises(RuntimeError, match="SHMDIR must be set to an existing directory"):
+        test_module.get_shmdir()

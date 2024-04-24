@@ -192,7 +192,7 @@ class MultiAnalyzer:
         cls,
         global_config: dict,
         base_path: StrOrPath,
-        extra_params: dict[str, Any],
+        extra_params: Optional[dict[str, Any]] = None,
     ) -> "MultiAnalyzer":
         """Initialize the MultiAnalyzer from the given configuration.
 
@@ -223,7 +223,9 @@ class MultiAnalyzer:
         }
 
     @classmethod
-    def from_file(cls, path: StrOrPath, extra_params: dict[str, Any]) -> "MultiAnalyzer":
+    def from_file(
+        cls, path: StrOrPath, extra_params: Optional[dict[str, Any]] = None
+    ) -> "MultiAnalyzer":
         """Return a new instance loaded using the given configuration file."""
         return cls.from_config(
             global_config=load_yaml(path),
@@ -337,6 +339,7 @@ def run_from_file(
     show: bool = False,
     clear_cache: Optional[bool] = None,
     readonly_cache: Optional[bool] = None,
+    skip_features_cache: Optional[bool] = None,
     loglevel: Optional[int] = None,
 ) -> MultiAnalyzer:
     """Initialize and return the MultiAnalyzer.
@@ -353,11 +356,15 @@ def run_from_file(
         readonly_cache: if None, use the value from the configuration file. Otherwise:
             if True, use the existing cache if possible, or raise an error;
             if False, use the existing cache if possible, or update it.
+        skip_features_cache:  if None, use the value from the configuration file. Otherwise:
+            if True, do not write the features to the cache;
+            if False, write the features to the cache after calculating them.
         loglevel: if specified, used to set up logging.
 
     Returns:
         a new MultiAnalyzer instance.
     """
+    # pylint: disable=too-many-arguments
     if loglevel is not None:
         setup_logging(loglevel=loglevel, force=True)
     if seed is not None:
@@ -368,6 +375,7 @@ def run_from_file(
         extra_params={
             "clear_cache": clear_cache,
             "readonly_cache": readonly_cache,
+            "skip_features_cache": skip_features_cache,
         },
     )
     if extract:

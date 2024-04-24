@@ -24,13 +24,23 @@ def _prepare_env(path):
     )
 
 
+@pytest.mark.parametrize("skip_features_cache", [True, False, None])
 @pytest.mark.parametrize("readonly_cache", [True, False, None])
 @pytest.mark.parametrize("clear_cache", [True, False, None])
 @pytest.mark.parametrize("show", [True, False])
 @pytest.mark.parametrize("calculate", [True, False])
 @pytest.mark.parametrize("extract", [True, False])
 @patch.object(test_module.MultiAnalyzer, "from_file")
-def test_run_from_file(from_file, tmp_path, extract, calculate, show, clear_cache, readonly_cache):
+def test_run_from_file(
+    from_file,
+    tmp_path,
+    extract,
+    calculate,
+    show,
+    clear_cache,
+    readonly_cache,
+    skip_features_cache,
+):
     analysis_config_file = tmp_path / "config.yaml"
     analysis_config_file.write_text("---")
 
@@ -41,6 +51,7 @@ def test_run_from_file(from_file, tmp_path, extract, calculate, show, clear_cach
         show=show,
         clear_cache=clear_cache,
         readonly_cache=readonly_cache,
+        skip_features_cache=skip_features_cache,
     )
 
     from_file.assert_called_once_with(
@@ -48,6 +59,7 @@ def test_run_from_file(from_file, tmp_path, extract, calculate, show, clear_cach
         extra_params={
             "clear_cache": clear_cache,
             "readonly_cache": readonly_cache,
+            "skip_features_cache": skip_features_cache,
         },
     )
     assert instance.extract_repo.call_count == int(extract)

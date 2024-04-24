@@ -9,7 +9,7 @@ New Features
 
 - Add ``cache.readonly``, to be able to use an existing cache without exclusive locking [NSETM-2310].
 - Add ``cache.store_type``, to change the file format (experimental).
-- Add ``cache.skip_features``, to skip writing the features DataFrames (not implemented yet).
+- Add ``cache.skip_features``, to skip writing the features DataFrames [NSETM-2312].
 
 Deprecations
 ~~~~~~~~~~~~

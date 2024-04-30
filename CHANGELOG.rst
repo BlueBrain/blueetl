@@ -1,6 +1,16 @@
 Changelog
 =========
 
+Version 0.10.0
+--------------
+
+New Features
+~~~~~~~~~~~~
+
+- Add ``multi_index`` option to the features configuration, to decide whether ``reset_index()`` should be applied to the features DataFrames.
+  Note: the features cache will be rebuilt, although the resulting DataFrames are unchanged (because the default value of the new option is ``True``).
+
+
 Version 0.9.1
 -------------
 

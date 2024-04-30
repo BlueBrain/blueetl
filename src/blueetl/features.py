@@ -431,7 +431,11 @@ def _user_func_wrapper(
         # ignore the index if it's unnamed and with one level; this can be useful
         # for example when the returned DataFrame has a RangeIndex to be dropped
         drop = result_df.index.names == [None]
-        result_df = result_df.etl.add_conditions(conditions=key._fields, values=key, drop=drop)
+        if features_config.multi_index:
+            result_df = result_df.etl.add_conditions(conditions=key._fields, values=key, drop=drop)
+        else:
+            result_df.reset_index(drop=drop, inplace=True)
+            result_df.etl.insert_columns(loc=0, columns=key._fields, values=key)
         # the conversion to the desired dtype here is important to reduce memory usage and cpu time
         result_df = ensure_dtypes(result_df)
         output_dir = temp_folder / f"{feature_group}{features_config.suffix}"

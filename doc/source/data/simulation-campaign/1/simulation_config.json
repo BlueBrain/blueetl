@@ -50,7 +50,7 @@
       "delay": 0,
       "duration": 40000,
       "input_type": "spikes",
-      "spike_file": "/path/to/sonataconf_thalamus/ml_noise_rawgid.dat",
+      "spike_file": "/path/to/sonataconf_thalamus/ml_noise_rawgid.h5",
       "source": "MedialLemniscus_projections:",
       "node_set": "Mosaic"
     },
@@ -59,7 +59,7 @@
       "delay": 0,
       "duration": 40000,
       "input_type": "spikes",
-      "spike_file": "/path/to/sonataconf_thalamus/ct_noise_rawgid.dat",
+      "spike_file": "/path/to/sonataconf_thalamus/ct_noise_rawgid.h5",
       "source": "CorticoThalamic_projections:",
       "node_set": "Mosaic"
     },
@@ -68,7 +68,7 @@
       "delay": 0,
       "duration": 40000,
       "input_type": "spikes",
-      "spike_file": "/path/to/targetmc2_Column/input.dat",
+      "spike_file": "/path/to/targetmc2_Column/input.h5",
       "node_set": "Mosaic"
     }
   },

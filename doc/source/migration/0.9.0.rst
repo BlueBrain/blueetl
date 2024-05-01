@@ -29,4 +29,4 @@ then it should be replaced with::
 
 You can see an example of configuration in the new format here:
 
-- https://github.com/BlueBrain/blueetl/blob/blueetl-v0.9.0/tests/functional/data/sonata/config/analysis_config_01.yaml
+- https://github.com/BlueBrain/blueetl/blob/v0.9.0/tests/functional/data/sonata/config/analysis_config_01.yaml

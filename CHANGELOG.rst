@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Version 0.10.1
+--------------
+
+Bug Fixes
+~~~~~~~~~
+
+- Fix link to the example configuration in the documentation.
+
+
 Version 0.10.0
 --------------
 

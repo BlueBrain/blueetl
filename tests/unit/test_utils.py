@@ -293,8 +293,8 @@ def test_get_shmdir(monkeypatch, tmp_path):
     assert shmdir == tmp_path
 
     monkeypatch.delenv("SHMDIR")
-    with pytest.raises(RuntimeError, match="SHMDIR must be set to the shared memory directory"):
-        test_module.get_shmdir()
+    shmdir = test_module.get_shmdir()
+    assert shmdir is None
 
     monkeypatch.setenv("SHMDIR", str(tmp_path / "non-existent"))
     with pytest.raises(RuntimeError, match="SHMDIR must be set to an existing directory"):

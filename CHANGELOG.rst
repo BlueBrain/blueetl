@@ -1,6 +1,12 @@
 Changelog
 =========
 
+Version 0.11.1
+--------------
+
+- Revert raising an error if the env variable SHMDIR isn't set. Log a more detailed warning instead.
+
+
 Version 0.11.0
 --------------
 

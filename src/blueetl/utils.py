@@ -335,15 +335,17 @@ def copy_config(src: StrOrPath, dst: StrOrPath) -> None:
     dump_yaml(dst, config, default_flow_style=None)
 
 
-def get_shmdir() -> Path:
-    """Return the shared memory directory, or raise an error if not set."""
+def get_shmdir() -> Optional[Path]:
+    """Return the shared memory directory, or return None if not set."""
     shmdir = os.getenv("SHMDIR")
     if not shmdir:
-        raise RuntimeError(
-            "SHMDIR must be set to the shared memory directory. "
-            "The variable should be automatically set when running on an allocated node, "
+        L.warning(
+            "SHMDIR should be set to the shared memory directory, "
+            "or the process may be slower, or even fail because of insufficient space. "
+            "The variable is automatically set when running on an allocated node, "
             "but it's not set when connecting via SSH to a pre-allocated node."
         )
+        return None
     shmdir = Path(shmdir)
     if not shmdir.is_dir():
         raise RuntimeError("SHMDIR must be set to an existing directory")

@@ -15,7 +15,7 @@ import pandas as pd
 from blueetl_core.utils import is_subfilter
 
 from blueetl.campaign.config import SimulationCampaign
-from blueetl.config.analysis_model import CacheConfig, FeaturesConfig, SingleAnalysisConfig
+from blueetl.config.analysis_model import FeaturesConfig, SingleAnalysisConfig
 from blueetl.store.base import BaseStore
 from blueetl.store.feather import FeatherStore
 from blueetl.store.parquet import ParquetStore
@@ -143,17 +143,17 @@ class CacheManager:
 
     def __init__(
         self,
-        cache_config: CacheConfig,
         analysis_config: SingleAnalysisConfig,
         simulations_config: SimulationCampaign,
     ) -> None:
         """Initialize the object.
 
         Args:
-            cache_config: cache configuration dict.
-            analysis_config: analysis configuration dict.
+            analysis_config: analysis configuration.
             simulations_config: simulations campaign configuration.
         """
+        cache_config = analysis_config.cache
+        assert cache_config is not None
         self._output_dir = cache_config.path
         if cache_config.clear:
             self._clear_cache()

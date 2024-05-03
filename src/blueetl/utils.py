@@ -9,12 +9,14 @@ import os.path
 import time
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
+from enum import Enum
 from functools import cache, cached_property
 from pathlib import Path
 from typing import Any, Callable, Optional, Union
 
 import pandas as pd
 import yaml
+from pydantic import BaseModel
 
 from blueetl.constants import DTYPES
 from blueetl.types import StrOrPath
@@ -190,12 +192,9 @@ def checksum_json(obj: Any) -> str:
 @cache
 def _get_internal_yaml_dumper() -> type[yaml.SafeDumper]:
     """Return the custom internal yaml dumper class."""
-    # pylint: disable=import-outside-toplevel
-    # imported here because optional
-    from pydantic import BaseModel
-
     _representers = {
         Path: str,
+        Enum: lambda data: data.value,
         BaseModel: lambda data: data.dict(),
     }
 
@@ -336,12 +335,15 @@ def copy_config(src: StrOrPath, dst: StrOrPath) -> None:
     dump_yaml(dst, config, default_flow_style=None)
 
 
-def get_shmdir() -> Optional[Path]:
-    """Return the shared memory directory, or None if not set."""
+def get_shmdir() -> Path:
+    """Return the shared memory directory, or raise an error if not set."""
     shmdir = os.getenv("SHMDIR")
     if not shmdir:
-        L.warning("SHMDIR should be set to the shared memory directory")
-        return None
+        raise RuntimeError(
+            "SHMDIR must be set to the shared memory directory. "
+            "The variable should be automatically set when running on an allocated node, "
+            "but it's not set when connecting via SSH to a pre-allocated node."
+        )
     shmdir = Path(shmdir)
     if not shmdir.is_dir():
         raise RuntimeError("SHMDIR must be set to an existing directory")

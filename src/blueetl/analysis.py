@@ -11,7 +11,7 @@ import pandas as pd
 from blueetl.cache import CacheManager
 from blueetl.campaign.config import SimulationCampaign
 from blueetl.config.analysis import init_multi_analysis_configuration
-from blueetl.config.analysis_model import CacheConfig, MultiAnalysisConfig, SingleAnalysisConfig
+from blueetl.config.analysis_model import MultiAnalysisConfig, SingleAnalysisConfig
 from blueetl.features import FeaturesCollection
 from blueetl.repository import Repository
 from blueetl.resolver import AttrResolver, Resolver
@@ -46,7 +46,6 @@ class Analyzer:
         cls,
         analysis_config: SingleAnalysisConfig,
         simulations_config: SimulationCampaign,
-        cache_config: CacheConfig,
         resolver: Resolver,
     ) -> "Analyzer":
         """Initialize the Analyzer from the given configuration.
@@ -54,11 +53,9 @@ class Analyzer:
         Args:
             analysis_config: analysis configuration.
             simulations_config: simulation campaign configuration.
-            cache_config: cache configuration.
             resolver: resolver instance.
         """
         cache_manager = CacheManager(
-            cache_config=cache_config,
             analysis_config=analysis_config,
             simulations_config=simulations_config,
         )
@@ -214,9 +211,6 @@ class MultiAnalyzer:
             name: Analyzer.from_config(
                 analysis_config=analysis_config,
                 simulations_config=simulations_config,
-                cache_config=self.global_config.cache.model_copy(
-                    update={"path": self.global_config.cache.path / name}
-                ),
                 resolver=resolver,
             )
             for name, analysis_config in self.global_config.analysis.items()

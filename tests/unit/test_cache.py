@@ -10,9 +10,7 @@ from tests.unit.utils import assert_frame_equal
 def cache_manager(global_config):
     simulations_config = SimulationCampaign.load(global_config.simulation_campaign)
     analysis_config = global_config.analysis["spikes"]
-    cache_config = global_config.cache
     instance = test_module.CacheManager(
-        cache_config=cache_config,
         analysis_config=analysis_config,
         simulations_config=simulations_config,
     )
@@ -62,10 +60,8 @@ def test_lock_manager_shared(tmp_path):
 def test_cache_manager_init_and_close(global_config):
     simulations_config = SimulationCampaign.load(global_config.simulation_campaign)
     analysis_config = global_config.analysis["spikes"]
-    cache_config = global_config.cache
 
     instance = test_module.CacheManager(
-        cache_config=cache_config,
         analysis_config=analysis_config,
         simulations_config=simulations_config,
     )
@@ -79,10 +75,8 @@ def test_cache_manager_init_and_close(global_config):
 def test_cache_manager_to_readonly(global_config):
     simulations_config = SimulationCampaign.load(global_config.simulation_campaign)
     analysis_config = global_config.analysis["spikes"]
-    cache_config = global_config.cache
 
     instance = test_module.CacheManager(
-        cache_config=cache_config,
         analysis_config=analysis_config,
         simulations_config=simulations_config,
     )
@@ -108,24 +102,20 @@ def test_cache_manager_to_readonly(global_config):
 def test_cache_manager_concurrency_is_not_allowed_when_locked(global_config):
     simulations_config = SimulationCampaign.load(global_config.simulation_campaign)
     analysis_config = global_config.analysis["spikes"]
-    cache_config = global_config.cache
 
     instance = test_module.CacheManager(
-        cache_config=cache_config,
         analysis_config=analysis_config,
         simulations_config=simulations_config,
     )
     # verify that a new instance cannot be created when the old instance is keeping the lock
     with pytest.raises(test_module.CacheError, match="Another process is locking"):
         test_module.CacheManager(
-            cache_config=cache_config,
             analysis_config=analysis_config,
             simulations_config=simulations_config,
         )
     # verify that a new instance can be created after closing the old instance
     instance.close()
     instance = test_module.CacheManager(
-        cache_config=cache_config,
         analysis_config=analysis_config,
         simulations_config=simulations_config,
     )
@@ -135,12 +125,10 @@ def test_cache_manager_concurrency_is_not_allowed_when_locked(global_config):
 def test_cache_manager_concurrency_is_allowed_when_readonly(global_config):
     simulations_config = SimulationCampaign.load(global_config.simulation_campaign)
     analysis_config = global_config.analysis["spikes"]
-    cache_config = global_config.cache.model_copy(update={"readonly": False})
-    cache_config_readonly = global_config.cache.model_copy(update={"readonly": True})
+    cache_config = analysis_config.cache
 
     # init the cache that will be used later
     instance = test_module.CacheManager(
-        cache_config=cache_config,
         analysis_config=analysis_config,
         simulations_config=simulations_config,
     )
@@ -149,8 +137,9 @@ def test_cache_manager_concurrency_is_allowed_when_readonly(global_config):
     # use the same cache in multiple cache managers
     instances = [
         test_module.CacheManager(
-            cache_config=cache_config_readonly,
-            analysis_config=analysis_config,
+            analysis_config=analysis_config.model_copy(
+                update={"cache": cache_config.model_copy(update={"readonly": True})}
+            ),
             simulations_config=simulations_config,
         )
         for _ in range(3)
@@ -162,15 +151,13 @@ def test_cache_manager_concurrency_is_allowed_when_readonly(global_config):
 def test_cache_manager_clear_cache(global_config, tmp_path):
     simulations_config = SimulationCampaign.load(global_config.simulation_campaign)
     analysis_config = global_config.analysis["spikes"]
-    cache_config = global_config.cache.model_copy(update={"clear": False})
-    cache_config_clear = global_config.cache.model_copy(update={"clear": True})
+    cache_config = analysis_config.cache
 
     output = cache_config.path
     sentinel = output / "sentinel"
 
     assert output.exists() is False
     instance = test_module.CacheManager(
-        cache_config=cache_config_clear,
         analysis_config=analysis_config,
         simulations_config=simulations_config,
     )
@@ -181,7 +168,6 @@ def test_cache_manager_clear_cache(global_config, tmp_path):
 
     # reuse the cache
     instance = test_module.CacheManager(
-        cache_config=cache_config,
         analysis_config=analysis_config,
         simulations_config=simulations_config,
     )
@@ -191,8 +177,9 @@ def test_cache_manager_clear_cache(global_config, tmp_path):
 
     # delete the cache
     instance = test_module.CacheManager(
-        cache_config=cache_config_clear,
-        analysis_config=analysis_config,
+        analysis_config=analysis_config.model_copy(
+            update={"cache": cache_config.model_copy(update={"clear": True})}
+        ),
         simulations_config=simulations_config,
     )
     instance.close()

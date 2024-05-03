@@ -171,7 +171,9 @@ def _resolve_features(features_config_list: list[FeaturesConfig]) -> list[Featur
 
 
 def _resolve_analysis_configs(global_config: MultiAnalysisConfig) -> None:
-    for config in global_config.analysis.values():
+    global_cache_path = global_config.cache.path
+    for name, config in global_config.analysis.items():
+        config.cache = global_config.cache.model_copy(update={"path": global_cache_path / name})
         config.simulations_filter = global_config.simulations_filter
         config.simulations_filter_in_memory = global_config.simulations_filter_in_memory
         config.features = _resolve_features(config.features)

@@ -182,6 +182,7 @@ class FeaturesConfig(BaseModel):
 class SingleAnalysisConfig(BaseModel):
     """SingleAnalysisConfig Model."""
 
+    cache: Optional[CacheConfig] = None
     simulations_filter: dict[str, Any] = {}
     simulations_filter_in_memory: dict[str, Any] = {}
     extraction: ExtractionConfig
@@ -203,6 +204,11 @@ class SingleAnalysisConfig(BaseModel):
         # needed to load any cached analysis configuration created with blueetl <= 0.8.2
         data.pop("output", None)
         return data
+
+    @property
+    def output(self) -> Optional[Path]:
+        """Shortcut to the base output path of the analysis."""
+        return self.cache.path if self.cache else None
 
 
 class MultiAnalysisConfig(BaseModel):

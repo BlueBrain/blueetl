@@ -1,4 +1,5 @@
 import json
+from enum import Enum
 from pathlib import Path
 
 import numpy as np
@@ -95,11 +96,16 @@ def test_resolve_path(tmp_path):
 
 
 def test_dump_yaml(tmp_path):
+    class TestEnum(str, Enum):
+        v0 = "v0"
+        v1 = "v1"
+
     data = {
         "dict": {"str": "mystr", "int": 123},
         "list_of_int": [1, 2, 3],
         "list_of_str": ["1", "2", "3"],
         "path": Path("/custom/path"),
+        "enum": TestEnum.v0,
     }
     expected = """
 dict:
@@ -114,6 +120,7 @@ list_of_str:
 - '2'
 - '3'
 path: /custom/path
+enum: v0
     """
     filepath = tmp_path / "test.yaml"
 
@@ -150,7 +157,7 @@ path: /custom/path
     assert loaded_data == expected
 
 
-def test_dump_jaon_load_json_roundtrip(tmp_path):
+def test_dump_json_load_json_roundtrip(tmp_path):
     data = {
         "dict": {"str": "mystr", "int": 123},
         "list_of_int": [1, 2, 3],
@@ -286,8 +293,8 @@ def test_get_shmdir(monkeypatch, tmp_path):
     assert shmdir == tmp_path
 
     monkeypatch.delenv("SHMDIR")
-    shmdir = test_module.get_shmdir()
-    assert shmdir is None
+    with pytest.raises(RuntimeError, match="SHMDIR must be set to the shared memory directory"):
+        test_module.get_shmdir()
 
     monkeypatch.setenv("SHMDIR", str(tmp_path / "non-existent"))
     with pytest.raises(RuntimeError, match="SHMDIR must be set to an existing directory"):

@@ -1,6 +1,16 @@
 Changelog
 =========
 
+Version 0.11.0
+--------------
+
+Improvements
+~~~~~~~~~~~~
+
+- Allow to access the cache config and the output path of individual analyses with ``analysis_config.cache`` and ``analysis_config.output``, as a shortcut to ``analysis_config.cache.path``.
+- Raise an error if the env variable ``SHMDIR`` isn't set, instead of logging a warning.
+
+
 Version 0.10.1
 --------------
 

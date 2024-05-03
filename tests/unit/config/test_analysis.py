@@ -1,7 +1,7 @@
 import pytest
 
 from blueetl.config import analysis as test_module
-from blueetl.config.analysis_model import FeaturesConfig, MultiAnalysisConfig
+from blueetl.config.analysis_model import FeaturesConfig, MultiAnalysisConfig, SingleAnalysisConfig
 from blueetl.utils import load_yaml
 from tests.functional.utils import TEST_DATA_PATH as TEST_DATA_PATH_FUNCTIONAL
 from tests.unit.utils import TEST_DATA_PATH as TEST_DATA_PATH_UNIT
@@ -191,3 +191,9 @@ def test_init_multi_analysis_configuration(config_file):
         config_dict, base_path=base_path, extra_params={}
     )
     assert isinstance(result, MultiAnalysisConfig)
+    assert result.cache.path == base_path / config_dict["cache"]["path"]
+    assert len(result.analysis) > 0
+    for name, analysis_config in result.analysis.items():
+        assert isinstance(analysis_config, SingleAnalysisConfig)
+        assert analysis_config.cache is not None
+        assert analysis_config.output == result.cache.path / name

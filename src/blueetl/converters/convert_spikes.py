@@ -249,7 +249,7 @@ def _write_analysis_config(path: Path, simulation_campaign_config_path: Path) ->
     L.info("Writing %s", path)
     simulation_campaign = str(relpath(simulation_campaign_config_path, path.parent))
     analysis_config = {
-        "version": 3,
+        "version": 4,
         "simulation_campaign": simulation_campaign,
         "cache": {
             "path": "analysis",

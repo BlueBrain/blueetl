@@ -5,7 +5,7 @@ type: object
 properties:
   version:
     title: Version
-    description: Version number of the configuration, it should be set to ``2``.
+    description: Version number of the configuration.
     type: integer
   simulation_campaign:
     title: Simulation Campaign

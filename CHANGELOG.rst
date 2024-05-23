@@ -1,8 +1,20 @@
 Changelog
 =========
 
+Version 0.11.2
+--------------
+
+Bug Fixes
+~~~~~~~~~
+
+- Fix version number in the analysis config created by ``blueetl convert-spikes``.
+
+
 Version 0.11.1
 --------------
+
+Bug Fixes
+~~~~~~~~~
 
 - Revert raising an error if the env variable SHMDIR isn't set. Log a more detailed warning instead.
 

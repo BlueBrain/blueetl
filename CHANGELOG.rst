@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Version 0.11.3
+--------------
+
+Bug Fixes
+~~~~~~~~~
+
+- Update expected results in functional tests, because the output of statistics.Complexity changed in elephant >= 0.13.0.
+- Fix warning when building docs, and include ``blueetl.analysis`` only.
+
 Version 0.11.2
 --------------
 

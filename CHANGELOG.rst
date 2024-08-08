@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Version 0.11.4
+--------------
+
+Bug Fixes
+~~~~~~~~~
+
+- Fix tests with libsonata 0.1.28.
+
+
 Version 0.11.3
 --------------
 

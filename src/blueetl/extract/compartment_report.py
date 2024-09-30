@@ -30,6 +30,7 @@ class CompartmentReport(ReportExtractor):
     @classmethod
     def _load_values(
         cls,
+        *,
         simulation: Simulation,
         population: Optional[str],
         gids,

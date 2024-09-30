@@ -327,6 +327,7 @@ class MultiAnalyzer:
 
 def run_from_file(
     analysis_config_file: StrOrPath,
+    *,
     seed: Optional[int] = 0,
     extract: bool = True,
     calculate: bool = True,

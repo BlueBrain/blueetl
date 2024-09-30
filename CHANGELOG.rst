@@ -1,14 +1,18 @@
 Changelog
 =========
 
-Version 0.11.5
+Version 0.12.0
 --------------
 
-Bug Fixes
-~~~~~~~~~
+Breaking changes
+~~~~~~~~~~~~~~~~
 
-- Skip simulations with empty path in the simulation campaign configuration (fix regression in blueetl 0.8.0).
+- Ensure that some methods and functions are called with named parameters. In particular, the following public methods require named parameters:
 
+  - ``blueetl.analysis.run_from_file()``
+  - ``blueetl.extract.report.ReportExtractor.from_simulations()``
+  - ``blueetl.repository.Repository.__init__()``
+  - ``blueetl.repository.FilteredRepository.__init__()``
 
 Version 0.11.4
 --------------
@@ -17,6 +21,7 @@ Bug Fixes
 ~~~~~~~~~
 
 - Fix tests with libsonata 0.1.28.
+- Skip simulations with empty path in the simulation campaign configuration (fix regression in blueetl 0.8.0).
 
 
 Version 0.11.3

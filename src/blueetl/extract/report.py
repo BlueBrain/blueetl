@@ -61,6 +61,7 @@ class ReportExtractor(BaseExtractor, metaclass=ABCMeta):
     @abstractmethod
     def _load_values(
         cls,
+        *,
         simulation: Simulation,
         population: Optional[str],
         gids,
@@ -83,6 +84,7 @@ class ReportExtractor(BaseExtractor, metaclass=ABCMeta):
     @classmethod
     def from_simulations(
         cls: type[ReportExtractorT],
+        *,
         simulations: Simulations,
         neurons: Neurons,
         windows: Windows,
@@ -122,6 +124,7 @@ class ReportExtractor(BaseExtractor, metaclass=ABCMeta):
 
 
 def _merge_filter_func(
+    *,
     task_index: int,
     key: NamedTuple,
     df_list: list[pd.DataFrame],

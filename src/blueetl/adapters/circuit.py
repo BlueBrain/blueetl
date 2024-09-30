@@ -16,7 +16,7 @@ class CircuitAdapter(BaseAdapter[CircuitInterface]):
     def from_file(cls, filepath: Optional[Path]) -> "CircuitAdapter":
         """Load and return a new object from file."""
         # pylint: disable=import-outside-toplevel
-        if not filepath or not filepath.exists():
+        if not filepath or not filepath.is_file():
             return cls(None)
         CircuitImpl: type[CircuitInterface]
         if filepath.suffix == ".json":

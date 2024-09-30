@@ -33,6 +33,7 @@ from blueetl.analysis import run_from_file
 @click.option("-i", "--interactive/--no-interactive", help="Start an interactive IPython shell.")
 @click.option("-v", "--verbose", count=True, help="-v for INFO, -vv for DEBUG")
 def run(
+    *,
     analysis_config_file,
     seed,
     extract,

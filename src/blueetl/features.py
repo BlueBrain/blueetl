@@ -390,6 +390,7 @@ def _calculate_new(
 
 
 def _user_func_wrapper(
+    *,
     task_index: int,
     key: NamedTuple,
     neurons_df: pd.DataFrame,
@@ -446,6 +447,7 @@ def _user_func_wrapper(
 
 
 def _merge_filter_func(
+    *,
     task_index: int,
     key: NamedTuple,
     df_list: list[pd.DataFrame],

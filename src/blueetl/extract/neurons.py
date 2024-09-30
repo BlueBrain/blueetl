@@ -31,6 +31,7 @@ def _get_property_names(neuron_classes: dict[str, NeuronClassConfig]) -> list[st
 
 
 def _load_cells(
+    *,
     circuit: Circuit,
     property_names: list[str],
     cells_cache: CellsCache,

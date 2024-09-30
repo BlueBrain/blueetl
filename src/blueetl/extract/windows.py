@@ -56,6 +56,7 @@ def _load_dynamic_gids(
 
 
 def _load_dynamic_spikes(
+    *,
     simulation: Simulation,
     population: Optional[str],
     gids: np.ndarray,
@@ -145,6 +146,7 @@ class Windows(BaseExtractor):
     @classmethod
     def _load_records_from_resolver(
         cls,
+        *,
         name: str,
         win: str,
         simulation_id: int,

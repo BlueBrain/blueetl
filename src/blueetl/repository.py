@@ -209,6 +209,7 @@ class Repository:
 
     def __init__(
         self,
+        *,
         simulations_config: SimulationCampaign,
         extraction_config: ExtractionConfig,
         cache_manager: CacheManager,
@@ -391,7 +392,7 @@ class Repository:
 class FilteredRepository(Repository):
     """FilteredRepository class."""
 
-    def __init__(self, parent: Repository, simulations_filter: dict[str, Any]) -> None:
+    def __init__(self, *, parent: Repository, simulations_filter: dict[str, Any]) -> None:
         """Initialize the object using the given dict of DataFrames.
 
         Filtered dataframes are never written to disk.

@@ -45,7 +45,7 @@ extra = [
 ]
 external = [
     # external requirements needed to run custom code in blueetl.external submodule
-    "elephant>=0.10.0",
+    "elephant>=1.1.0",
     "matplotlib>=3.4.3",
     "quantities>=0.13.0",
     "scipy>=1.8.0",
@@ -152,6 +152,8 @@ ignored-modules = ["bluepy"]
 [tool.pylint.design]
 # Maximum number of arguments for function / method.
 max-args = 8
+# Maximum number of positional arguments for function / method.
+max-positional-arguments = 10
 # Maximum number of attributes for a class (see R0902).
 max-attributes = 40
 # Maximum number of boolean expressions in an if statement (see R0916).

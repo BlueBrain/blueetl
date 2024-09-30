@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Version 0.11.5
+--------------
+
+Bug Fixes
+~~~~~~~~~
+
+- Skip simulations with empty path in the simulation campaign configuration (fix regression in blueetl 0.8.0).
+
+
 Version 0.11.4
 --------------
 

@@ -20,7 +20,7 @@ class SimulationAdapter(BaseAdapter[SimulationInterface]):
     def from_file(cls, filepath: Optional[Path]) -> "SimulationAdapter":
         """Load and return a new object from file."""
         # pylint: disable=import-outside-toplevel
-        if not filepath or not filepath.exists():
+        if not filepath or not filepath.is_file():
             return cls(None)
         SimulationImpl: type[SimulationInterface]
         if filepath.suffix == ".json":

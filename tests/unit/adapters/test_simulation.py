@@ -76,8 +76,14 @@ def test_simulation_adapter(path, population, reports, expected_classes, monkeyp
     assert sorted(loaded._impl.__dict__) == ["_simulation"]
 
 
-def test_simulation_adapter_with_nonexistent_path():
-    path = Path("path/to/simulation_config.json")
+@pytest.mark.parametrize(
+    "path",
+    [
+        Path("path/to/missing/simulation_config.json"),
+        Path(""),  # not a file
+    ],
+)
+def test_simulation_adapter_with_nonexistent_path(path):
     obj = test_module.SimulationAdapter.from_file(path)
 
     assert obj.instance is None

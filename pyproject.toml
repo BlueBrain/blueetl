@@ -47,6 +47,7 @@ external = [
     # external requirements needed to run custom code in blueetl.external submodule
     "elephant>=1.1.0",
     "matplotlib>=3.4.3",
+    "neo<0.13.4",  # pinned because 0.13.4 is incompatible with elephant 1.1.0
     "quantities>=0.13.0",
     "scipy>=1.8.0",
     "seaborn>=0.11.2",

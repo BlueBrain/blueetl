@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Version 0.12.1
+--------------
+
+Bug Fixes
+~~~~~~~~~
+
+- Fix functional tests.
+
+
 Version 0.12.0
 --------------
 

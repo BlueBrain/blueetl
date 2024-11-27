@@ -50,3 +50,10 @@ LEVEL_SEP = "."
 
 CONFIG_VERSION = 4
 MIN_SUPPORTED_CONFIG_VERSION = 3
+
+CACHED_CONFIG_DIR = "config"
+CACHED_REPO_DIR = "repo"
+CACHED_FEATURES_DIR = "features"
+CACHED_ANALYSIS_CONFIG_FILE = "analysis_config.cached.yaml"
+CACHED_SIMULATIONS_CONFIG_FILE = "simulations_config.cached.yaml"
+CACHED_CHECKSUMS_FILE = "checksums.cached.yaml"

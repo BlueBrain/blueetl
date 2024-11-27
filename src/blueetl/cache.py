@@ -16,6 +16,14 @@ from blueetl_core.utils import is_subfilter
 
 from blueetl.campaign.config import SimulationCampaign
 from blueetl.config.analysis_model import FeaturesConfig, SingleAnalysisConfig
+from blueetl.constants import (
+    CACHED_ANALYSIS_CONFIG_FILE,
+    CACHED_CHECKSUMS_FILE,
+    CACHED_CONFIG_DIR,
+    CACHED_FEATURES_DIR,
+    CACHED_REPO_DIR,
+    CACHED_SIMULATIONS_CONFIG_FILE,
+)
 from blueetl.store.base import BaseStore
 from blueetl.store.feather import FeatherStore
 from blueetl.store.parquet import ParquetStore
@@ -157,9 +165,9 @@ class CacheManager:
         self._output_dir = cache_config.path
         if cache_config.clear:
             self._clear_cache()
-        repo_dir = self._output_dir / "repo"
-        features_dir = self._output_dir / "features"
-        config_dir = self._output_dir / "config"
+        repo_dir = self._output_dir / CACHED_REPO_DIR
+        features_dir = self._output_dir / CACHED_FEATURES_DIR
+        config_dir = self._output_dir / CACHED_CONFIG_DIR
         for new_dir in repo_dir, features_dir, config_dir:
             new_dir.mkdir(exist_ok=True, parents=True)
 
@@ -179,9 +187,9 @@ class CacheManager:
         self._lock_manager: LockManagerProtocol = LockManager(self._output_dir)
         self._lock_manager.lock(mode=LockManager.LOCK_SH if self._readonly else LockManager.LOCK_EX)
 
-        self._cached_analysis_config_path = config_dir / "analysis_config.cached.yaml"
-        self._cached_simulations_config_path = config_dir / "simulations_config.cached.yaml"
-        self._cached_checksums_path = config_dir / "checksums.cached.yaml"
+        self._cached_analysis_config_path = config_dir / CACHED_ANALYSIS_CONFIG_FILE
+        self._cached_simulations_config_path = config_dir / CACHED_SIMULATIONS_CONFIG_FILE
+        self._cached_checksums_path = config_dir / CACHED_CHECKSUMS_FILE
 
         self._analysis_configs = CoupledCache[SingleAnalysisConfig](
             cached=self._load_cached_analysis_config(),

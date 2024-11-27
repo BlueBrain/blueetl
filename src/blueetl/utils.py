@@ -160,8 +160,22 @@ def resolve_path(*paths: StrOrPath, symlinks: bool = False) -> Path:
     """Make the path absolute and return a new path object.
 
     It may be different from calling Path.resolve(), because Path.resolve() always resolve symlinks.
-    It may be different from calling Path.absolute(), because Path.absolute() doesn't remove the
-    relative paths. For example, Path('/tmp/..').absolute() == PosixPath('/tmp/..').
+    It may be different from calling Path.absolute(), because Path.absolute() doesn't simplify the
+    relative paths.
+
+    For example:
+
+    >>> str(Path('/tmp/..').absolute())
+    '/tmp/..'
+    >>> str(Path('/tmp/..').resolve())
+    '/private'
+    >>> Path(os.path.abspath(Path("/tmp/..")))
+    PosixPath('/')
+
+    However, note that os.path.abspath() might return wrong results. From the official docs:
+
+    |   os.path.abspath() removes ".." components without resolving symlinks, which may change the
+    |   meaning of the path, whereas Path.absolute() leaves any ".." components in the path.
     """
     if symlinks:
         # resolve any symlinks

@@ -206,11 +206,12 @@ class MultiAnalyzer:
     def _init_analyzers(self) -> dict[str, Analyzer]:
         """Load and return a dict of analyzers."""
         resolver = AttrResolver(root=self)
-        simulations_config = SimulationCampaign.load(self.global_config.simulation_campaign)
         return {
             name: Analyzer.from_config(
                 analysis_config=analysis_config,
-                simulations_config=simulations_config,
+                simulations_config=SimulationCampaign.load(
+                    analysis_config.simulation_campaign or self.global_config.simulation_campaign
+                ),
                 resolver=resolver,
             )
             for name, analysis_config in self.global_config.analysis.items()
@@ -351,7 +352,7 @@ def run_from_file(
         readonly_cache: if None, use the value from the configuration file. Otherwise:
             if True, use the existing cache if possible, or raise an error;
             if False, use the existing cache if possible, or update it.
-        skip_features_cache:  if None, use the value from the configuration file. Otherwise:
+        skip_features_cache: if None, use the value from the configuration file. Otherwise:
             if True, do not write the features to the cache;
             if False, write the features to the cache after calculating them.
         loglevel: if specified, used to set up logging.

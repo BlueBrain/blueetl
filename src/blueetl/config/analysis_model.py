@@ -182,6 +182,7 @@ class FeaturesConfig(BaseModel):
 class SingleAnalysisConfig(BaseModel):
     """SingleAnalysisConfig Model."""
 
+    simulation_campaign: Annotated[Optional[Path], Field(exclude=True)] = None
     cache: Optional[CacheConfig] = None
     simulations_filter: dict[str, Any] = {}
     simulations_filter_in_memory: dict[str, Any] = {}

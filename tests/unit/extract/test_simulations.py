@@ -359,42 +359,6 @@ def test_simulations_from_pandas_load_inconsistent_campaign(mock_simulation_clas
 
 
 @patch(f"{test_module.__name__}.Simulation", autospec=True)
-def test_simulations_from_pandas_first_nonexistent(mock_simulation_class):
-    mock_simulation0 = _get_mock_simulation(exists=False)
-    mock_simulation1 = _get_mock_simulation(exists=True)
-    mock_circuit0 = mock_simulation0.circuit
-    mock_circuit1 = mock_simulation1.circuit
-    mock_simulation_class.from_file.side_effect = [mock_simulation0, mock_simulation1]
-    df = pd.DataFrame(
-        [
-            {
-                "simulation_path": "path1",
-                "seed": 10,
-                "Grating Orientation (degrees)": 0,
-                "simulation_id": 0,
-                "circuit_id": 0,
-            },
-            {
-                "simulation_path": "path2",
-                "seed": 11,
-                "Grating Orientation (degrees)": 45,
-                "simulation_id": 1,
-                "circuit_id": 0,
-            },
-        ]
-    )
-    with pytest.raises(test_module.InconsistentSimulations, match="Inconsistent cache"):
-        test_module.Simulations.from_pandas(df)
-
-    assert mock_simulation_class.from_file.call_count == 2
-    assert mock_circuit0 != mock_circuit1
-    assert mock_simulation0.exists.call_count == 1
-    assert mock_simulation1.exists.call_count == 1
-    assert mock_simulation0.is_complete.call_count == 0
-    assert mock_simulation1.is_complete.call_count == 1
-
-
-@patch(f"{test_module.__name__}.Simulation", autospec=True)
 def test_simulations_from_pandas_filtered_by_simulation_id(mock_simulation_class):
     mock_simulation0 = _get_mock_simulation()
     mock_simulation1 = _get_mock_simulation()

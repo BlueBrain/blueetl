@@ -114,46 +114,55 @@ class Simulations(BaseExtractor):
 
     @classmethod
     def _filter_simulations_df(
-        cls, df: pd.DataFrame, query: Optional[dict], cached: bool = False
+        cls,
+        df: pd.DataFrame,
+        query: Optional[dict],
+        *,
+        ignore_missing: bool = True,
+        ignore_incomplete: bool = True,
     ) -> pd.DataFrame:
         """Remove the missing and incomplete simulations and filter by the given query.
 
         Args:
             df: DataFrame to filter.
             query: filtering query.
-            cached: if True, raise an error in case any simulation is missing or incomplete.
+            ignore_missing: remove any missing simulation.
+            ignore_incomplete: remove any incomplete simulation.
 
         Returns:
             the filtered DataFrame.
         """
         len_total = len(df)
-        len_missing = len(df.etl.q({_STATUS: SimulationStatus.MISSING}))
-        len_incomplete = len(df.etl.q({_STATUS: SimulationStatus.INCOMPLETE}))
+        len_missing = len(df.etl.q({_STATUS: SimulationStatus.MISSING})) if ignore_missing else 0
+        len_incomplete = (
+            len(df.etl.q({_STATUS: SimulationStatus.INCOMPLETE})) if ignore_incomplete else 0
+        )
+        allowed_states = [SimulationStatus.COMPLETE]
+        if not ignore_missing:
+            allowed_states.append(SimulationStatus.MISSING)
+        if not ignore_incomplete:
+            allowed_states.append(SimulationStatus.INCOMPLETE)
         # filter by the internal ``_status`` column, and drop the column
-        df = df.etl.q({_STATUS: SimulationStatus.COMPLETE}).drop(columns=_STATUS)
+        df = df.etl.q({_STATUS: allowed_states}).drop(columns=_STATUS)
         len_complete = len(df)
-        assert len_missing + len_incomplete + len_complete == len_total
         # filter by the custom query if provided
         df = df.etl.q(query or {})
         # reset the index to ensure that it doesn't contain gaps,
         # while preserving the simulation_id in a dedicated column
         df = df.reset_index(drop=True)
         len_final = len(df)
-        L.info("Simulations ignored because missing: %s", len_missing)
-        L.info("Simulations ignored because incomplete: %s", len_incomplete)
-        L.info("Simulations filtered out: %s, with query: %s", len_complete - len_final, query)
+        if len_missing:
+            L.info("Simulations ignored because missing: %s", len_missing)
+        if len_incomplete:
+            L.info("Simulations ignored because incomplete: %s", len_incomplete)
+        if query:
+            L.info("Simulations filtered out: %s, with query: %s", len_complete - len_final, query)
         L.info(
             "Simulations extracted: %s/%s, ids: %s",
             len_final,
             len_total,
             df[SIMULATION_ID].to_list(),
         )
-        if cached and (len_missing or len_incomplete):
-            L.error(
-                "Some cached simulations are missing or incomplete, "
-                "you may need to delete the cache."
-            )
-            raise InconsistentSimulations("Inconsistent cache")
         return df
 
     @classmethod
@@ -172,7 +181,10 @@ class Simulations(BaseExtractor):
         """Extract simulations from a dataframe containing valid simulation ids and circuit ids."""
         original_len = len(df)
         df = cls._from_paths(df)
-        df = cls._filter_simulations_df(df, query, cached=cached)
+        remove_missing = remove_incomplete = not cached
+        df = cls._filter_simulations_df(
+            df, query, ignore_missing=remove_missing, ignore_incomplete=remove_incomplete
+        )
         filtered = len(df) != original_len
         return cls(df, cached=cached, filtered=filtered)
 

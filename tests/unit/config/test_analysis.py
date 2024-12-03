@@ -1,3 +1,5 @@
+import pathlib
+
 import pytest
 
 from blueetl.config import analysis as test_module
@@ -184,7 +186,9 @@ def test_config__resolve_features_error():
         for f in base.glob("*.yaml")
     ],
 )
-def test_init_multi_analysis_configuration(config_file):
+def test_init_multi_analysis_configuration(config_file, monkeypatch):
+    # patch Path.exists() to always return True for the simulation campaign config file
+    monkeypatch.setattr(pathlib.Path, "exists", lambda _: True)
     config_dict = load_yaml(config_file)
     base_path = config_file.parent
     result = test_module.init_multi_analysis_configuration(

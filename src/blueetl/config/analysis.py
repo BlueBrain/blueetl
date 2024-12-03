@@ -13,7 +13,7 @@ from blueetl.config.analysis_model import (
     TrialStepsConfig,
     WindowConfig,
 )
-from blueetl.constants import CHECKSUM_SEP
+from blueetl.constants import CACHED_CONFIG_DIR, CACHED_SIMULATIONS_CONFIG_FILE, CHECKSUM_SEP
 from blueetl.utils import checksum_json, dict_product, load_json
 from blueetl.validation import read_schema, validate_config
 
@@ -173,6 +173,22 @@ def _resolve_features(features_config_list: list[FeaturesConfig]) -> list[Featur
 def _resolve_analysis_configs(global_config: MultiAnalysisConfig) -> None:
     global_cache_path = global_config.cache.path
     for name, config in global_config.analysis.items():
+        if global_config.simulation_campaign.exists():
+            config.simulation_campaign = global_config.simulation_campaign
+        else:
+            cached = global_cache_path / name / CACHED_CONFIG_DIR / CACHED_SIMULATIONS_CONFIG_FILE
+            if cached.exists():
+                L.info(
+                    "Missing simulation campaign config file %s, loading from %s",
+                    global_config.simulation_campaign,
+                    cached,
+                )
+                config.simulation_campaign = cached
+            else:
+                raise RuntimeError(
+                    f"The simulation campaign config file {global_config.simulation_campaign} "
+                    f"doesn't exist and it's not found in the cache {global_cache_path}"
+                )
         config.cache = global_config.cache.model_copy(update={"path": global_cache_path / name})
         config.simulations_filter = global_config.simulations_filter
         config.simulations_filter_in_memory = global_config.simulations_filter_in_memory

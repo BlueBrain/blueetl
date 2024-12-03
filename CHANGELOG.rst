@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Version 0.13.0
+--------------
+
+Improvements
+~~~~~~~~~~~~
+
+- When loading the cache, do not fail if the original simulation campaign and related files are missing [NSETM-2336].
+
+
 Version 0.12.1
 --------------
 

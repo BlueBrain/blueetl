@@ -14,6 +14,7 @@ from blueetl.constants import (
     SECTION,
     SIMULATION_ID,
     TIME,
+    TRIAL,
     VALUE,
     WINDOW,
 )
@@ -25,7 +26,7 @@ L = logging.getLogger(__name__)
 class CompartmentReport(ReportExtractor):
     """CompartmentReport extractor class."""
 
-    COLUMNS = [SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS, WINDOW, TIME, GID, SECTION, VALUE]
+    COLUMNS = [SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS, WINDOW, TRIAL, TIME, GID, SECTION, VALUE]
 
     @classmethod
     def _load_values(
@@ -48,5 +49,8 @@ class CompartmentReport(ReportExtractor):
             df = df.unstack().reset_index()
             df.rename(columns={0: VALUE}, inplace=True)
             df[WINDOW] = win.name
+            df[TRIAL] = win.trial
+            # make the times relative to the offset
+            df[TIME] -= win.offset
             df_list.append(df)
         return smart_concat(df_list)

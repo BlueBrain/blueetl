@@ -1,6 +1,33 @@
 Changelog
 =========
 
+Version 0.13.4
+--------------
+
+Bug Fixes
+~~~~~~~~~
+
+- In soma and compartment reports, add trial number in the extracted dataframe, as in the spikes report.
+- In soma and compartment reports, make the exported time relative to the offset, as in the spikes report.
+
+Version 0.13.3
+--------------
+
+Bug Fixes
+~~~~~~~~~
+
+- Create ``.zenodo.json`` as a workaround to publish the release on Zenodo.
+
+Version 0.13.2
+--------------
+
+- Technical release.
+
+Version 0.13.1
+--------------
+
+- Technical release.
+
 Version 0.13.0
 --------------
 

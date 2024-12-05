@@ -7,7 +7,16 @@ import pandas as pd
 from blueetl_core.utils import smart_concat
 
 from blueetl.adapters.simulation import SimulationAdapter as Simulation
-from blueetl.constants import CIRCUIT_ID, GID, NEURON_CLASS, SIMULATION_ID, TIME, VALUE, WINDOW
+from blueetl.constants import (
+    CIRCUIT_ID,
+    GID,
+    NEURON_CLASS,
+    SIMULATION_ID,
+    TIME,
+    TRIAL,
+    VALUE,
+    WINDOW,
+)
 from blueetl.extract.report import ReportExtractor
 
 L = logging.getLogger(__name__)
@@ -16,7 +25,7 @@ L = logging.getLogger(__name__)
 class SomaReport(ReportExtractor):
     """SomaReport extractor class."""
 
-    COLUMNS = [SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS, WINDOW, TIME, GID, VALUE]
+    COLUMNS = [SIMULATION_ID, CIRCUIT_ID, NEURON_CLASS, WINDOW, TRIAL, TIME, GID, VALUE]
 
     @classmethod
     def _load_values(
@@ -39,5 +48,8 @@ class SomaReport(ReportExtractor):
             df = df.unstack().reset_index()
             df.rename(columns={0: VALUE}, inplace=True)
             df[WINDOW] = win.name
+            df[TRIAL] = win.trial
+            # make the times relative to the offset
+            df[TIME] -= win.offset
             df_list.append(df)
         return smart_concat(df_list)
